@@ -290,6 +290,142 @@
     gap: 6px;
     margin-top: 10px;
   }
+
+  /* ─── タッチ最適化 ─── */
+  button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* Canvas をCSSでスケール可能に */
+  #avatarCanvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* ─── タブレット・大型スマホ（〜 767px）─── */
+  @media (max-width: 767px) {
+    h1 {
+      font-size: 1.5rem;
+      padding: 14px 12px;
+      letter-spacing: 2px;
+    }
+
+    .main {
+      flex-direction: column;   /* 縦並びに切り替え */
+      padding: 8px 12px 24px;
+      gap: 14px;
+    }
+
+    .avatar-panel {
+      flex: none;
+      width: 100%;
+      position: static;         /* sticky 解除 */
+      flex-direction: row;      /* キャンバス と 入力を横並び */
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 16px;
+    }
+
+    #avatarCanvas {
+      max-width: 200px;
+      flex-shrink: 0;
+    }
+
+    .name-input-wrap {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .btn-save {
+      width: 100%;
+      padding: 10px 20px;
+      font-size: 0.92rem;
+    }
+
+    .char-type-row,
+    .part-section,
+    .bg-section { padding: 12px; }
+
+    .section-title {
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .nav-btn {
+      width: 34px;
+      height: 34px;
+      font-size: 1.1rem;
+      border-radius: 9px;
+    }
+
+    .swatch { width: 24px; height: 24px; }
+  }
+
+  /* ─── 標準スマホ（〜 480px）─── */
+  @media (max-width: 480px) {
+    h1 {
+      font-size: 1.25rem;
+      padding: 12px 10px;
+      letter-spacing: 1px;
+    }
+
+    .main { padding: 6px 10px 20px; gap: 10px; }
+
+    .avatar-panel {
+      padding: 12px;
+      gap: 10px;
+    }
+
+    #avatarCanvas { max-width: 170px; }
+
+    .name-input {
+      font-size: 1rem;
+      padding: 8px 10px;
+    }
+
+    /* パーツグリッドを1列に */
+    .parts-grid { grid-template-columns: 1fr; gap: 8px; }
+
+    .char-buttons { gap: 7px; }
+    .char-btn {
+      padding: 8px 10px;
+      min-width: 54px;
+      font-size: 0.78rem;
+    }
+    .char-btn .icon { font-size: 1.45rem; }
+
+    .bg-buttons { gap: 6px; }
+    .bg-btn {
+      padding: 6px 7px;
+      min-width: 48px;
+      font-size: 0.7rem;
+    }
+    .bg-btn .bg-prev { width: 28px; height: 18px; }
+
+    .part-section { padding: 10px 12px; }
+    .part-header { margin-bottom: 8px; }
+    .part-name { font-size: 0.82rem; }
+    .part-nav { gap: 4px; }
+    .part-index { font-size: 0.74rem; }
+
+    .color-label { font-size: 0.7rem; margin-top: 6px; margin-bottom: 4px; }
+    .color-swatches { gap: 4px; }
+    .swatch { width: 22px; height: 22px; }
+    .bg-solid-colors { gap: 5px; }
+  }
+
+  /* ─── 小型スマホ（〜 360px）─── */
+  @media (max-width: 360px) {
+    .avatar-panel { flex-direction: column; align-items: center; }
+    #avatarCanvas { max-width: 200px; }   /* 縦積みなら少し大きく */
+    .char-btn { min-width: 48px; padding: 7px 8px; }
+    .nav-btn { width: 30px; height: 30px; font-size: 1rem; }
+  }
 </style>
 </head>
 <body>
@@ -418,6 +554,7 @@ function buildPartsUI() {
   PARTS_DEF.forEach(def => {
     const sec = document.createElement('div');
     sec.className = 'part-section';
+    sec.id = `sec-${def.id}`;
     sec.innerHTML = `
       <div class="part-header">
         <span class="part-name">${def.label}</span>
@@ -470,6 +607,9 @@ function setCharType(type, btn) {
   state.charType = type;
   document.querySelectorAll('.char-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  const isAnimal = type === 'cat' || type === 'dog' || type === 'rabbit';
+  const hairSec = document.getElementById('sec-hair');
+  if (hairSec) hairSec.style.display = isAnimal ? 'none' : '';
   drawAvatar();
 }
 
@@ -1540,6 +1680,12 @@ function drawName() {
 // ===== INIT =====
 buildBgUI();
 buildPartsUI();
+// 初期タイプが動物なら髪の毛セクションを非表示
+(function() {
+  const isAnimal = state.charType === 'cat' || state.charType === 'dog' || state.charType === 'rabbit';
+  const hairSec = document.getElementById('sec-hair');
+  if (hairSec) hairSec.style.display = isAnimal ? 'none' : '';
+})();
 drawAvatar();
 document.getElementById('nameInput').addEventListener('input', drawAvatar);
 </script>
