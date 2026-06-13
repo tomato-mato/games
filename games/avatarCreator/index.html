@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アバターメーカー</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', 'Yu Gothic', sans-serif;
+    color: #fff;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    text-align: center;
+    padding: 20px;
+    font-size: 2rem;
+    background: linear-gradient(90deg, #ff6b9d, #c44dff, #4daaff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    letter-spacing: 4px;
+  }
+
+  .main {
+    display: flex;
+    gap: 20px;
+    padding: 10px 20px 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    align-items: flex-start;
+  }
+
+  /* === AVATAR DISPLAY === */
+  .avatar-panel {
+    flex: 0 0 320px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 20px;
+    backdrop-filter: blur(10px);
+  }
+
+  #avatarCanvas {
+    border-radius: 16px;
+    background: linear-gradient(160deg, #ffecd2, #fcb69f);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    display: block;
+  }
+
+  .btn-save {
+    background: linear-gradient(90deg, #ff6b9d, #c44dff);
+    border: none;
+    color: white;
+    padding: 12px 32px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(196,77,255,0.4);
+  }
+  .btn-save:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(196,77,255,0.6); }
+
+  .name-input-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .name-label {
+    font-size: 0.78rem;
+    letter-spacing: 2px;
+    color: #aaa;
+    text-transform: uppercase;
+  }
+  .name-input {
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1.5px solid rgba(255,255,255,0.18);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.1rem;
+    padding: 10px 14px;
+    text-align: center;
+    letter-spacing: 2px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: 'Yu Gothic', 'Segoe UI', sans-serif;
+  }
+  .name-input:focus {
+    border-color: #c44dff;
+    box-shadow: 0 0 10px rgba(196,77,255,0.35);
+  }
+  .name-input::placeholder { color: rgba(255,255,255,0.3); }
+
+  /* === CONTROLS === */
+  .controls {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* キャラクター種類 */
+  .char-type-row {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+  }
+
+  .section-title {
+    font-size: 0.85rem;
+    letter-spacing: 3px;
+    color: #aaa;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .char-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .char-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #ccc;
+    font-size: 0.85rem;
+    min-width: 70px;
+  }
+  .char-btn .icon { font-size: 1.8rem; }
+  .char-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
+  .char-btn.active {
+    background: linear-gradient(135deg, rgba(196,77,255,0.3), rgba(77,170,255,0.3));
+    border-color: #c44dff;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(196,77,255,0.4);
+  }
+
+  /* パーツパネル */
+  .parts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .part-section {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 14px;
+    backdrop-filter: blur(10px);
+  }
+
+  .part-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .part-name {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #ddd;
+  }
+
+  .part-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .nav-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.25); }
+
+  .part-index {
+    font-size: 0.8rem;
+    color: #aaa;
+    min-width: 30px;
+    text-align: center;
+  }
+
+  /* 色選択 */
+  .color-label {
+    font-size: 0.75rem;
+    color: #aaa;
+    margin-top: 8px;
+    margin-bottom: 5px;
+  }
+
+  .color-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .swatch:hover { transform: scale(1.2); }
+  .swatch.active { border-color: #fff; transform: scale(1.15); box-shadow: 0 0 6px rgba(255,255,255,0.5); }
+
+  /* 背景セクション */
+  .bg-section {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+  }
+  .bg-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .bg-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    cursor: pointer;
+    color: #ccc;
+    font-size: 0.78rem;
+    transition: all 0.2s;
+    min-width: 60px;
+  }
+  .bg-btn .bg-prev {
+    width: 36px;
+    height: 24px;
+    border-radius: 5px;
+    display: block;
+  }
+  .bg-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
+  .bg-btn.active {
+    background: linear-gradient(135deg, rgba(77,170,255,0.3), rgba(196,77,255,0.3));
+    border-color: #4daaff;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(77,170,255,0.4);
+  }
+  .bg-solid-colors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>✨ アバターメーカー ✨</h1>
+
+<div class="main">
+  <!-- アバタープレビュー -->
+  <div class="avatar-panel">
+    <canvas id="avatarCanvas" width="280" height="360"></canvas>
+    <div class="name-input-wrap">
+      <span class="name-label">なまえ</span>
+      <input class="name-input" id="nameInput" type="text" maxlength="12" placeholder="なまえをいれてね">
+    </div>
+    <button class="btn-save" onclick="saveAvatar()">💾 保存する</button>
+  </div>
+
+  <!-- コントロール -->
+  <div class="controls">
+    <!-- 背景 -->
+    <div class="bg-section">
+      <div class="section-title">背景</div>
+      <div class="bg-buttons" id="bgButtons"></div>
+      <div class="bg-solid-colors" id="bgSolidColors" style="display:none"></div>
+    </div>
+
+    <!-- キャラクター種類 -->
+    <div class="char-type-row">
+      <div class="section-title">キャラクタータイプ</div>
+      <div class="char-buttons">
+        <button class="char-btn active" onclick="setCharType('girl',this)"><span class="icon">👧</span>女の子</button>
+        <button class="char-btn" onclick="setCharType('boy',this)"><span class="icon">👦</span>男の子</button>
+        <button class="char-btn" onclick="setCharType('cat',this)"><span class="icon">🐱</span>ねこ</button>
+        <button class="char-btn" onclick="setCharType('dog',this)"><span class="icon">🐶</span>いぬ</button>
+        <button class="char-btn" onclick="setCharType('rabbit',this)"><span class="icon">🐰</span>うさぎ</button>
+      </div>
+    </div>
+
+    <!-- パーツ -->
+    <div class="parts-grid" id="partsGrid"></div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const PARTS_DEF = [
+  { id: 'hair',      label: '髪の毛',       count: 7, colors: ['#2c1b0e','#6b3a2a','#c8763a','#f0c070','#e8e8e8','#1a1a3a','#b03090'] },
+  { id: 'eyes',      label: '目',           count: 6, colors: ['#3a2010','#1a4a8a','#2a7a2a','#8a2a2a','#5a2a8a','#888888'] },
+  { id: 'mouth',     label: '口',           count: 5, colors: ['#e87a7a','#c84040','#ff9999','#cc6688','#ffaacc'] },
+  { id: 'top',       label: '服',           count: 7, colors: ['#e84040','#4040e8','#40c040','#e8c040','#e840c0','#40c0e8','#ffffff'] },
+  { id: 'bottom',    label: 'ズボン',       count: 5, colors: ['#2a2a7a','#4a2a1a','#2a2a2a','#7a2a2a','#2a6a2a'] },
+  { id: 'shoes',     label: '靴',           count: 5, colors: ['#1a1a1a','#8b4513','#c0392b','#2c3e50','#ffffff'] },
+  { id: 'accessory', label: 'アクセサリー', count: 6, colors: ['#ff6699','#ffd700','#4499ff','#99dd44','#ff9944','#cc44ff'] },
+  { id: 'bag',       label: '鞄',           count: 4, colors: ['#8b4513','#e84040','#4040e8','#404040'] },
+];
+
+const BG_PRESETS = [
+  { label: 'サンセット', grad: ['#ffecd2','#fcb69f'] },
+  { label: '青空',       grad: ['#87ceeb','#d0eeff'] },
+  { label: '夜空',       grad: ['#0d0d2b','#1a1a4a'] },
+  { label: '森',         grad: ['#d4edda','#a8d5b5'] },
+  { label: '桜',         grad: ['#ffe4f0','#ffc8e0'] },
+  { label: '海',         grad: ['#cceeff','#99ddff'] },
+  { label: '教室',       grad: ['#fff8e1','#ffe4b0'] },
+  { label: '単色',       grad: ['#e8e8e8','#d0d0d0'] },
+];
+
+const BG_SOLID_COLORS = [
+  '#ffffff','#fff0f5','#f0f0ff','#f0fff0','#fffce0','#e0f8ff','#ffe0e0','#f5e0ff',
+  '#ffccdd','#ccddff','#ccffee','#ffffcc','#ddeeff','#ffddcc','#e8e8e8','#333344'
+];
+
+const state = {
+  charType: 'girl',
+  bg: { type: 0, solidIdx: 0 },
+  parts: {}
+};
+PARTS_DEF.forEach(p => {
+  state.parts[p.id] = { index: 0, colorIdx: 0 };
+});
+
+// ===== BACKGROUND UI =====
+function buildBgUI() {
+  const wrap = document.getElementById('bgButtons');
+  BG_PRESETS.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'bg-btn' + (i === 0 ? ' active' : '');
+    btn.onclick = () => setBgType(i, btn);
+    const prev = document.createElement('span');
+    prev.className = 'bg-prev';
+    prev.style.background = `linear-gradient(135deg, ${p.grad[0]}, ${p.grad[1]})`;
+    btn.appendChild(prev);
+    btn.appendChild(document.createTextNode(p.label));
+    wrap.appendChild(btn);
+  });
+
+  const solidWrap = document.getElementById('bgSolidColors');
+  BG_SOLID_COLORS.forEach((c, i) => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch' + (i === 0 ? ' active' : '');
+    sw.style.background = c;
+    sw.style.border = '2px solid rgba(255,255,255,0.3)';
+    sw.onclick = () => setBgSolid(i);
+    solidWrap.appendChild(sw);
+  });
+}
+
+function setBgType(idx, btn) {
+  state.bg.type = idx;
+  document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('bgSolidColors').style.display = (idx === 7) ? 'flex' : 'none';
+  drawAvatar();
+}
+
+function setBgSolid(idx) {
+  state.bg.solidIdx = idx;
+  document.querySelectorAll('#bgSolidColors .swatch').forEach((s,i) => s.classList.toggle('active', i===idx));
+  drawAvatar();
+}
+
+// ===== BUILD UI =====
+function buildPartsUI() {
+  const grid = document.getElementById('partsGrid');
+  grid.innerHTML = '';
+  PARTS_DEF.forEach(def => {
+    const sec = document.createElement('div');
+    sec.className = 'part-section';
+    sec.innerHTML = `
+      <div class="part-header">
+        <span class="part-name">${def.label}</span>
+        <div class="part-nav">
+          <button class="nav-btn" onclick="changePart('${def.id}',-1)">&#8249;</button>
+          <span class="part-index" id="idx-${def.id}">${partLabel(def.id, 0, def.count)}</span>
+          <button class="nav-btn" onclick="changePart('${def.id}',1)">&#8250;</button>
+        </div>
+      </div>
+      <div class="color-label">カラー</div>
+      <div class="color-swatches" id="sw-${def.id}"></div>
+    `;
+    grid.appendChild(sec);
+
+    const swDiv = sec.querySelector(`#sw-${def.id}`);
+    def.colors.forEach((c, i) => {
+      const sw = document.createElement('div');
+      sw.className = 'swatch' + (i === 0 ? ' active' : '');
+      sw.style.background = c;
+      sw.onclick = () => setColor(def.id, i);
+      swDiv.appendChild(sw);
+    });
+  });
+}
+
+const NONE_PARTS = new Set(['accessory','bag']);
+
+function partLabel(id, idx, count) {
+  if (NONE_PARTS.has(id) && idx === 0) return 'なし';
+  if (NONE_PARTS.has(id)) return `${idx} / ${count - 1}`;
+  return `${idx + 1} / ${count}`;
+}
+
+function changePart(id, dir) {
+  const def = PARTS_DEF.find(p => p.id === id);
+  state.parts[id].index = (state.parts[id].index + dir + def.count) % def.count;
+  document.getElementById(`idx-${id}`).textContent = partLabel(id, state.parts[id].index, def.count);
+  drawAvatar();
+}
+
+function setColor(id, idx) {
+  state.parts[id].colorIdx = idx;
+  const def = PARTS_DEF.find(p => p.id === id);
+  const swatches = document.querySelectorAll(`#sw-${id} .swatch`);
+  swatches.forEach((s, i) => s.classList.toggle('active', i === idx));
+  drawAvatar();
+}
+
+function setCharType(type, btn) {
+  state.charType = type;
+  document.querySelectorAll('.char-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  drawAvatar();
+}
+
+// ===== DRAWING =====
+const canvas = document.getElementById('avatarCanvas');
+const ctx = canvas.getContext('2d');
+
+function getColor(partId) {
+  const def = PARTS_DEF.find(p => p.id === partId);
+  return def.colors[state.parts[partId].colorIdx];
+}
+
+function drawAvatar() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  drawBackground(W, H);
+
+  // Draw based on char type
+  const type = state.charType;
+  if (type === 'girl' || type === 'boy') drawHuman(type);
+  else drawAnimal(type);
+
+  drawName();
+}
+
+// ===== BACKGROUND DRAWING =====
+function drawBackground(W, H) {
+  const t = state.bg.type;
+
+  function grad(c1, c2) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, c1); g.addColorStop(1, c2);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  function cloud(x, y, s) {
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    [[0,0,s],[s*.7,s*.2,s*.7],[s*1.3,s*.1,s*.75],[s*2,0,s*.8]].forEach(([dx,dy,r])=>{
+      ctx.beginPath(); ctx.arc(x+dx, y+dy, r, 0, Math.PI*2); ctx.fill();
+    });
+  }
+  function ground(c1, c2, yStart) {
+    const g = ctx.createLinearGradient(0, yStart, 0, H);
+    g.addColorStop(0, c1); g.addColorStop(1, c2);
+    ctx.fillStyle = g; ctx.fillRect(0, yStart, W, H - yStart);
+  }
+
+  switch(t) {
+    case 0: // サンセット
+      grad('#ffd4a0','#ff8c69');
+      // 雲(夕焼け色)
+      ctx.globalAlpha = 0.4;
+      cloud(10, 30, 20); cloud(160, 50, 16);
+      ctx.globalAlpha = 1;
+      ground('#8b4513','#5c2e00', H*.78);
+      break;
+
+    case 1: // 青空
+      grad('#87ceeb','#d0eeff');
+      // 太陽
+      ctx.fillStyle = '#ffe866';
+      ctx.beginPath(); ctx.arc(230, 38, 26, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+      for(let i=0;i<8;i++){
+        const a=(i/8)*Math.PI*2;
+        ctx.beginPath(); ctx.moveTo(230+32*Math.cos(a),38+32*Math.sin(a));
+        ctx.lineTo(230+42*Math.cos(a),38+42*Math.sin(a)); ctx.stroke();
+      }
+      cloud(20, 36, 18); cloud(130, 52, 14); cloud(200, 25, 11);
+      ground('#7ec850','#4a9e2a', H*.76);
+      break;
+
+    case 2: // 夜空
+      grad('#0d0d2b','#1e2050');
+      // 星
+      for(let i=0;i<60;i++){
+        const sx=Math.sin(i*137.5)*W*.5+W*.5;
+        const sy=Math.cos(i*97.3)*H*.35+H*.15;
+        const sr=Math.random()*1.4+0.4;
+        ctx.fillStyle = `rgba(255,255,220,${0.5+Math.sin(i)*0.4})`;
+        ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill();
+      }
+      // 月
+      ctx.fillStyle = '#fffde0';
+      ctx.beginPath(); ctx.arc(220, 44, 28, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#1e2050';
+      ctx.beginPath(); ctx.arc(232, 38, 24, 0, Math.PI*2); ctx.fill();
+      ground('#0a1a0a','#142814', H*.78);
+      break;
+
+    case 3: // 森
+      grad('#c8e6c9','#a5d6a7');
+      // 木（背景）
+      [[30,H*.65],[80,H*.58],[200,H*.62],[250,H*.56]].forEach(([tx,ty])=>{
+        ctx.fillStyle = '#4a7c59';
+        ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx-20,ty+50); ctx.lineTo(tx+20,ty+50); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(tx,ty-20); ctx.lineTo(tx-18,ty+20); ctx.lineTo(tx+18,ty+20); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#5d4037'; ctx.fillRect(tx-5,ty+48,10,22);
+      });
+      ground('#558b2f','#33691e', H*.78);
+      break;
+
+    case 4: // 桜
+      grad('#ffe4f0','#ffd0e8');
+      // 桜の木の幹
+      ctx.fillStyle = '#7a5033';
+      ctx.fillRect(W*.1-5, H*.45, 10, H*.35);
+      ctx.fillRect(W*.1-5, H*.45, 30, 8);
+      ctx.fillRect(W*.1-25, H*.52, 25, 7);
+      // 花
+      const petalC = ['#ffb7c5','#ff8fa3','#ffc8d5','#ff7090'];
+      for(let i=0;i<30;i++){
+        const px=Math.sin(i*83)*90+W*.13;
+        const py=Math.cos(i*61)*50+H*.38;
+        ctx.fillStyle = petalC[i%4];
+        ctx.beginPath(); ctx.arc(px,py,6+Math.sin(i)*2,0,Math.PI*2); ctx.fill();
+      }
+      // 花びらが舞う
+      for(let i=0;i<20;i++){
+        const px=(i*47)%W*.9+15;
+        const py=(i*73+20)%(H*.6)+20;
+        ctx.fillStyle = 'rgba(255,180,200,0.7)';
+        ctx.beginPath(); ctx.ellipse(px,py,4,2,i*0.5,0,Math.PI*2); ctx.fill();
+      }
+      ground('#a8d5a2','#7ab87a', H*.78);
+      break;
+
+    case 5: // 海
+      grad('#87ceeb','#b3e5ff');
+      // 太陽
+      ctx.fillStyle = '#ffe566';
+      ctx.beginPath(); ctx.arc(240, 42, 24, 0, Math.PI*2); ctx.fill();
+      cloud(20, 40, 15); cloud(150, 28, 12);
+      // 砂浜
+      const sand = ctx.createLinearGradient(0,H*.72,0,H);
+      sand.addColorStop(0,'#f4d59e'); sand.addColorStop(1,'#e8c076');
+      ctx.fillStyle = sand; ctx.fillRect(0, H*.72, W, H*.28);
+      // 波
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 3;
+      [H*.68, H*.72].forEach(wy=>{
+        ctx.beginPath();
+        for(let x=0;x<=W;x+=4) ctx.lineTo(x, wy+Math.sin(x*.08)*4);
+        ctx.stroke();
+      });
+      // 海
+      const sea = ctx.createLinearGradient(0,H*.55,0,H*.72);
+      sea.addColorStop(0,'#29b6f6'); sea.addColorStop(1,'#0288d1');
+      ctx.fillStyle = sea; ctx.fillRect(0, H*.55, W, H*.18);
+      break;
+
+    case 6: // 教室
+      // 壁
+      grad('#fff8e1','#ffe0b2');
+      // 窓
+      ctx.fillStyle = '#b3e5fc';
+      roundRect(10, 30, 80, 80, 4); ctx.fill();
+      ctx.strokeStyle = '#9ab'; ctx.lineWidth = 3;
+      roundRect(10, 30, 80, 80, 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(50,30); ctx.lineTo(50,110); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(10,70); ctx.lineTo(90,70); ctx.stroke();
+      // 窓の光
+      ctx.fillStyle = 'rgba(255,255,200,0.3)';
+      ctx.beginPath(); ctx.moveTo(90,30); ctx.lineTo(W*.6,H*.5); ctx.lineTo(W*.7,H*.5); ctx.lineTo(100,30); ctx.closePath(); ctx.fill();
+      // 黒板
+      ctx.fillStyle = '#2d5a27';
+      roundRect(W*.3, 20, W*.65, 70, 4); ctx.fill();
+      ctx.strokeStyle = '#4a8a44'; ctx.lineWidth = 2;
+      roundRect(W*.3, 20, W*.65, 70, 4); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.font = 'bold 11px Yu Gothic,sans-serif';
+      ctx.textAlign = 'center'; ctx.fillText('ようこそ！', W*.62, 62);
+      // 床
+      const floor = ctx.createLinearGradient(0,H*.78,0,H);
+      floor.addColorStop(0,'#d7a96d'); floor.addColorStop(1,'#c49055');
+      ctx.fillStyle = floor; ctx.fillRect(0, H*.78, W, H*.22);
+      // 床の線
+      ctx.strokeStyle = 'rgba(180,130,80,0.5)'; ctx.lineWidth = 1;
+      for(let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(0,H*.78+i*(H*.22/4)); ctx.lineTo(W,H*.78+i*(H*.22/4)); ctx.stroke(); }
+      break;
+
+    case 7: // 単色
+      ctx.fillStyle = BG_SOLID_COLORS[state.bg.solidIdx];
+      ctx.fillRect(0, 0, W, H);
+      break;
+  }
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+const SKIN = '#fcd5b0';
+const SKIN_DARK = '#e8a87c';
+
+function drawHuman(type) {
+  const cx = 140, W = 280;
+
+  drawShoes(type);
+  drawPants(type);
+  drawTop(type);
+
+  // 髪の毛（顔の後ろに回る部分）
+  drawHairBack(type, cx);
+
+  // ネック
+  ctx.fillStyle = SKIN;
+  ctx.fillRect(cx-13, 152, 26, 20);
+
+  // 顔
+  ctx.fillStyle = SKIN;
+  ctx.beginPath();
+  ctx.ellipse(cx, 110, 52, 48, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,160,160,0.35)';
+  ctx.beginPath(); ctx.ellipse(cx-32, 118, 14, 9, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+32, 118, 14, 9, 0, 0, Math.PI*2); ctx.fill();
+
+  ctx.fillStyle = SKIN;
+  ctx.beginPath(); ctx.ellipse(cx-50, 108, 9, 12, -0.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+50, 108, 9, 12, 0.2, 0, Math.PI*2); ctx.fill();
+
+  // 髪の毛（顔の前に出る部分）
+  drawHairFront(type, cx);
+
+  drawEyes(type, cx);
+  drawMouth(type, cx);
+  drawAccessory(cx);
+  drawArms(type, cx);
+  drawBag(cx);
+}
+
+function drawAnimal(type) {
+  const cx = 140;
+  const skinColor = type === 'cat' ? '#f5c8a0' : type === 'dog' ? '#bf7030' : '#f0d0e8';
+
+  drawShoes(type);
+  drawPants(type);
+  drawTop(type);
+
+  ctx.fillStyle = skinColor;
+  ctx.fillRect(cx-12, 150, 24, 18);
+
+  ctx.fillStyle = skinColor;
+  ctx.beginPath();
+  ctx.ellipse(cx, 108, 55, 55, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,140,140,0.3)';
+  ctx.beginPath(); ctx.ellipse(cx-34, 118, 14, 9, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+34, 118, 14, 9, 0, 0, Math.PI*2); ctx.fill();
+
+  drawAnimalEars(type, cx, skinColor);
+
+  drawEyes(type, cx);
+  drawAnimalFace(type, cx);
+  drawAccessory(cx);
+  drawArms(type, cx);
+  drawTail(type, cx);
+  drawBag(cx);
+}
+
+// ---- HAIR BACK (顔の後ろに回る部分、顔を描く前に描画) ----
+function drawHairBack(type, cx) {
+  const c = getColor('hair');
+  const idx = state.parts['hair'].index;
+  ctx.fillStyle = c;
+
+  if (type === 'girl') {
+    switch(idx) {
+      case 0: // ロング - 両サイドを顔の後ろに
+        ctx.fillRect(cx-56, 90, 16, 118);
+        ctx.beginPath(); ctx.ellipse(cx-48, 208, 8, 8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillRect(cx+40, 90, 16, 118);
+        ctx.beginPath(); ctx.ellipse(cx+48, 208, 8, 8, 0, 0, Math.PI*2); ctx.fill();
+        break;
+      case 1: // ツインテール - しっぽを後ろに
+        ctx.fillRect(cx-63, 90, 18, 80);
+        ctx.beginPath(); ctx.ellipse(cx-54, 170, 9, 9, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillRect(cx+45, 90, 18, 80);
+        ctx.beginPath(); ctx.ellipse(cx+54, 170, 9, 9, 0, 0, Math.PI*2); ctx.fill();
+        break;
+      case 3: // ポニーテール - テールを後ろに
+        ctx.fillRect(cx-8, 54, 16, 82);
+        ctx.beginPath(); ctx.ellipse(cx, 136, 12, 28, 0.2, 0, Math.PI*2); ctx.fill();
+        break;
+      case 4: // ウェーブロング - ウェーブを後ろに
+        for(let s=-1;s<=1;s+=2) {
+          for(let i=0;i<4;i++) {
+            ctx.beginPath();
+            ctx.ellipse(cx+s*49, 102+i*24, 11, 14, 0, 0, Math.PI*2);
+            ctx.fill();
+          }
+        }
+        break;
+      case 6: // ストレートミディアム - サイドを後ろに
+        ctx.fillRect(cx-55, 90, 16, 75);
+        ctx.beginPath(); ctx.ellipse(cx-47, 165, 8, 8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillRect(cx+39, 90, 16, 75);
+        ctx.beginPath(); ctx.ellipse(cx+47, 165, 8, 8, 0, 0, Math.PI*2); ctx.fill();
+        break;
+    }
+  } else {
+    // boy / animal - ロング系のみ後ろに
+    switch(idx) {
+      case 4: // ロングストレート
+        ctx.fillRect(cx-55, 90, 15, 78);
+        ctx.beginPath(); ctx.ellipse(cx-47, 168, 8, 8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillRect(cx+40, 90, 15, 78);
+        ctx.beginPath(); ctx.ellipse(cx+47, 168, 8, 8, 0, 0, Math.PI*2); ctx.fill();
+        break;
+      case 5: // ウェーブ
+        for(let s=-1;s<=1;s+=2) {
+          for(let i=0;i<3;i++) {
+            ctx.beginPath(); ctx.ellipse(cx+s*48, 100+i*22, 10, 13, 0, 0, Math.PI*2); ctx.fill();
+          }
+        }
+        break;
+    }
+  }
+}
+
+// ---- HAIR FRONT (顔の上に乗る部分、顔を描いた後に描画) ----
+function drawHairFront(type, cx) {
+  const c = getColor('hair');
+  const idx = state.parts['hair'].index;
+  ctx.fillStyle = c;
+
+  if (type === 'girl') {
+    switch(idx) {
+      case 0: // ロング - トップのみ
+        ctx.beginPath(); ctx.ellipse(cx, 92, 56, 54, 0, Math.PI, Math.PI*2); ctx.fill();
+        break;
+      case 1: // ツインテール - トップ + クリップ
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 52, 0, Math.PI, Math.PI*2); ctx.fill();
+        roundRect(cx-74, 88, 26, 18, 8); ctx.fill();
+        roundRect(cx+48, 88, 26, 18, 8); ctx.fill();
+        break;
+      case 2: // ショート
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 52, 0, Math.PI, Math.PI*2); ctx.fill();
+        ctx.fillRect(cx-55, 90, 18, 40);
+        ctx.fillRect(cx+37, 90, 18, 40);
+        break;
+      case 3: // ポニーテール - トップ + 短いサイド
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 52, 0, Math.PI, Math.PI*2); ctx.fill();
+        ctx.fillRect(cx-55, 90, 14, 28);
+        ctx.fillRect(cx+41, 90, 14, 28);
+        break;
+      case 4: // ウェーブロング - トップのみ
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 54, 0, Math.PI, Math.PI*2); ctx.fill();
+        break;
+      case 5: // おだんご
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 52, 0, Math.PI, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx-28, 64, 22, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx+28, 64, 22, 0, Math.PI*2); ctx.fill();
+        break;
+      case 6: // ストレートミディアム - トップのみ
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 54, 0, Math.PI, Math.PI*2); ctx.fill();
+        break;
+    }
+  } else {
+    switch(idx) {
+      case 0: // ショート刈り上げ
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 50, 0, Math.PI, Math.PI*2); ctx.fill();
+        ctx.fillRect(cx-55, 90, 12, 25);
+        ctx.fillRect(cx+43, 90, 12, 25);
+        break;
+      case 1: // マッシュ
+        ctx.beginPath(); ctx.ellipse(cx, 88, 58, 52, 0, Math.PI, Math.PI*2); ctx.fill();
+        ctx.fillRect(cx-56, 88, 16, 32);
+        ctx.fillRect(cx+40, 88, 16, 32);
+        ctx.fillRect(cx-40, 56, 80, 18);
+        break;
+      case 2: // サイドパート
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 52, 0, Math.PI, Math.PI*2); ctx.fill();
+        ctx.fillRect(cx-55, 90, 14, 28);
+        ctx.fillRect(cx+41, 90, 14, 28);
+        ctx.fillRect(cx-30, 56, 70, 20);
+        break;
+      case 3: // ツンツン
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 52, 0, Math.PI, Math.PI*2); ctx.fill();
+        for(let i=-2;i<=2;i++) {
+          ctx.beginPath();
+          ctx.moveTo(cx+i*18-6, 72);
+          ctx.lineTo(cx+i*18, 44+Math.abs(i)*6);
+          ctx.lineTo(cx+i*18+6, 72);
+          ctx.fill();
+        }
+        break;
+      case 4: // ロングストレート - トップのみ
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 54, 0, Math.PI, Math.PI*2); ctx.fill();
+        break;
+      case 5: // ウェーブ - トップのみ
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 52, 0, Math.PI, Math.PI*2); ctx.fill();
+        break;
+      case 6: // 帽子風
+        ctx.beginPath(); ctx.ellipse(cx, 90, 56, 52, 0, Math.PI, Math.PI*2); ctx.fill();
+        roundRect(cx-64, 78, 128, 12, 4); ctx.fill();
+        roundRect(cx-44, 42, 88, 40, 12); ctx.fill();
+        break;
+    }
+  }
+}
+
+// ---- EYES ----
+function drawEyes(type, cx) {
+  const c = getColor('eyes');
+  const idx = state.parts['eyes'].index;
+  const y = 108;
+
+  function drawOneEye(ex) {
+    switch(idx) {
+      case 0: // 丸目
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(ex, y, 13, 13, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = c;
+        ctx.beginPath(); ctx.ellipse(ex, y, 9, 9, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#111';
+        ctx.beginPath(); ctx.ellipse(ex+2, y-1, 5, 5, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(ex+4, y-3, 2.5, 2.5, 0, 0, Math.PI*2); ctx.fill();
+        break;
+      case 1: // キラキラ大目
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(ex, y, 15, 16, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = c;
+        ctx.beginPath(); ctx.ellipse(ex, y+1, 11, 12, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.ellipse(ex+2, y, 6, 7, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(ex+4, y-4, 3, 3, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(ex-3, y+2, 2, 2, 0, 0, Math.PI*2); ctx.fill();
+        break;
+      case 2: // 細目
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(ex, y, 13, 8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = c;
+        ctx.beginPath(); ctx.ellipse(ex, y, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#111';
+        ctx.beginPath(); ctx.ellipse(ex+1, y-1, 4, 4, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(ex+3, y-2, 2, 2, 0, 0, Math.PI*2); ctx.fill();
+        break;
+      case 3: // 三角目(クール)
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(ex-13, y+8);
+        ctx.lineTo(ex+13, y+8);
+        ctx.lineTo(ex+13, y-4);
+        ctx.lineTo(ex, y-10);
+        ctx.lineTo(ex-13, y-4);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = c;
+        ctx.beginPath(); ctx.ellipse(ex, y+2, 8, 8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#111';
+        ctx.beginPath(); ctx.ellipse(ex+2, y+1, 5, 5, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(ex+4, y-1, 2, 2, 0, 0, Math.PI*2); ctx.fill();
+        break;
+      case 4: // 点目
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.arc(ex, y, 7, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(ex+2, y-2, 2.5, 0, Math.PI*2); ctx.fill();
+        break;
+      case 5: // きりっと目
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(ex-13, y+6);
+        ctx.lineTo(ex+2, y-6);
+        ctx.lineTo(ex+13, y-1);
+        ctx.lineTo(ex+13, y+8);
+        ctx.lineTo(ex-13, y+8);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = c;
+        ctx.beginPath(); ctx.ellipse(ex+1, y+2, 7, 7, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#111';
+        ctx.beginPath(); ctx.ellipse(ex+2, y+2, 5, 5, 0, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(ex-13, y+6);
+        ctx.lineTo(ex+2, y-6);
+        ctx.lineTo(ex+13, y-1);
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(ex+5, y-1, 2.5, 0, Math.PI*2); ctx.fill();
+        break;
+    }
+  }
+  drawOneEye(cx-30);
+  drawOneEye(cx+30);
+}
+
+function drawStar(cx, cy, r1, r2, n, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for(let i=0;i<n*2;i++) {
+    const r = i%2===0 ? r2 : r1;
+    const a = (i*Math.PI/n) - Math.PI/2;
+    if(i===0) ctx.moveTo(cx+r*Math.cos(a), cy+r*Math.sin(a));
+    else ctx.lineTo(cx+r*Math.cos(a), cy+r*Math.sin(a));
+  }
+  ctx.closePath(); ctx.fill();
+}
+
+// ---- MOUTH ----
+function drawMouth(type, cx) {
+  const c = getColor('mouth');
+  const idx = state.parts['mouth'].index;
+  const y = 136;
+
+  ctx.strokeStyle = shadeColor(c, -40);
+  ctx.lineWidth = 2;
+
+  switch(idx) {
+    case 0: // 笑顔
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(cx, y, 18, 0, Math.PI);
+      ctx.fill();
+      ctx.fillStyle = '#e05050';
+      ctx.fillRect(cx-18, y, 36, 3);
+      break;
+    case 1: // 小さい笑顔
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(cx, y+2, 11, 0, Math.PI); ctx.fill();
+      break;
+    case 2: // ニヤリ
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(cx-20, y-2);
+      ctx.quadraticCurveTo(cx, y+16, cx+20, y-2);
+      ctx.lineTo(cx+20, y+4);
+      ctx.quadraticCurveTo(cx, y+20, cx-20, y+4);
+      ctx.closePath(); ctx.fill();
+      break;
+    case 3: // キャット口
+      ctx.strokeStyle = c;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx, y+8);
+      ctx.moveTo(cx, y+8); ctx.lineTo(cx-14, y+14);
+      ctx.moveTo(cx, y+8); ctx.lineTo(cx+14, y+14);
+      ctx.stroke();
+      break;
+    case 4: // びっくり口
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.ellipse(cx, y+6, 14, 16, 0, 0, Math.PI*2); ctx.fill();
+      break;
+  }
+}
+
+// ---- TOP / 服 ----
+function drawTop(type) {
+  const c = getColor('top');
+  const idx = state.parts['top'].index;
+  const cx = 140;
+
+  ctx.fillStyle = c;
+
+  switch(idx) {
+    case 0: // シンプルTシャツ
+      roundRect(cx-50, 168, 100, 70, 10); ctx.fill();
+      // sleeves
+      ctx.beginPath(); ctx.ellipse(cx-58, 188, 16, 24, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+58, 188, 16, 24, 0.3, 0, Math.PI*2); ctx.fill();
+      break;
+    case 1: // フーディー
+      roundRect(cx-52, 165, 104, 75, 12); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx-60, 188, 17, 26, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+60, 188, 17, 26, 0.3, 0, Math.PI*2); ctx.fill();
+      // hood
+      ctx.fillStyle = shadeColor(c, -20);
+      ctx.beginPath();
+      ctx.moveTo(cx-30, 170); ctx.quadraticCurveTo(cx, 148, cx+30, 170);
+      ctx.lineTo(cx+26, 170); ctx.quadraticCurveTo(cx, 154, cx-26, 170);
+      ctx.closePath(); ctx.fill();
+      break;
+    case 2: // ドレス
+      ctx.beginPath();
+      ctx.moveTo(cx-40, 168); ctx.lineTo(cx+40, 168);
+      ctx.lineTo(cx+64, 238); ctx.lineTo(cx-64, 238);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx-48, 186, 14, 22, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+48, 186, 14, 22, 0.3, 0, Math.PI*2); ctx.fill();
+      // ribbon
+      ctx.fillStyle = shadeColor(c, 30);
+      ctx.beginPath();
+      ctx.moveTo(cx-10, 172); ctx.lineTo(cx-24, 160); ctx.lineTo(cx, 170); ctx.lineTo(cx+24, 160); ctx.lineTo(cx+10, 172); ctx.lineTo(cx, 164);
+      ctx.closePath(); ctx.fill();
+      break;
+    case 3: // ジャケット
+      roundRect(cx-52, 165, 104, 75, 10); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx-60, 188, 17, 26, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+60, 188, 17, 26, 0.3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = shadeColor(c, -25);
+      ctx.fillRect(cx-8, 168, 16, 72);
+      ctx.fillRect(cx-52, 165, 24, 40);
+      ctx.fillRect(cx+28, 165, 24, 40);
+      break;
+    case 4: // ストライプシャツ
+      roundRect(cx-50, 168, 100, 70, 10); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx-58, 188, 16, 24, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+58, 188, 16, 24, 0.3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = shadeColor(c, -30);
+      for(let i=0;i<5;i++) {
+        ctx.fillRect(cx-50, 174+i*14, 100, 5);
+      }
+      break;
+    case 5: // セーラー服
+      ctx.fillStyle = '#3050b0';
+      roundRect(cx-52, 165, 104, 75, 10); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx-60, 188, 17, 26, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+60, 188, 17, 26, 0.3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(cx-52, 200, 104, 6);
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(cx-30, 168); ctx.lineTo(cx, 200); ctx.lineTo(cx+30, 168);
+      ctx.closePath(); ctx.fill();
+      break;
+    case 6: // タンクトップ
+      roundRect(cx-38, 168, 76, 70, 10); ctx.fill();
+      ctx.fillRect(cx-50, 168, 14, 16);
+      ctx.fillRect(cx+36, 168, 14, 16);
+      break;
+  }
+}
+
+// ---- PANTS ----
+function drawPants(type) {
+  const c = getColor('bottom');
+  const idx = state.parts['bottom'].index;
+  const cx = 140;
+
+  ctx.fillStyle = c;
+  switch(idx) {
+    case 0: // ジーンズ
+      roundRect(cx-48, 232, 44, 72, 8); ctx.fill();
+      roundRect(cx+4, 232, 44, 72, 8); ctx.fill();
+      ctx.fillStyle = shadeColor(c, 20);
+      ctx.fillRect(cx-48, 232, 96, 6);
+      ctx.fillRect(cx-4, 232, 8, 72);
+      break;
+    case 1: // ショートパンツ
+      roundRect(cx-48, 232, 44, 44, 8); ctx.fill();
+      roundRect(cx+4, 232, 44, 44, 8); ctx.fill();
+      ctx.fillStyle = shadeColor(c, 20);
+      ctx.fillRect(cx-48, 232, 96, 5);
+      ctx.fillRect(cx-4, 232, 8, 44);
+      ctx.fillStyle = SKIN;
+      ctx.fillRect(cx-45, 276, 38, 30);
+      ctx.fillRect(cx+7, 276, 38, 30);
+      break;
+    case 2: // スカート
+      ctx.beginPath();
+      ctx.moveTo(cx-44, 234); ctx.lineTo(cx+44, 234);
+      ctx.lineTo(cx+60, 300); ctx.lineTo(cx-60, 300);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = shadeColor(c, 15);
+      ctx.fillRect(cx-44, 234, 88, 6);
+      break;
+    case 3: // カーゴパンツ
+      roundRect(cx-48, 232, 44, 72, 8); ctx.fill();
+      roundRect(cx+4, 232, 44, 72, 8); ctx.fill();
+      ctx.fillStyle = shadeColor(c, -20);
+      roundRect(cx-46, 254, 20, 18, 4); ctx.fill();
+      roundRect(cx+26, 254, 20, 18, 4); ctx.fill();
+      break;
+    case 4: // レギンス
+      roundRect(cx-42, 232, 38, 74, 6); ctx.fill();
+      roundRect(cx+4, 232, 38, 74, 6); ctx.fill();
+      ctx.strokeStyle = shadeColor(c, 30);
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(cx-42, 260); ctx.lineTo(cx-4, 260); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+4, 260); ctx.lineTo(cx+42, 260); ctx.stroke();
+      break;
+  }
+}
+
+// ---- SHOES ----
+function drawShoes(type) {
+  const c = getColor('shoes');
+  const idx = state.parts['shoes'].index;
+  const cx = 140;
+
+  ctx.fillStyle = c;
+  const sole = shadeColor(c, -40);
+
+  switch(idx) {
+    case 0: // スニーカー
+      roundRect(cx-56, 296, 46, 22, 6); ctx.fill();
+      roundRect(cx+10, 296, 46, 22, 6); ctx.fill();
+      ctx.fillStyle = sole;
+      roundRect(cx-58, 311, 50, 10, 4); ctx.fill();
+      roundRect(cx+8, 311, 50, 10, 4); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(cx-52, 300, 36, 3);
+      ctx.fillRect(cx+16, 300, 36, 3);
+      break;
+    case 1: // ブーツ
+      roundRect(cx-52, 278, 38, 42, 6); ctx.fill();
+      roundRect(cx+14, 278, 38, 42, 6); ctx.fill();
+      ctx.fillStyle = sole;
+      roundRect(cx-54, 312, 42, 10, 4); ctx.fill();
+      roundRect(cx+12, 312, 42, 10, 4); ctx.fill();
+      ctx.fillStyle = shadeColor(c, 20);
+      ctx.fillRect(cx-50, 284, 32, 3);
+      ctx.fillRect(cx+18, 284, 32, 3);
+      break;
+    case 2: // ヒール
+      roundRect(cx-50, 295, 40, 18, 5); ctx.fill();
+      roundRect(cx+10, 295, 40, 18, 5); ctx.fill();
+      ctx.fillStyle = sole;
+      roundRect(cx-51, 308, 20, 12, 3); ctx.fill();
+      roundRect(cx+31, 308, 20, 12, 3); ctx.fill();
+      ctx.fillRect(cx-43, 308, 4, 14);
+      ctx.fillRect(cx+39, 308, 4, 14);
+      break;
+    case 3: // サンダル
+      ctx.fillStyle = c;
+      roundRect(cx-54, 308, 46, 12, 4); ctx.fill();
+      roundRect(cx+8, 308, 46, 12, 4); ctx.fill();
+      ctx.fillStyle = sole;
+      roundRect(cx-56, 314, 50, 8, 3); ctx.fill();
+      roundRect(cx+6, 314, 50, 8, 3); ctx.fill();
+      ctx.strokeStyle = c; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(cx-44, 308); ctx.lineTo(cx-28, 295); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx-20, 308); ctx.lineTo(cx-24, 295); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+36, 308); ctx.lineTo(cx+52, 295); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+20, 308); ctx.lineTo(cx+24, 295); ctx.stroke();
+      break;
+    case 4: // ローファー
+      roundRect(cx-52, 298, 44, 20, 7); ctx.fill();
+      roundRect(cx+8, 298, 44, 20, 7); ctx.fill();
+      ctx.fillStyle = sole;
+      roundRect(cx-54, 312, 48, 8, 3); ctx.fill();
+      roundRect(cx+6, 312, 48, 8, 3); ctx.fill();
+      ctx.fillStyle = shadeColor(c, 30);
+      roundRect(cx-44, 299, 28, 8, 3); ctx.fill();
+      roundRect(cx+16, 299, 28, 8, 3); ctx.fill();
+      break;
+  }
+}
+
+// ---- ARMS ----
+function drawArms(type, cx) {
+  const topColor = getColor('top');
+  const idx = state.parts['top'].index;
+
+  // Sleeve-less tops show skin
+  const sleeveColor = (idx === 6) ? SKIN : topColor;
+
+  ctx.fillStyle = sleeveColor;
+  // left arm
+  ctx.beginPath();
+  ctx.moveTo(cx-50, 172); ctx.lineTo(cx-72, 172);
+  ctx.lineTo(cx-80, 230); ctx.lineTo(cx-58, 230);
+  ctx.closePath(); ctx.fill();
+  // right arm
+  ctx.beginPath();
+  ctx.moveTo(cx+50, 172); ctx.lineTo(cx+72, 172);
+  ctx.lineTo(cx+80, 230); ctx.lineTo(cx+58, 230);
+  ctx.closePath(); ctx.fill();
+
+  // hands
+  ctx.fillStyle = SKIN;
+  ctx.beginPath(); ctx.ellipse(cx-69, 234, 12, 10, 0.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+69, 234, 12, 10, -0.3, 0, Math.PI*2); ctx.fill();
+}
+
+// ---- ANIMAL EARS ----
+function drawAnimalEars(type, cx, skin) {
+  ctx.fillStyle = skin;
+  if (type === 'cat') {
+    // 三角耳
+    ctx.beginPath(); ctx.moveTo(cx-50, 70); ctx.lineTo(cx-68, 28); ctx.lineTo(cx-28, 58); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx+50, 70); ctx.lineTo(cx+68, 28); ctx.lineTo(cx+28, 58); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffb0c0';
+    ctx.beginPath(); ctx.moveTo(cx-50, 66); ctx.lineTo(cx-64, 36); ctx.lineTo(cx-30, 60); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx+50, 66); ctx.lineTo(cx+64, 36); ctx.lineTo(cx+30, 60); ctx.closePath(); ctx.fill();
+  } else if (type === 'dog') {
+    // ダックスフンドの長い垂れ耳
+    ctx.beginPath(); ctx.ellipse(cx-60, 120, 20, 50, -0.15, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+60, 120, 20, 50, 0.15, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = shadeColor(skin, -25);
+    ctx.beginPath(); ctx.ellipse(cx-60, 124, 12, 40, -0.15, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+60, 124, 12, 40, 0.15, 0, Math.PI*2); ctx.fill();
+  } else if (type === 'rabbit') {
+    // 長い耳
+    ctx.beginPath(); ctx.ellipse(cx-30, 46, 13, 44, -0.15, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+30, 46, 13, 44, 0.15, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffb0c0';
+    ctx.beginPath(); ctx.ellipse(cx-30, 46, 7, 36, -0.15, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+30, 46, 7, 36, 0.15, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+// ---- ANIMAL FACE ----
+function drawAnimalFace(type, cx) {
+  const y = 126;
+
+  if (type === 'cat') {
+    // 鼻
+    ctx.fillStyle = '#ff9999';
+    ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx-6, y+6); ctx.lineTo(cx+6, y+6); ctx.closePath(); ctx.fill();
+    // ひげ
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+    for(let s=-1;s<=1;s+=2) {
+      ctx.beginPath(); ctx.moveTo(cx+s*8, y+10); ctx.lineTo(cx+s*36, y+6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+s*8, y+14); ctx.lineTo(cx+s*36, y+14); ctx.stroke();
+    }
+    // 口
+    ctx.strokeStyle = '#c06080'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, y+6); ctx.lineTo(cx, y+14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, y+14); ctx.quadraticCurveTo(cx-10, y+20, cx-16, y+16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, y+14); ctx.quadraticCurveTo(cx+10, y+20, cx+16, y+16); ctx.stroke();
+  } else if (type === 'dog') {
+    // ダックスフンドの長いマズル
+    ctx.fillStyle = shadeColor('#bf7030', -15);
+    ctx.beginPath(); ctx.ellipse(cx, y+14, 22, 16, 0, 0, Math.PI*2); ctx.fill();
+    // 鼻（横長・大きめ）
+    ctx.fillStyle = '#2a1a0a';
+    ctx.beginPath(); ctx.ellipse(cx, y+5, 13, 9, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#554433';
+    ctx.beginPath(); ctx.ellipse(cx-4, y+3, 4, 3, 0, 0, Math.PI*2); ctx.fill();
+    // 口（たれた感じ）
+    ctx.strokeStyle = '#7a3a20'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(cx, y+14); ctx.lineTo(cx, y+22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, y+22); ctx.quadraticCurveTo(cx-14, y+30, cx-20, y+24); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, y+22); ctx.quadraticCurveTo(cx+14, y+30, cx+20, y+24); ctx.stroke();
+  } else if (type === 'rabbit') {
+    // 鼻
+    ctx.fillStyle = '#ff99bb';
+    ctx.beginPath(); ctx.ellipse(cx, y+2, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+    // ひげ
+    ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1.2;
+    for(let s=-1;s<=1;s+=2) {
+      ctx.beginPath(); ctx.moveTo(cx+s*10, y+8); ctx.lineTo(cx+s*34, y+2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+s*10, y+12); ctx.lineTo(cx+s*34, y+12); ctx.stroke();
+    }
+    // 口
+    ctx.strokeStyle = '#e080a0'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, y+8); ctx.lineTo(cx, y+16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, y+16); ctx.quadraticCurveTo(cx-8, y+22, cx-14, y+18); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, y+16); ctx.quadraticCurveTo(cx+8, y+22, cx+14, y+18); ctx.stroke();
+  }
+}
+
+// ---- TAIL ----
+function drawTail(type, cx) {
+  const skinColor = type === 'cat' ? '#f5c8a0' : type === 'dog' ? '#bf7030' : '#f0d0e8';
+  ctx.fillStyle = skinColor;
+  ctx.strokeStyle = shadeColor(skinColor, -20);
+  ctx.lineWidth = 3;
+
+  if (type === 'cat') {
+    ctx.beginPath();
+    ctx.moveTo(cx+50, 230);
+    ctx.bezierCurveTo(cx+90, 220, cx+100, 190, cx+80, 175);
+    ctx.bezierCurveTo(cx+70, 170, cx+68, 178, cx+72, 185);
+    ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx+80, 174, 10, 8, -0.5, 0, Math.PI*2); ctx.fill();
+  } else if (type === 'dog') {
+    // ダックスフンドのしっぽ（上向きに立つ）
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(cx+48, 228);
+    ctx.bezierCurveTo(cx+70, 220, cx+82, 200, cx+72, 180);
+    ctx.stroke();
+    ctx.lineWidth = 3;
+  } else if (type === 'rabbit') {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.ellipse(cx+52, 238, 10, 12, 0.3, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+// ---- ACCESSORY ----
+function drawAccessory(cx) {
+  const c = getColor('accessory');
+  const idx = state.parts['accessory'].index;
+  if (idx === 0) return;
+
+  switch(idx) {
+    case 1: { // リボン（右寄り）
+      const rx = cx + 26;
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(rx-4, 66); ctx.lineTo(rx-26, 52); ctx.lineTo(rx-22, 70); ctx.lineTo(rx-26, 82); ctx.lineTo(rx-4, 70);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(rx+4, 66); ctx.lineTo(rx+26, 52); ctx.lineTo(rx+22, 70); ctx.lineTo(rx+26, 82); ctx.lineTo(rx+4, 70);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = shadeColor(c, 20);
+      ctx.beginPath(); ctx.ellipse(rx, 68, 7, 6, 0, 0, Math.PI*2); ctx.fill();
+      break;
+    }
+    case 2: { // 花かんむり
+      const fc = ['#ff6699','#ff9944','#ffdd44','#44cc88','#66aaff'];
+      for(let i=0;i<9;i++) {
+        const a = (i/9)*Math.PI*2 - Math.PI/2;
+        const fx = cx + 50*Math.cos(a);
+        const fy = 70 + 22*Math.sin(a);
+        ctx.fillStyle = fc[i%fc.length];
+        ctx.beginPath(); ctx.ellipse(fx, fy, 9, 8, a, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffffaa';
+        ctx.beginPath(); ctx.ellipse(fx, fy, 4, 4, 0, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.strokeStyle = '#55aa55'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(cx, 70, 50, Math.PI+0.25, Math.PI*2-0.25); ctx.stroke();
+      break;
+    }
+    case 3: { // メガネ
+      ctx.strokeStyle = c; ctx.lineWidth = 3;
+      ctx.fillStyle = 'rgba(180,220,255,0.22)';
+      roundRect(cx-47, 100, 30, 22, 6); ctx.fill();
+      roundRect(cx-47, 100, 30, 22, 6); ctx.stroke();
+      roundRect(cx+17, 100, 30, 22, 6); ctx.fill();
+      roundRect(cx+17, 100, 30, 22, 6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx-17, 111); ctx.lineTo(cx+17, 111); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx-47, 107); ctx.lineTo(cx-60, 103); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+47, 107); ctx.lineTo(cx+60, 103); ctx.stroke();
+      break;
+    }
+    case 4: { // ニット帽
+      ctx.fillStyle = c;
+      roundRect(cx-56, 38, 112, 48, 10); ctx.fill();
+      ctx.fillStyle = shadeColor(c, -35);
+      for(let i=0;i<3;i++) ctx.fillRect(cx-56, 46+i*13, 112, 6);
+      ctx.fillStyle = shadeColor(c, 25);
+      ctx.beginPath(); ctx.arc(cx, 38, 15, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = shadeColor(c, -20);
+      ctx.beginPath(); ctx.arc(cx, 38, 7, 0, Math.PI*2); ctx.fill();
+      break;
+    }
+    case 5: { // 王冠
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(cx-48, 76); ctx.lineTo(cx-48, 48);
+      ctx.lineTo(cx-26, 64); ctx.lineTo(cx, 42);
+      ctx.lineTo(cx+26, 64); ctx.lineTo(cx+48, 48);
+      ctx.lineTo(cx+48, 76);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = shadeColor(c, -40); ctx.lineWidth = 2; ctx.stroke();
+      [['#ff4444',cx-30,58],['#ffd700',cx,46],['#4444ff',cx+30,58]].forEach(([gc,gx,gy]) => {
+        ctx.fillStyle = gc;
+        ctx.beginPath(); ctx.ellipse(gx, gy, 5, 5, 0, 0, Math.PI*2); ctx.fill();
+      });
+      break;
+    }
+  }
+}
+
+// ---- BAG ----
+function drawBag(cx) {
+  const c = getColor('bag');
+  const idx = state.parts['bag'].index;
+  if (idx === 0) return;
+
+  const dark = shadeColor(c, -35);
+
+  switch(idx) {
+    case 1: { // リュックサック
+      ctx.fillStyle = c;
+      roundRect(cx+40, 168, 38, 58, 9); ctx.fill();
+      ctx.fillStyle = dark;
+      ctx.fillRect(cx+44, 176, 30, 3); ctx.fillRect(cx+44, 184, 30, 3);
+      ctx.strokeStyle = dark; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(cx+28, 172); ctx.quadraticCurveTo(cx+40, 176, cx+40, 220); ctx.stroke();
+      ctx.fillStyle = shadeColor(c, -20);
+      roundRect(cx+46, 198, 24, 20, 5); ctx.fill();
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.ellipse(cx+58, 208, 4, 3, 0, 0, Math.PI*2); ctx.fill();
+      break;
+    }
+    case 2: { // ショルダーバッグ
+      ctx.fillStyle = c;
+      roundRect(cx+60, 210, 38, 32, 8); ctx.fill();
+      ctx.fillStyle = dark; ctx.fillRect(cx+64, 210, 30, 3);
+      ctx.strokeStyle = dark; ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(cx+60, 214); ctx.quadraticCurveTo(cx+28, 196, cx+18, 172); ctx.stroke();
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.ellipse(cx+79, 214, 4, 3, 0, 0, Math.PI*2); ctx.fill();
+      break;
+    }
+    case 3: { // トートバッグ
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(cx+52, 220); ctx.lineTo(cx+48, 260);
+      ctx.lineTo(cx+98, 260); ctx.lineTo(cx+94, 220);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = dark; ctx.fillRect(cx+48, 218, 50, 5);
+      ctx.strokeStyle = dark; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(cx+58, 220); ctx.quadraticCurveTo(cx+56, 202, cx+68, 202); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+84, 220); ctx.quadraticCurveTo(cx+86, 202, cx+74, 202); ctx.stroke();
+      ctx.fillStyle = shadeColor(c, 18);
+      roundRect(cx+56, 232, 32, 18, 4); ctx.fill();
+      break;
+    }
+  }
+}
+
+// ---- HELPERS ----
+function shadeColor(hex, amount) {
+  hex = hex.replace(/^#/, '');
+  if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  let r = parseInt(hex.substring(0,2),16);
+  let g = parseInt(hex.substring(2,4),16);
+  let b = parseInt(hex.substring(4,6),16);
+  r = Math.max(0, Math.min(255, r+amount));
+  g = Math.max(0, Math.min(255, g+amount));
+  b = Math.max(0, Math.min(255, b+amount));
+  return `rgb(${r},${g},${b})`;
+}
+
+function saveAvatar() {
+  const link = document.createElement('a');
+  link.download = `avatar_${Date.now()}.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+}
+
+function drawName() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) return;
+
+  const W = canvas.width;
+  const H = canvas.height;
+  const y = H - 18;
+
+  // プレート背景
+  const plateW = Math.min(W - 20, name.length * 22 + 48);
+  const plateX = (W - plateW) / 2;
+  const plateY = y - 22;
+
+  ctx.fillStyle = 'rgba(30,10,60,0.72)';
+  roundRect(plateX, plateY, plateW, 32, 10);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(196,77,255,0.7)';
+  ctx.lineWidth = 1.5;
+  roundRect(plateX, plateY, plateW, 32, 10);
+  ctx.stroke();
+
+  // テキスト
+  ctx.font = 'bold 18px "Yu Gothic","Segoe UI",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // グロー
+  ctx.shadowColor = '#c44dff';
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = '#fff';
+  ctx.fillText(name, W / 2, plateY + 16);
+  ctx.shadowBlur = 0;
+}
+
+// ===== INIT =====
+buildBgUI();
+buildPartsUI();
+drawAvatar();
+document.getElementById('nameInput').addEventListener('input', drawAvatar);
+</script>
+</body>
+</html>
