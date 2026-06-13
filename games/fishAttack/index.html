@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>魚バトル</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html,body { overflow:hidden; width:100%; height:100%; touch-action:none; }
+        body { background:#03045e; font-family:Arial,sans-serif; }
+        canvas { display:block; cursor:none; }
+
+        #hud {
+            position:fixed; top:12px; left:0; right:0;
+            display:flex; justify-content:center; gap:14px;
+            pointer-events:none;
+        }
+        .hud-panel {
+            background:rgba(0,0,0,0.5);
+            border:1px solid rgba(255,255,255,0.15);
+            border-radius:14px; padding:5px 18px;
+            text-align:center; color:#fff;
+        }
+        .hud-label { font-size:0.72em; opacity:0.7; letter-spacing:1px; }
+        .hud-val   { font-size:1.8em; font-weight:bold; line-height:1.1; }
+
+        /* ── スタート ── */
+        #start-screen {
+            position:fixed; inset:0;
+            background:rgba(2,10,40,0.93);
+            display:flex; align-items:center; justify-content:center;
+            z-index:20; color:#fff;
+        }
+        #start-screen.hidden { display:none; }
+        .start-box { text-align:center; max-width:360px; padding:20px; }
+        .start-box h1 { font-size:2.5em; margin-bottom:12px; }
+        .start-box p  { font-size:0.95em; line-height:1.85; opacity:0.88; margin-bottom:24px; }
+        .start-btn {
+            padding:14px 44px; font-size:1.1em; font-weight:bold;
+            background:#4cc9f0; color:#03045e; border:none;
+            border-radius:30px; cursor:pointer; letter-spacing:2px;
+        }
+
+        /* ── ゲームオーバー ── */
+        #overlay {
+            position:fixed; inset:0; background:rgba(0,0,0,0);
+            display:flex; align-items:center; justify-content:center;
+            pointer-events:none; transition:background .5s; z-index:15;
+        }
+        #overlay.active { background:rgba(0,0,0,0.72); pointer-events:all; }
+        #go-box {
+            background:linear-gradient(135deg,#023e8a,#03045e);
+            border:2px solid #4cc9f0; border-radius:22px;
+            padding:36px 52px; text-align:center; color:#fff;
+            transform:scale(0); transition:transform .45s cubic-bezier(.22,1,.36,1);
+            box-shadow:0 0 50px rgba(76,201,240,.3);
+        }
+        #overlay.active #go-box { transform:scale(1); }
+        #go-box h2 { font-size:2.2em; color:#f87171; margin-bottom:10px; }
+        #go-box .go-scores { font-size:1.2em; line-height:2; margin-bottom:20px; }
+        #restart-btn {
+            padding:11px 34px; font-size:1em; font-weight:bold;
+            background:#4cc9f0; color:#03045e; border:none;
+            border-radius:25px; cursor:pointer; letter-spacing:2px;
+        }
+
+        /* ── スマホ向け ── */
+        @media (max-width:480px) {
+            .hud-label { font-size:0.6em; }
+            .hud-val   { font-size:1.4em; }
+            .hud-panel { padding:4px 12px; border-radius:10px; }
+            .start-box h1 { font-size:1.9em; }
+            .start-box p  { font-size:0.88em; }
+            #go-box { padding:28px 30px; }
+            #go-box h2 { font-size:1.7em; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="hud">
+    <div class="hud-panel">
+        <div class="hud-label">スコア</div>
+        <div class="hud-val" id="hud-score">2</div>
+    </div>
+    <div class="hud-panel">
+        <div class="hud-label">ハイスコア</div>
+        <div class="hud-val" id="hud-hi">2</div>
+    </div>
+</div>
+
+<div id="start-screen">
+    <div class="start-box">
+        <h1>🐟 魚バトル</h1>
+        <p>
+            <span style="color:#4ade80">数字が小さい魚</span>を食べると<br>その数字ぶんスコアが増えるよ！<br>
+            <span style="color:#f87171">数字が大きい魚</span>には食べられてしまう！<br><br>
+            🖱️ マウス追従 ／ 📱 左下ジョイスティック
+        </p>
+        <button class="start-btn" onclick="startGame()">スタート！</button>
+    </div>
+</div>
+
+<div id="overlay">
+    <div id="go-box">
+        <h2>💀 食べられた！</h2>
+        <div class="go-scores" id="go-scores"></div>
+        <button id="restart-btn" onclick="startGame()">もう一度！</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+
+let W, H;
+function resize(){
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    if(isMobile) resetJoyBase();
+}
+window.addEventListener('resize', resize);
+
+// ── モバイル判定 ──
+const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+// ── ユーティリティ ──
+const rng    = (a,b) => Math.random()*(b-a)+a;
+const rngInt = (a,b) => Math.floor(rng(a,b+1));
+const clamp  = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
+const dist2  = (ax,ay,bx,by) => Math.hypot(ax-bx,ay-by);
+function lerpAngle(a,b,t){
+    const d=((b-a)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI;
+    return a+d*t;
+}
+function fishSize(n){ return clamp(16+n*2.6, 18, 130); }
+
+// ── サウンド ──
+let _ac=null;
+function getAC(){
+    if(!_ac) try{ _ac=new(window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+    return _ac;
+}
+function playKirari(){
+    const ac=getAC(); if(!ac) return;
+    const t=ac.currentTime;
+    [[2200,2900,0],[3400,4100,0.06]].forEach(([f1,f2,d])=>{
+        const o=ac.createOscillator(),g=ac.createGain();
+        o.connect(g); g.connect(ac.destination); o.type='sine';
+        o.frequency.setValueAtTime(f1,t+d);
+        o.frequency.exponentialRampToValueAtTime(f2,t+d+0.07);
+        g.gain.setValueAtTime(0,t+d);
+        g.gain.linearRampToValueAtTime(0.18,t+d+0.008);
+        g.gain.exponentialRampToValueAtTime(0.001,t+d+0.22);
+        o.start(t+d); o.stop(t+d+0.25);
+    });
+}
+function playMilestone(){
+    const ac=getAC(); if(!ac) return;
+    const t=ac.currentTime;
+    [523,659,784,1047,1319,1568].forEach((freq,i)=>{
+        const o=ac.createOscillator(),g=ac.createGain();
+        o.connect(g); g.connect(ac.destination); o.type='sine'; o.frequency.value=freq;
+        const st=t+i*0.08;
+        g.gain.setValueAtTime(0,st);
+        g.gain.linearRampToValueAtTime(0.18,st+0.015);
+        g.gain.exponentialRampToValueAtTime(0.001,st+0.5);
+        o.start(st); o.stop(st+0.55);
+    });
+}
+
+// ── ジョイスティック ──
+const JOY_R  = 60;   // ベース半径
+const JOY_TH = 26;   // サム半径
+const JOY_MAX= 48;   // サムの最大変位
+
+let joy = { active:false, bx:0, by:0, tx:0, ty:0, dx:0, dy:0, mag:0, id:null };
+
+function resetJoyBase(){
+    joy.bx = JOY_R + 18;
+    joy.by = H - JOY_R - 18;
+    if(!joy.active){ joy.tx = joy.bx; joy.ty = joy.by; }
+}
+
+function updateJoy(cx, cy){
+    const dx=cx-joy.bx, dy=cy-joy.by;
+    const d=Math.hypot(dx,dy);
+    joy.mag = Math.min(1, d/JOY_MAX);
+    if(d>0){
+        joy.dx=dx/d; joy.dy=dy/d;
+        const cd=Math.min(d,JOY_MAX);
+        joy.tx=joy.bx+joy.dx*cd;
+        joy.ty=joy.by+joy.dy*cd;
+    } else {
+        joy.dx=0; joy.dy=0; joy.tx=joy.bx; joy.ty=joy.by;
+    }
+}
+
+// ── タッチイベント ──
+canvas.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    const ac=getAC(); if(ac&&ac.state==='suspended') ac.resume();
+    for(const t of e.changedTouches){
+        if(joy.id===null){
+            const d=dist2(t.clientX,t.clientY,joy.bx,joy.by);
+            if(d < JOY_R*2.2){          // 判定を広めに
+                joy.id=t.identifier; joy.active=true;
+                updateJoy(t.clientX,t.clientY);
+            }
+        }
+    }
+},{passive:false});
+
+canvas.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    for(const t of e.changedTouches){
+        if(t.identifier===joy.id) updateJoy(t.clientX,t.clientY);
+    }
+},{passive:false});
+
+canvas.addEventListener('touchend', e=>{
+    for(const t of e.changedTouches){
+        if(t.identifier===joy.id){
+            joy.active=false; joy.id=null;
+            joy.dx=0; joy.dy=0; joy.mag=0;
+            joy.tx=joy.bx; joy.ty=joy.by;
+        }
+    }
+});
+canvas.addEventListener('touchcancel', e=>{
+    for(const t of e.changedTouches){
+        if(t.identifier===joy.id){
+            joy.active=false; joy.id=null;
+            joy.dx=0; joy.dy=0; joy.mag=0;
+            joy.tx=joy.bx; joy.ty=joy.by;
+        }
+    }
+});
+
+// ── マウスイベント（デスクトップ） ──
+let mouseX=-9999, mouseY=-9999;
+if(!isMobile){
+    canvas.addEventListener('mousemove',e=>{ mouseX=e.clientX; mouseY=e.clientY; });
+}
+
+// ── 虹エフェクト ──
+const RB_COLORS=['#ff2222','#ff8800','#ffff00','#22ee44','#2288ff','#cc22ff'];
+let rainbowBurst=null, lastDecade=0;
+
+function triggerRainbow(x,y){
+    rainbowBurst={phase:0,x,y};
+    RB_COLORS.forEach(color=>{
+        for(let i=0;i<14;i++){
+            const a=rng(0,Math.PI*2),s=rng(4,14);
+            particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+                life:1,decay:rng(0.008,0.022),size:rng(5,15),color});
+        }
+    });
+    playMilestone();
+}
+
+// ── 色 ──
+const COL_PLAYER='#4cc9f0', COL_PLAYER_DARK='#0077b6';
+function npcColor(n,pn){
+    if(n<pn) return {body:'#4ade80',dark:'#15803d'};
+    if(n>pn) return {body:'#f87171',dark:'#b91c1c'};
+    return {body:'#fbbf24',dark:'#b45309'};
+}
+
+// ── 状態 ──
+let player,npcs,particles,popups,gameActive;
+let highScore=parseInt(localStorage.getItem('fishHS')||'2');
+document.getElementById('hud-hi').textContent=highScore;
+
+// ── NPC生成 ──
+function createNPC(onScreen){
+    const pn=player?player.number:2;
+    let n; const r=Math.random();
+    if     (r<0.55) n=Math.max(1,rngInt(1,Math.max(1,pn-1)));
+    else if(r<0.82) n=rngInt(pn+1,pn+Math.max(3,Math.ceil(pn*0.9)));
+    else            n=pn;
+    n=Math.max(1,n);
+    let x,y;
+    if(onScreen){
+        do{ x=rng(80,W-80); y=rng(80,H-80); }
+        while(player&&dist2(x,y,player.x,player.y)<160);
+    } else {
+        const side=rngInt(0,3);
+        if(side===0){x=rng(0,W);y=-70;}
+        else if(side===1){x=W+70;y=rng(0,H);}
+        else if(side===2){x=rng(0,W);y=H+70;}
+        else{x=-70;y=rng(0,H);}
+    }
+    const ang=rng(0,Math.PI*2),spd=rng(0.7,1.9);
+    return{x,y,n,alive:true,
+        vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+        angle:ang,swimPhase:rng(0,Math.PI*2),size:fishSize(n),dirTimer:rng(80,220)};
+}
+
+// ── パーティクル ──
+function spawnParticles(x,y,color,count){
+    for(let i=0;i<count;i++){
+        const a=rng(0,Math.PI*2),s=rng(1.5,5.5);
+        particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+            life:1,decay:rng(0.025,0.06),size:rng(3,9),color});
+    }
+}
+function spawnPopup(x,y,text){
+    popups.push({x,y,text,vy:-1.8,life:1,decay:0.018});
+}
+
+// ── 魚描画 ──
+function drawFishBody(x,y,size,angle,bodyColor,darkColor,swimPhase){
+    const wiggle=Math.sin(swimPhase*2.8)*0.26;
+    const fr=Math.cos(angle)>=0;
+    ctx.save(); ctx.translate(x,y);
+    if(!fr) ctx.scale(-1,1);
+    ctx.rotate(fr?angle:Math.PI-angle);
+
+    ctx.fillStyle=darkColor;
+    ctx.beginPath();
+    ctx.moveTo(-size*0.78,0);
+    ctx.lineTo(-size*1.52,-size*0.62+wiggle*size*0.9);
+    ctx.lineTo(-size*1.15,0);
+    ctx.lineTo(-size*1.52, size*0.62+wiggle*size*0.9);
+    ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle=bodyColor;
+    ctx.beginPath(); ctx.ellipse(0,0,size,size*0.57,0,0,Math.PI*2); ctx.fill();
+    const g=ctx.createRadialGradient(-size*0.15,-size*0.2,size*0.08,0,0,size);
+    g.addColorStop(0,'rgba(255,255,255,0.35)'); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.ellipse(0,0,size,size*0.57,0,0,Math.PI*2); ctx.fill();
+
+    ctx.fillStyle=darkColor;
+    ctx.beginPath();
+    ctx.moveTo(-size*0.08,-size*0.54);
+    ctx.quadraticCurveTo(size*0.22,-size*0.98,size*0.44,-size*0.54);
+    ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle='white';
+    ctx.beginPath(); ctx.arc(size*0.52,-size*0.1,size*0.17,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#0d1b2a';
+    ctx.beginPath(); ctx.arc(size*0.55,-size*0.1,size*0.09,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='white';
+    ctx.beginPath(); ctx.arc(size*0.58,-size*0.16,size*0.04,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+}
+
+function drawFish(x,y,size,angle,bodyColor,darkColor,number,swimPhase,isPlayer){
+    if(isPlayer){
+        const rg=ctx.createRadialGradient(x,y,size*0.5,x,y,size*1.6);
+        rg.addColorStop(0,'rgba(76,201,240,0.22)'); rg.addColorStop(1,'rgba(76,201,240,0)');
+        ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(x,y,size*1.6,0,Math.PI*2); ctx.fill();
+    }
+    drawFishBody(x,y,size,angle,bodyColor,darkColor,swimPhase);
+    const fs=clamp(size*0.88,11,38);
+    ctx.save(); ctx.translate(x,y);
+    ctx.font=`bold ${fs}px Arial`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.strokeStyle='rgba(0,0,0,0.82)'; ctx.lineWidth=Math.max(2,fs*0.24);
+    ctx.strokeText(number,0,0); ctx.fillStyle='white'; ctx.fillText(number,0,0);
+    ctx.restore();
+}
+
+// ── ジョイスティック描画 ──
+function drawJoystick(){
+    if(!isMobile||!gameActive) return;
+    const {bx,by,tx,ty,active}=joy;
+    ctx.save();
+
+    // ベース外円
+    ctx.globalAlpha=active?0.48:0.22;
+    ctx.beginPath(); ctx.arc(bx,by,JOY_R,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=2.5; ctx.stroke();
+
+    // 内円ガイド（最大変位）
+    ctx.globalAlpha=active?0.28:0.12;
+    ctx.beginPath(); ctx.arc(bx,by,JOY_MAX,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
+
+    // サム
+    ctx.globalAlpha=active?0.82:0.38;
+    ctx.beginPath(); ctx.arc(tx,ty,JOY_TH,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.95)'; ctx.lineWidth=2; ctx.stroke();
+
+    // 非アクティブ時のヒントテキスト
+    if(!active){
+        ctx.globalAlpha=0.35;
+        ctx.font='bold 11px Arial';
+        ctx.fillStyle='white'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('MOVE',bx,by+JOY_R+13);
+    }
+    ctx.restore();
+}
+
+// ── 背景 ──
+function drawBG(){
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#03045e'); g.addColorStop(0.55,'#023e8a'); g.addColorStop(1,'#0077b6');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    ctx.save(); ctx.globalAlpha=0.035; ctx.fillStyle='white';
+    for(let i=0;i<7;i++){
+        const lx=W*(i/7)+W*0.07;
+        ctx.beginPath(); ctx.moveTo(lx,0); ctx.lineTo(lx-50,H); ctx.lineTo(lx+50,H);
+        ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+}
+
+// ── ゲームループ ──
+let lastTime=0;
+function gameLoop(ts){
+    const dt=Math.min((ts-lastTime)/16.67,3);
+    lastTime=ts;
+    ctx.clearRect(0,0,W,H);
+    drawBG();
+
+    // 虹リング（背景の上）
+    if(rainbowBurst){
+        const rb=rainbowBurst;
+        const maxR=Math.hypot(W,H)*1.15;
+        RB_COLORS.forEach((color,i)=>{
+            const r=rb.phase*maxR-i*26;
+            if(r<=0) return;
+            const alpha=Math.max(0,(1-rb.phase*0.62)*0.85);
+            ctx.save();
+            ctx.globalAlpha=alpha; ctx.strokeStyle=color; ctx.lineWidth=13;
+            ctx.shadowColor=color; ctx.shadowBlur=22;
+            ctx.beginPath(); ctx.arc(rb.x,rb.y,r,0,Math.PI*2); ctx.stroke();
+            ctx.restore();
+        });
+        rb.phase+=0.019*dt;
+        if(rb.phase>1.6) rainbowBurst=null;
+    }
+
+    if(!gameActive){ drawJoystick(); requestAnimationFrame(gameLoop); return; }
+
+    // ── プレイヤー更新 ──
+    if(isMobile){
+        if(joy.active && joy.mag>0.05){
+            const spd=clamp(3+player.number*0.04,3,7)*joy.mag*dt;
+            player.x+=joy.dx*spd;
+            player.y+=joy.dy*spd;
+            player.angle=Math.atan2(joy.dy,joy.dx);
+        }
+    } else {
+        if(mouseX>-9000){
+            const dx=mouseX-player.x, dy=mouseY-player.y;
+            const d=Math.hypot(dx,dy);
+            if(d>4){
+                const spd=clamp(3+player.number*0.04,3,7)*dt;
+                player.x+=dx/d*Math.min(spd,d);
+                player.y+=dy/d*Math.min(spd,d);
+                player.angle=Math.atan2(dy,dx);
+            }
+        }
+    }
+    player.swimPhase+=0.1*dt;
+    player.x=clamp(player.x,8,W-8);
+    player.y=clamp(player.y,8,H-8);
+
+    // ── NPC更新（ランダム遊泳のみ） ──
+    for(const npc of npcs){
+        if(!npc.alive) continue;
+        npc.dirTimer-=dt;
+        if(npc.dirTimer<=0){
+            const a=rng(0,Math.PI*2),s=rng(0.7,2.0);
+            npc.vx=Math.cos(a)*s; npc.vy=Math.sin(a)*s;
+            npc.dirTimer=rng(80,240);
+        }
+        if(npc.x<40)   npc.vx= Math.abs(npc.vx);
+        if(npc.x>W-40) npc.vx=-Math.abs(npc.vx);
+        if(npc.y<40)   npc.vy= Math.abs(npc.vy);
+        if(npc.y>H-40) npc.vy=-Math.abs(npc.vy);
+        const spd=Math.hypot(npc.vx,npc.vy);
+        if(spd>2.0){npc.vx*=2.0/spd; npc.vy*=2.0/spd;}
+        npc.x+=npc.vx*dt; npc.y+=npc.vy*dt;
+        if(spd>0.05) npc.angle=lerpAngle(npc.angle,Math.atan2(npc.vy,npc.vx),0.1*dt);
+        npc.swimPhase+=0.09*dt;
+    }
+
+    npcs=npcs.filter(n=>n.alive);
+    while(npcs.length<25) npcs.push(createNPC(false));
+
+    // 大きい魚を常に5匹以上確保
+    let lc=npcs.filter(n=>n.alive&&n.n>player.number).length;
+    while(lc<5){
+        const npc=createNPC(true);
+        npc.n=player.number+rngInt(1,Math.max(3,Math.ceil(player.number*0.6)));
+        npc.size=fishSize(npc.n);
+        npcs.push(npc); lc++;
+    }
+
+    // ── 衝突判定 ──
+    for(const npc of npcs){
+        if(!npc.alive) continue;
+        const d=dist2(player.x,player.y,npc.x,npc.y);
+        if(d<(player.size+npc.size)*0.65){
+            if(player.number>npc.n){
+                playKirari();
+                spawnParticles(npc.x,npc.y,'#4ade80',10);
+                spawnPopup(npc.x,npc.y-npc.size,`+${npc.n}`);
+                player.number+=npc.n;
+                player.size=fishSize(player.number);
+                npc.alive=false;
+                document.getElementById('hud-score').textContent=player.number;
+                if(player.number>highScore){
+                    highScore=player.number;
+                    document.getElementById('hud-hi').textContent=highScore;
+                    localStorage.setItem('fishHS',highScore);
+                }
+                const nd=Math.floor(player.number/10);
+                if(nd>lastDecade){ lastDecade=nd; triggerRainbow(player.x,player.y); }
+            } else if(player.number<npc.n){
+                spawnParticles(player.x,player.y,COL_PLAYER,22);
+                gameOver(); return;
+            }
+        }
+    }
+
+    // ── 描画 ──
+    for(const p of particles){
+        p.x+=p.vx; p.y+=p.vy; p.vx*=0.92; p.vy*=0.92; p.life-=p.decay;
+        if(p.life<=0) continue;
+        ctx.save(); ctx.globalAlpha=p.life*0.85; ctx.fillStyle=p.color;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+    particles=particles.filter(p=>p.life>0);
+
+    for(const npc of npcs){
+        if(!npc.alive) continue;
+        const c=npcColor(npc.n,player.number);
+        drawFish(npc.x,npc.y,npc.size,npc.angle,c.body,c.dark,npc.n,npc.swimPhase,false);
+    }
+    drawFish(player.x,player.y,player.size,player.angle,COL_PLAYER,COL_PLAYER_DARK,player.number,player.swimPhase,true);
+
+    for(const p of popups){
+        p.y+=p.vy; p.life-=p.decay;
+        if(p.life<=0) continue;
+        ctx.save(); ctx.globalAlpha=p.life;
+        ctx.font=`bold 22px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.strokeStyle='rgba(0,0,0,0.8)'; ctx.lineWidth=4;
+        ctx.strokeText(p.text,p.x,p.y);
+        ctx.fillStyle='#ffd60a'; ctx.fillText(p.text,p.x,p.y);
+        ctx.restore();
+    }
+    popups=popups.filter(p=>p.life>0);
+
+    drawJoystick();
+    requestAnimationFrame(gameLoop);
+}
+
+// ── ゲーム開始/終了 ──
+function startGame(){
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('overlay').classList.remove('active');
+    const ac=getAC(); if(ac&&ac.state==='suspended') ac.resume();
+
+    player={x:W/2,y:H/2,number:2,angle:0,swimPhase:0,size:fishSize(2)};
+    npcs=[]; particles=[]; popups=[];
+    rainbowBurst=null; lastDecade=0; gameActive=true;
+
+    // ジョイスティックリセット
+    resetJoyBase();
+    joy.active=false; joy.id=null; joy.dx=0; joy.dy=0; joy.mag=0;
+
+    for(let i=0;i<25;i++) npcs.push(createNPC(true));
+    mouseX=W/2+1; mouseY=H/2;
+    document.getElementById('hud-score').textContent=2;
+    document.getElementById('hud-hi').textContent=highScore;
+}
+
+function gameOver(){
+    gameActive=false;
+    document.getElementById('go-scores').innerHTML=
+        `スコア：<strong>${player.number}</strong><br>ハイスコア：<strong>${highScore}</strong>`;
+    document.getElementById('overlay').classList.add('active');
+}
+
+// ── 起動 ──
+gameActive=false; particles=[]; popups=[]; npcs=[]; rainbowBurst=null;
+resize(); // W,H 確定後にジョイスティック位置を初期化
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
