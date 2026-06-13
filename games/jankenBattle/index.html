@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>じゃんけんバトル ⚔️</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+body {
+    font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', 'メイリオ', sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #eee;
+}
+
+.container { width: 100%; max-width: 920px; padding: 20px; }
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ── Title ── */
+.title-wrap {
+    text-align: center;
+    padding: 60px 20px;
+}
+.title-logo {
+    font-size: 5em;
+    animation: float 3s ease-in-out infinite;
+    display: block;
+    margin-bottom: 12px;
+}
+@keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+}
+.title-h1 {
+    font-size: 3em;
+    color: #ffd700;
+    text-shadow: 0 0 30px rgba(255,215,0,.55), 0 0 60px rgba(255,215,0,.25);
+    margin-bottom: 8px;
+}
+.title-sub {
+    color: #9b8fc4;
+    margin-bottom: 50px;
+    font-size: 1.05em;
+}
+.enemy-preview {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    font-size: 2em;
+}
+
+/* ── Buttons ── */
+.btn {
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform .2s, box-shadow .2s;
+    padding: 14px 36px;
+    font-size: 1em;
+}
+.btn:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,.4); }
+.btn:active { transform: translateY(0); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-gold {
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    color: #1a1a1a;
+    font-weight: bold;
+    font-size: 1.35em;
+    padding: 18px 60px;
+}
+.btn-purple {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    font-weight: bold;
+}
+.btn-ghost {
+    background: rgba(255,255,255,.08);
+    color: #eee;
+    border: 1px solid rgba(255,255,255,.2);
+}
+
+/* ── Character Select ── */
+.scr-title { text-align: center; font-size: 2em; color: #ffd700; margin-bottom: 6px; }
+.scr-sub { text-align: center; color: #9b8fc4; margin-bottom: 22px; }
+
+.char-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.char-card {
+    background: rgba(255,255,255,.04);
+    border: 2px solid rgba(255,255,255,.1);
+    border-radius: 16px;
+    padding: 16px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .22s;
+    position: relative;
+}
+.char-card:hover { border-color: #667eea; background: rgba(102,126,234,.1); transform: translateY(-4px); }
+.char-card.sel { border-color: #ffd700; background: rgba(255,215,0,.08); transform: translateY(-4px); }
+.char-card.sel::after {
+    content: '✓';
+    position: absolute;
+    top: 8px; right: 10px;
+    color: #ffd700; font-size: .95em;
+}
+
+.cc-emoji { font-size: 2.8em; display: block; margin-bottom: 8px; }
+.cc-name { font-weight: bold; margin-bottom: 8px; font-size: .95em; }
+
+.stat-row { display: flex; align-items: center; gap: 5px; margin: 4px 0; }
+.stat-icon { font-size: .72em; width: 14px; }
+.stat-bg { flex: 1; height: 5px; background: rgba(255,255,255,.1); border-radius: 3px; overflow: hidden; }
+.stat-fill { height: 100%; border-radius: 3px; }
+.fill-hp { background: linear-gradient(90deg, #4CAF50, #8BC34A); }
+.fill-atk { background: linear-gradient(90deg, #f44336, #FF9800); }
+
+.cc-ability { font-size: .67em; color: #ff9800; margin-top: 8px; line-height: 1.35; }
+.cc-desc { font-size: .67em; color: #7a6fa0; margin-top: 4px; }
+
+.confirm-wrap { text-align: center; }
+
+/* ── Battle ── */
+.prog-row {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 18px;
+}
+.prog-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.prog-emoji { font-size: 1.3em; opacity: .25; }
+.prog-emoji.done { opacity: .6; filter: grayscale(1); }
+.prog-emoji.current { opacity: 1; }
+.prog-lbl { font-size: .6em; color: #666; }
+.prog-line { width: 24px; height: 2px; background: rgba(255,255,255,.12); margin-top: 12px; }
+
+.battle-card {
+    background: rgba(0,0,0,.3);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 22px;
+    padding: 24px;
+}
+
+.fighters {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+.fighter { flex: 1; text-align: center; }
+.f-icon {
+    font-size: 5em;
+    display: block;
+    line-height: 1;
+    margin-bottom: 10px;
+}
+.f-name { font-weight: bold; margin-bottom: 8px; font-size: 1.05em; }
+.hp-wrap { background: rgba(255,255,255,.1); border-radius: 10px; height: 18px; overflow: hidden; }
+.hp-bar { height: 100%; border-radius: 10px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+.hp-p { background: linear-gradient(90deg, #4CAF50, #8BC34A); }
+.hp-e { background: linear-gradient(90deg, #f44336, #FF5722); }
+.hp-lbl { font-size: .78em; color: #8a80aa; margin-top: 4px; }
+.combo-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+.combo-label { font-size: .72em; color: #ff9800; }
+.c-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.12); transition: background .3s; }
+.c-dot.lit { background: #ff9800; box-shadow: 0 0 6px rgba(255,152,0,.65); }
+
+.vs-col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.vs-text { font-size: 2em; font-weight: 900; color: #ffd700; text-shadow: 0 0 14px rgba(255,215,0,.4); }
+.choices { display: flex; align-items: center; gap: 14px; min-height: 56px; }
+.choice-box { font-size: 2.4em; min-width: 48px; text-align: center; }
+.vs-mini { font-size: .8em; color: #666; }
+
+/* Janken buttons */
+.jk-section { margin: 16px 0; }
+.jk-hint { text-align: center; color: #8a80aa; margin-bottom: 10px; font-size: .88em; }
+.jk-row { display: flex; justify-content: center; gap: 14px; }
+.jk-btn {
+    background: rgba(255,255,255,.05);
+    border: 2px solid rgba(255,255,255,.14);
+    border-radius: 16px;
+    padding: 14px 22px;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1em;
+    transition: all .2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 96px;
+}
+.jk-btn:hover:not(:disabled) {
+    border-color: #667eea;
+    background: rgba(102,126,234,.18);
+    transform: translateY(-4px);
+}
+.jk-btn:disabled { opacity: .45; cursor: not-allowed; }
+.jk-icon { font-size: 2.4em; }
+.jk-name { font-size: .88em; font-weight: bold; }
+
+/* Battle log */
+.log-box {
+    background: rgba(0,0,0,.4);
+    border-radius: 12px;
+    padding: 14px 18px;
+    min-height: 88px;
+    text-align: center;
+}
+.res-tag { font-size: 1.35em; font-weight: bold; margin-bottom: 6px; }
+.tag-win { color: #4CAF50; }
+.tag-lose { color: #f44336; }
+.tag-draw { color: #ffd700; }
+.log-txt { font-size: .92em; color: #ddd; line-height: 1.65; }
+.abi-txt { color: #ff9800; font-size: .88em; margin-top: 5px; }
+
+/* ── Overlays ── */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+.ov-box {
+    background: linear-gradient(135deg, #1a1a2e, #302b63);
+    border: 3px solid #ffd700;
+    border-radius: 24px;
+    padding: 50px 60px;
+    text-align: center;
+    max-width: 440px;
+    animation: popIn .38s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn {
+    from { transform: scale(.5); opacity: 0; }
+    to   { transform: scale(1);  opacity: 1; }
+}
+.ov-icon { font-size: 5em; margin-bottom: 10px; }
+.ov-title { font-size: 2.4em; font-weight: bold; margin-bottom: 10px; }
+.col-gold { color: #ffd700; }
+.col-red  { color: #f44336; }
+.ov-desc { color: #9b8fc4; margin-bottom: 25px; line-height: 1.6; }
+.ov-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ── Stars ── */
+.stars { position: fixed; inset: 0; pointer-events: none; z-index: 190; }
+.star {
+    position: absolute;
+    font-size: 1.5em;
+    animation: starFall 2s ease-in forwards;
+}
+@keyframes starFall {
+    from { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+    to   { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+
+/* ── Animations ── */
+@keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-12px); }
+    40% { transform: translateX(12px); }
+    60% { transform: translateX(-8px); }
+    80% { transform: translateX(8px); }
+}
+@keyframes bounce {
+    0%,100% { transform: scale(1); }
+    35% { transform: scale(1.3); }
+    65% { transform: scale(.95); }
+}
+@keyframes spinOut {
+    from { transform: scale(1) rotate(0deg); opacity: 1; }
+    to   { transform: scale(0) rotate(720deg); opacity: 0; }
+}
+.anim-shake { animation: shake .38s; }
+.anim-bounce { animation: bounce .38s; }
+.anim-spin-out { animation: spinOut .55s forwards; }
+
+@keyframes healPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(76,175,80,.8); }
+    50%  { box-shadow: 0 0 0 12px rgba(76,175,80,0); }
+    100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); }
+}
+.anim-heal { animation: healPulse .7s ease-out; }
+
+/* ── Ultimate Gauge ── */
+.gauge-row {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.gauge-lbl { font-size: .65em; color: #9b8fc4; }
+.gauge-orbs { display: flex; gap: 6px; }
+.g-orb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(255,255,255,.1);
+    border: 2px solid rgba(255,255,255,.2);
+    transition: all .3s;
+}
+.g-orb.lit {
+    background: #ffd700;
+    border-color: #ff8c00;
+    box-shadow: 0 0 8px rgba(255,215,0,.8), 0 0 14px rgba(255,140,0,.4);
+}
+
+/* ── Ultimate Button ── */
+.ult-wrap { text-align: center; margin: 8px 0 10px; }
+.ult-btn {
+    background: linear-gradient(135deg, #ffd700, #ff6b00);
+    color: #1a1a1a;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 1.05em;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 38px;
+    cursor: pointer;
+    animation: ultGlow 1s ease-in-out infinite alternate;
+    transition: transform .15s;
+}
+.ult-btn:hover { transform: scale(1.06); }
+@keyframes ultGlow {
+    from { box-shadow: 0 0 10px rgba(255,215,0,.5); }
+    to   { box-shadow: 0 0 28px rgba(255,215,0,.95), 0 0 55px rgba(255,100,0,.35); }
+}
+
+@keyframes ultFlash {
+    0%,100% { filter: none; }
+    30%     { filter: brightness(2) saturate(2); }
+    60%     { filter: brightness(1.5); }
+}
+.anim-ult-flash { animation: ultFlash .6s; }
+
+/* ── Items ── */
+.item-section { margin: 10px 0 6px; }
+.item-hint { text-align: center; color: #9b8fc4; font-size: .8em; margin-bottom: 8px; }
+.item-row { display: flex; justify-content: center; gap: 10px; }
+.item-btn {
+    background: rgba(255,255,255,.05);
+    border: 1.5px solid rgba(255,255,255,.16);
+    border-radius: 12px;
+    padding: 9px 12px;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 70px;
+    transition: all .2s;
+    position: relative;
+}
+.item-btn:hover:not([disabled]) {
+    border-color: #ffd700;
+    background: rgba(255,215,0,.1);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 14px rgba(0,0,0,.3);
+}
+.item-btn[disabled] {
+    opacity: .28;
+    cursor: not-allowed;
+    transform: none;
+}
+.item-btn[disabled]::after {
+    content: '使用済';
+    position: absolute;
+    bottom: -1px;
+    font-size: .55em;
+    color: #888;
+    letter-spacing: .05em;
+}
+.item-emoji-lg { font-size: 1.9em; }
+.item-lbl { font-size: .75em; font-weight: bold; }
+.item-sub  { font-size: .62em; color: #aaa; }
+
+/* Shield status badge */
+.shield-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(33,150,243,.18);
+    border: 1px solid rgba(100,181,246,.45);
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-size: .7em;
+    color: #90CAF9;
+    margin-top: 5px;
+    animation: shieldPulse 2s ease-in-out infinite;
+}
+@keyframes shieldPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(33,150,243,.3); }
+    50%      { box-shadow: 0 0 8px 3px rgba(33,150,243,.15); }
+}
+
+/* ═══ RESPONSIVE ═══ */
+
+/* ── タブレット・大型スマホ ── */
+@media (max-width: 640px) {
+    .container { padding: 12px; }
+
+    /* キャラ選択 */
+    .char-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .char-card { padding: 12px 8px; }
+    .cc-emoji { font-size: 2.3em; }
+    .cc-ability { font-size: .62em; }
+    .cc-desc { display: none; }
+
+    /* バトル */
+    .battle-card { padding: 18px 14px; }
+    .f-icon { font-size: 4em; }
+    .jk-btn { min-width: 84px; padding: 12px 14px; }
+
+    /* オーバーレイ */
+    .ov-box { padding: 30px 24px; margin: 16px; }
+}
+
+/* ── 標準スマホ（〜480px）── */
+@media (max-width: 480px) {
+    /* タイトル */
+    .title-wrap { padding: 32px 16px; }
+    .title-logo { font-size: 3.8em; }
+    .title-h1 { font-size: 2.3em; }
+    .title-sub { font-size: .9em; }
+    .enemy-preview { font-size: 1.6em; gap: 10px; margin-bottom: 28px; }
+    .btn-gold { font-size: 1.1em; padding: 14px 40px; }
+
+    /* キャラ選択 */
+    .scr-title { font-size: 1.5em; }
+    .scr-sub { font-size: .85em; margin-bottom: 16px; }
+    .char-grid { gap: 6px; }
+    .char-card { padding: 10px 6px; border-radius: 12px; }
+    .cc-emoji { font-size: 2em; margin-bottom: 5px; }
+    .cc-name { font-size: .82em; margin-bottom: 5px; }
+    .stat-row { margin: 2px 0; }
+    .stat-bg { height: 4px; }
+    .confirm-wrap .btn-purple { padding: 12px 28px; }
+
+    /* 敵進捗バー */
+    .prog-row { gap: 3px; margin-bottom: 12px; }
+    .prog-emoji { font-size: .95em; }
+    .prog-lbl { display: none; }
+    .prog-line { width: 12px; }
+
+    /* バトルカード */
+    .battle-card { padding: 13px 11px; border-radius: 16px; }
+    .fighters { gap: 5px; margin-bottom: 13px; }
+
+    /* 各ファイター */
+    .f-icon { font-size: 2.9em; margin-bottom: 7px; line-height: 1.05; }
+    .f-name { font-size: .83em; margin-bottom: 6px; }
+    .hp-wrap { height: 13px; border-radius: 7px; }
+    .hp-bar { border-radius: 7px; }
+    .hp-lbl { font-size: .68em; margin-top: 3px; }
+
+    /* ゲージ・シールド・コンボ */
+    .gauge-row { gap: 3px; margin-top: 4px; }
+    .gauge-lbl { font-size: .58em; }
+    .g-orb { width: 10px; height: 10px; border-width: 1.5px; }
+    .shield-badge { font-size: .6em; padding: 2px 6px; margin-top: 3px; }
+    .combo-wrap { gap: 4px; margin-top: 3px; }
+    .combo-label { font-size: .6em; }
+    .c-dot { width: 8px; height: 8px; }
+
+    /* VSカラム */
+    .vs-col { gap: 5px; }
+    .vs-text { font-size: 1.25em; }
+    .choices { gap: 5px; min-height: 42px; }
+    .choice-box { font-size: 1.6em; min-width: 28px; }
+    .vs-mini { font-size: .62em; }
+
+    /* じゃんけんボタン */
+    .jk-section { margin: 11px 0; }
+    .jk-hint { font-size: .76em; margin-bottom: 7px; }
+    .jk-row { gap: 7px; }
+    .jk-btn { flex: 1; min-width: 0; padding: 9px 6px; border-radius: 11px; font-size: .88em; }
+    .jk-icon { font-size: 1.85em; }
+    .jk-name { font-size: .76em; }
+
+    /* アイテム */
+    .item-section { margin: 7px 0 4px; }
+    .item-hint { font-size: .73em; margin-bottom: 6px; }
+    .item-row { gap: 6px; }
+    .item-btn { flex: 1; min-width: 0; padding: 7px 5px; border-radius: 10px; }
+    .item-emoji-lg { font-size: 1.5em; }
+    .item-lbl { font-size: .67em; }
+    .item-sub { font-size: .54em; }
+
+    /* 必殺技ボタン */
+    .ult-wrap { margin: 6px 0 7px; }
+    .ult-btn { font-size: .9em; padding: 10px 22px; }
+
+    /* バトルログ */
+    .log-box { padding: 9px 11px; min-height: 66px; border-radius: 10px; }
+    .log-txt { font-size: .82em; line-height: 1.55; }
+    .res-tag { font-size: 1.1em; margin-bottom: 4px; }
+    .abi-txt { font-size: .79em; }
+
+    /* オーバーレイ */
+    .ov-box { padding: 26px 18px; margin: 10px; border-radius: 18px; }
+    .ov-icon { font-size: 3.5em; margin-bottom: 8px; }
+    .ov-title { font-size: 1.85em; margin-bottom: 8px; }
+    .ov-desc { font-size: .86em; margin-bottom: 16px; }
+    .ov-btns { gap: 8px; }
+}
+
+/* ── 小型スマホ（〜360px）── */
+@media (max-width: 360px) {
+    .title-h1 { font-size: 2em; }
+    .char-card { padding: 8px 5px; }
+    .cc-emoji { font-size: 1.75em; }
+    .cc-ability { font-size: .57em; }
+    .f-icon { font-size: 2.5em; }
+    .choice-box { font-size: 1.4em; }
+    .jk-icon { font-size: 1.65em; }
+    .item-sub { display: none; }
+    .ov-title { font-size: 1.6em; }
+    .ov-btns { flex-direction: column; align-items: stretch; }
+    .ov-btns .btn { text-align: center; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ═══ TITLE SCREEN ═══ -->
+<div class="screen active" id="titleScreen">
+    <div class="title-wrap">
+        <span class="title-logo">⚔️</span>
+        <h1 class="title-h1">じゃんけんバトル</h1>
+        <p class="title-sub">5人の強敵を倒して真の勇者となれ！</p>
+        <div class="enemy-preview">
+            <span title="スライム">🟢</span>
+            <span title="ゴブリン">👺</span>
+            <span title="オーク">👹</span>
+            <span title="ドラゴン">🐲</span>
+            <span title="魔王">😈</span>
+        </div>
+        <button class="btn btn-gold" onclick="showScreen('characterSelect')">🎮 ゲームスタート</button>
+    </div>
+</div>
+
+<!-- ═══ CHARACTER SELECT ═══ -->
+<div class="screen" id="characterSelectScreen">
+    <h2 class="scr-title">⚔️ キャラクター選択</h2>
+    <p class="scr-sub">主人公を選んで冒険へ出発しよう！</p>
+    <div class="char-grid" id="charGrid"></div>
+    <div class="confirm-wrap">
+        <button class="btn btn-purple" id="confirmBtn" onclick="startBattle()" disabled>
+            バトルへ進む →
+        </button>
+    </div>
+</div>
+
+<!-- ═══ BATTLE SCREEN ═══ -->
+<div class="screen" id="battleScreen">
+    <div class="prog-row" id="progRow"></div>
+
+    <div class="battle-card">
+        <!-- Fighters row -->
+        <div class="fighters">
+            <!-- Player -->
+            <div class="fighter">
+                <span class="f-icon" id="pIcon">⚔️</span>
+                <div class="f-name" id="pName">勇者</div>
+                <div class="hp-wrap"><div class="hp-bar hp-p" id="pHpBar" style="width:100%"></div></div>
+                <div class="hp-lbl" id="pHpLbl">100 / 100</div>
+                <div class="gauge-row">
+                    <span class="gauge-lbl">必殺ゲージ</span>
+                    <div class="gauge-orbs">
+                        <div class="g-orb" id="g0"></div>
+                        <div class="g-orb" id="g1"></div>
+                        <div class="g-orb" id="g2"></div>
+                    </div>
+                </div>
+                <div class="shield-badge" id="shieldBadge" style="display:none">
+                    🛡️ 防御中 <span id="shieldCnt">5</span>T
+                </div>
+                <div class="combo-wrap" id="comboWrap" style="display:none">
+                    <span class="combo-label">コンボ</span>
+                    <div class="c-dot" id="cd0"></div>
+                    <div class="c-dot" id="cd1"></div>
+                    <div class="c-dot" id="cd2"></div>
+                </div>
+            </div>
+
+            <!-- VS center -->
+            <div class="vs-col">
+                <div class="vs-text">VS</div>
+                <div class="choices">
+                    <div class="choice-box" id="pChoice">　</div>
+                    <span class="vs-mini">vs</span>
+                    <div class="choice-box" id="eChoice">　</div>
+                </div>
+            </div>
+
+            <!-- Enemy -->
+            <div class="fighter">
+                <span class="f-icon" id="eIcon">👺</span>
+                <div class="f-name" id="eName">ゴブリン</div>
+                <div class="hp-wrap"><div class="hp-bar hp-e" id="eHpBar" style="width:100%"></div></div>
+                <div class="hp-lbl" id="eHpLbl">90 / 90</div>
+            </div>
+        </div>
+
+        <!-- Janken buttons -->
+        <div class="jk-section">
+            <p class="jk-hint">✊ 手を選んでバトル！ ✋</p>
+            <div class="jk-row">
+                <button class="jk-btn" id="btnGu"    onclick="battle('gu')">
+                    <span class="jk-icon">✊</span><span class="jk-name">グー</span>
+                </button>
+                <button class="jk-btn" id="btnChoki" onclick="battle('choki')">
+                    <span class="jk-icon">✌️</span><span class="jk-name">チョキ</span>
+                </button>
+                <button class="jk-btn" id="btnPa"    onclick="battle('pa')">
+                    <span class="jk-icon">🖐️</span><span class="jk-name">パー</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Item buttons -->
+        <div class="item-section">
+            <p class="item-hint">🎒 アイテム（各1回限り）</p>
+            <div class="item-row">
+                <button class="item-btn" id="itemHerb"   onclick="useItem('herb')">
+                    <span class="item-emoji-lg">🌿</span>
+                    <span class="item-lbl">薬草</span>
+                    <span class="item-sub">HP+40回復</span>
+                </button>
+                <button class="item-btn" id="itemBomb"   onclick="useItem('bomb')">
+                    <span class="item-emoji-lg">💣</span>
+                    <span class="item-lbl">爆弾</span>
+                    <span class="item-sub">敵-50ダメ</span>
+                </button>
+                <button class="item-btn" id="itemShield" onclick="useItem('shield')">
+                    <span class="item-emoji-lg">🛡️</span>
+                    <span class="item-lbl">盾</span>
+                    <span class="item-sub">防御×2 5T</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Ultimate button (hidden until gauge full) -->
+        <div class="ult-wrap" id="ultWrap" style="display:none">
+            <button class="ult-btn" onclick="useUltimate()" id="ultBtn">
+                <span id="ultLabel">⚡ 必殺技！</span>
+            </button>
+        </div>
+
+        <!-- Log -->
+        <div class="log-box" id="logBox">
+            <div class="log-txt">手を選んでバトル開始！</div>
+        </div>
+    </div>
+</div>
+
+</div><!-- /container -->
+
+<!-- ── Enemy Beaten Overlay ── -->
+<div class="overlay" id="ovWin" style="display:none">
+    <div class="ov-box">
+        <div class="ov-icon">🏆</div>
+        <h2 class="ov-title col-gold" id="ovWinTitle">勝利！</h2>
+        <p class="ov-desc" id="ovWinDesc"></p>
+        <p style="color:#4CAF50;font-size:1.2em;margin-bottom:16px" id="ovWinHeal"></p>
+        <div class="ov-btns">
+            <button class="btn btn-purple" onclick="nextEnemy()">次の敵へ →</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Defeat Overlay ── -->
+<div class="overlay" id="ovDefeat" style="display:none">
+    <div class="ov-box" style="border-color:#f44336">
+        <div class="ov-icon">💀</div>
+        <h2 class="ov-title col-red">敗北...</h2>
+        <p class="ov-desc" id="ovDefeatDesc">体力が尽きてしまった...</p>
+        <div class="ov-btns">
+            <button class="btn btn-ghost" onclick="goCharSelect()">キャラ選択へ</button>
+            <button class="btn btn-purple" onclick="retryBattle()">もう一度挑戦！</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Game Clear Overlay ── -->
+<div class="overlay" id="ovClear" style="display:none">
+    <div class="ov-box">
+        <div class="ov-icon">👑</div>
+        <h2 class="ov-title col-gold">ゲームクリア！！</h2>
+        <p class="ov-desc">すべての強敵を倒し、真の勇者となった！<br>おめでとうございます！🎉</p>
+        <div class="ov-btns">
+            <button class="btn btn-gold" onclick="resetGame()">もう一度プレイ</button>
+        </div>
+    </div>
+</div>
+
+<div class="stars" id="stars"></div>
+
+<script>
+// ════════════════════════════════════
+//  DATA
+// ════════════════════════════════════
+
+const CHARS = [
+    {
+        id: 'hero', name: '勇者', emoji: '⚔️',
+        maxHp: 100, dmg: 20,
+        hpR: .63, atkR: .57,
+        desc: 'バランス型の戦士',
+        abi: 'HP50%以下でダメージ+30%',
+        abiName: '🔥 闘志',
+        ultName: '⚡ 天空斬り', ultDesc: '敵に60ダメージ！（じゃんけん不要）',
+    },
+    {
+        id: 'mage', name: '魔法使い', emoji: '🔮',
+        maxHp: 70, dmg: 35,
+        hpR: .44, atkR: 1.0,
+        desc: '高火力の魔法使い',
+        abi: '25%の確率でダメージ2倍',
+        abiName: '✨ 魔法暴走',
+        ultName: '☄️ メテオ', ultDesc: '敵に105ダメージ！（じゃんけん不要）',
+    },
+    {
+        id: 'ninja', name: '忍者', emoji: '🥷',
+        maxHp: 110, dmg: 20,
+        hpR: .69, atkR: .57,
+        desc: '身軽な忍者',
+        abi: '負け時20%で攻撃を回避',
+        abiName: '💨 回避',
+        ultName: '💨 影分身', ultDesc: '60ダメージ＋次ラウンドのダメージ無効！',
+    },
+    {
+        id: 'knight', name: '騎士', emoji: '🛡️',
+        maxHp: 160, dmg: 15,
+        hpR: 1.0, atkR: .43,
+        desc: '重鎧の守護騎士',
+        abi: '受けるダメージを常に30%軽減',
+        abiName: '🛡️ 堅牢',
+        ultName: '✨ 神聖防壁', ultDesc: '45ダメージ＋HP40回復！',
+    },
+    {
+        id: 'dragon', name: 'ドラゴン使い', emoji: '🐉',
+        maxHp: 90, dmg: 15,
+        hpR: .56, atkR: .43,
+        desc: 'ドラゴンと契約した者',
+        abi: '連勝でダメージUP（最大3連勝で×2）',
+        abiName: '🐉 コンボ',
+        ultName: '🔥 竜炎爆発', ultDesc: '90ダメージ＋コンボをMAXに！',
+    },
+];
+
+const ENEMIES = [
+    { name: 'スライム',  emoji: '🟢', maxHp: 60,  dmg: 10, aiChance: 1.0, aiDesc: '⚠️ 前回の手を<strong>100%</strong>読んでくる！' },
+    { name: 'ゴブリン',  emoji: '👺', maxHp: 90,  dmg: 15, aiChance: 0.7, aiDesc: '⚠️ 前回の手を<strong>70%</strong>読んでくる！' },
+    { name: 'オーク',    emoji: '👹', maxHp: 130, dmg: 22, aiChance: 0.4, aiDesc: '⚠️ 前回の手を<strong>40%</strong>読んでくる！' },
+    { name: 'ドラゴン',  emoji: '🐲', maxHp: 180, dmg: 30, aiChance: 0,   aiDesc: '' },
+    { name: '魔王',      emoji: '😈', maxHp: 250, dmg: 42, aiChance: 0,   aiDesc: '' },
+];
+
+// 各手を対策する手のマップ（gu を出されたら pa で勝てる等）
+const COUNTER = { gu: 'pa', choki: 'gu', pa: 'choki' };
+
+const ITEMS = [
+    { id: 'herb',   btnId: 'itemHerb',   emoji: '🌿', name: '薬草' },
+    { id: 'bomb',   btnId: 'itemBomb',   emoji: '💣', name: '爆弾' },
+    { id: 'shield', btnId: 'itemShield', emoji: '🛡️', name: '盾'  },
+];
+
+const JANKEN = {
+    gu:    { emoji: '✊', label: 'グー',   beats: 'choki' },
+    choki: { emoji: '✌️', label: 'チョキ', beats: 'pa' },
+    pa:    { emoji: '🖐️', label: 'パー',   beats: 'gu' },
+};
+
+// ════════════════════════════════════
+//  STATE
+// ════════════════════════════════════
+
+const S = {
+    char: null,
+    playerHp: 0,
+    enemyIdx: 0,
+    enemyHp: 0,
+    combo: 0,
+    gauge: 0,         // 0–3: 必殺技ゲージ
+    nextDodge: false, // 忍者必殺技の次ラウンド回避フラグ
+    itemUsed: { herb: false, bomb: false, shield: false },
+    shieldTurns: 0,   // 盾の残りターン数
+    busy: false,
+};
+
+// ════════════════════════════════════
+//  SCREENS
+// ════════════════════════════════════
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id + 'Screen').classList.add('active');
+    if (id === 'characterSelect') buildCharGrid();
+}
+
+// ════════════════════════════════════
+//  CHARACTER SELECT
+// ════════════════════════════════════
+
+function buildCharGrid() {
+    S.char = null;
+    document.getElementById('confirmBtn').disabled = true;
+
+    const grid = document.getElementById('charGrid');
+    grid.innerHTML = '';
+
+    CHARS.forEach((c, i) => {
+        const el = document.createElement('div');
+        el.className = 'char-card';
+        el.id = 'cc' + i;
+        el.onclick = () => pickChar(i);
+        el.innerHTML = `
+            <span class="cc-emoji">${c.emoji}</span>
+            <div class="cc-name">${c.name}</div>
+            <div>
+                <div class="stat-row">
+                    <span class="stat-icon">❤️</span>
+                    <div class="stat-bg"><div class="stat-fill fill-hp" style="width:${c.hpR*100}%"></div></div>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-icon">⚔️</span>
+                    <div class="stat-bg"><div class="stat-fill fill-atk" style="width:${c.atkR*100}%"></div></div>
+                </div>
+            </div>
+            <div class="cc-ability">★ ${c.abi}</div>
+            <div class="cc-ability" style="color:#ffd700;margin-top:4px">⚡ ${c.ultName}</div>
+            <div class="cc-desc">${c.desc}</div>
+        `;
+        grid.appendChild(el);
+    });
+}
+
+function pickChar(i) {
+    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('sel'));
+    document.getElementById('cc' + i).classList.add('sel');
+    S.char = CHARS[i];
+    document.getElementById('confirmBtn').disabled = false;
+}
+
+// ════════════════════════════════════
+//  BATTLE SETUP
+// ════════════════════════════════════
+
+function startBattle() {
+    if (!S.char) return;
+    S.playerHp = S.char.maxHp;
+    S.enemyIdx = 0;
+    S.combo = 0;
+    S.gauge = 0;
+    S.nextDodge = false;
+    S.itemUsed = { herb: false, bomb: false, shield: false };
+    S.shieldTurns = 0;
+    S.lastPlayerChoice = null;
+    showScreen('battle');
+    loadEnemy();
+}
+
+function retryBattle() {
+    hide('ovDefeat');
+    startBattle();
+}
+
+function goCharSelect() {
+    hide('ovDefeat');
+    showScreen('characterSelect');
+}
+
+function resetGame() {
+    hide('ovClear');
+    document.getElementById('stars').innerHTML = '';
+    showScreen('characterSelect');
+}
+
+function loadEnemy() {
+    const e = ENEMIES[S.enemyIdx];
+    S.enemyHp = e.maxHp;
+
+    $('pIcon').textContent  = S.char.emoji;
+    $('pName').textContent  = S.char.name;
+    $('eIcon').textContent  = e.emoji;
+    $('eName').textContent  = e.name;
+
+    const comboWrap = $('comboWrap');
+    comboWrap.style.display = S.char.id === 'dragon' ? 'flex' : 'none';
+    refreshCombo();
+    refreshHp();
+    refreshGauge();
+    refreshItems();
+    refreshShield();
+    renderProgress();
+
+    S.lastPlayerChoice = null; // 敵が変わったら読み履歴リセット
+
+    $('pChoice').textContent = '　';
+    $('eChoice').textContent = '　';
+    $('logBox').innerHTML = `
+        <div class="log-txt">「${e.name}」が現れた！</div>
+        ${e.aiDesc ? `<div class="abi-txt" style="color:#f4a261">${e.aiDesc}</div>` : ''}
+        <div class="log-txt" style="margin-top:4px">じゃんけんで勝負だ！</div>
+    `;
+
+    setBtns(true);
+    S.busy = false;
+}
+
+function renderProgress() {
+    const row = $('progRow');
+    row.innerHTML = '';
+    ENEMIES.forEach((e, i) => {
+        const item = document.createElement('div');
+        item.className = 'prog-item';
+        const cls = i < S.enemyIdx ? 'done' : i === S.enemyIdx ? 'current' : '';
+        item.innerHTML = `<span class="prog-emoji ${cls}">${e.emoji}</span><span class="prog-lbl">${e.name}</span>`;
+        row.appendChild(item);
+        if (i < ENEMIES.length - 1) {
+            const line = document.createElement('div');
+            line.className = 'prog-line';
+            row.appendChild(line);
+        }
+    });
+}
+
+// ════════════════════════════════════
+//  BATTLE LOGIC
+// ════════════════════════════════════
+
+function battle(pc) {
+    if (S.busy) return;
+    S.busy = true;
+    setBtns(false);
+
+    const choices = ['gu', 'choki', 'pa'];
+
+    // 敵AI：前回プレイヤーの手をカウンターする確率
+    const e = ENEMIES[S.enemyIdx];
+    let ec;
+    if (S.lastPlayerChoice && Math.random() < e.aiChance) {
+        ec = COUNTER[S.lastPlayerChoice]; // 前回の手に勝つ手を出す
+    } else {
+        ec = choices[Math.floor(Math.random() * 3)];
+    }
+
+    S.lastPlayerChoice = pc; // 今回の手を次ラウンド用に記録
+
+    $('pChoice').textContent = JANKEN[pc].emoji;
+    $('eChoice').textContent = JANKEN[ec].emoji;
+
+    let result = pc === ec ? 'draw' : JANKEN[pc].beats === ec ? 'win' : 'lose';
+
+    setTimeout(() => resolve(result, pc, ec), 420);
+}
+
+function resolve(result, pc, ec) {
+    const c = S.char;
+    const e = ENEMIES[S.enemyIdx];
+    const pEl = $('pIcon');
+    const eEl = $('eIcon');
+    let html = '';
+    let abiMsg = '';
+
+    if (result === 'win') {
+        let dmg = c.dmg;
+
+        if (c.id === 'hero' && S.playerHp <= c.maxHp * 0.5) {
+            dmg = Math.floor(dmg * 1.3);
+            abiMsg = c.abiName + '発動！ ダメージ+30%！';
+        } else if (c.id === 'mage' && Math.random() < 0.25) {
+            dmg *= 2;
+            abiMsg = c.abiName + '！ ダメージ2倍！';
+        } else if (c.id === 'dragon') {
+            S.combo = Math.min(S.combo + 1, 3);
+            const mult = 1 + (S.combo - 1) * 0.5;
+            dmg = Math.floor(dmg * mult);
+            if (S.combo > 1) abiMsg = c.abiName + ` ${S.combo}連勝！ ダメージ×${mult}！`;
+        }
+
+        S.enemyHp = Math.max(0, S.enemyHp - dmg);
+        S.gauge = Math.min(3, S.gauge + 1);
+        anim(eEl, 'anim-shake');
+        anim(pEl, 'anim-bounce');
+
+        const gaugeMsg = S.gauge >= 3
+            ? '<div class="abi-txt">💥 必殺技ゲージMAX！</div>'
+            : `<div style="font-size:.8em;color:#9b8fc4">ゲージ ${S.gauge}/3</div>`;
+
+        html = `
+            <div class="res-tag tag-win">✅ 勝ち！</div>
+            <div class="log-txt">${JANKEN[pc].label}で${JANKEN[ec].label}に勝った！<br>
+            ${e.name}に <strong>${dmg}</strong> ダメージ！</div>
+            ${abiMsg ? `<div class="abi-txt">${abiMsg}</div>` : ''}
+            ${gaugeMsg}
+        `;
+
+    } else if (result === 'lose') {
+        if (c.id === 'dragon') S.combo = 0;
+
+        let dmg = e.dmg;
+        let dodged = false;
+
+        if (S.nextDodge) {
+            dmg = 0;
+            dodged = true;
+            S.nextDodge = false;
+            abiMsg = '💨 影分身が攻撃を無効化！';
+        } else if (S.shieldTurns > 0) {
+            dmg = Math.floor(dmg * 0.5);
+            abiMsg = `🛡️ 盾で防御！ ダメージ半減！（残り${S.shieldTurns}T）`;
+            if (c.id === 'knight') dmg = Math.floor(dmg * 0.7); // 騎士と重複適用
+        } else if (c.id === 'knight') {
+            dmg = Math.floor(dmg * 0.7);
+            abiMsg = c.abiName + '！ ダメージ軽減！';
+        } else if (c.id === 'ninja' && Math.random() < 0.2) {
+            dmg = 0;
+            dodged = true;
+            abiMsg = c.abiName + '成功！ ダメージ無効！';
+        }
+
+        if (dodged) {
+            anim(pEl, 'anim-bounce');
+        } else {
+            S.playerHp = Math.max(0, S.playerHp - dmg);
+            anim(pEl, 'anim-shake');
+        }
+
+        html = `
+            <div class="res-tag tag-lose">❌ 負け…</div>
+            <div class="log-txt">${JANKEN[pc].label}で${JANKEN[ec].label}に負けた…<br>
+            ${dodged ? '攻撃を回避した！' : `<strong>${dmg}</strong> ダメージを受けた！`}</div>
+            ${abiMsg ? `<div class="abi-txt">${abiMsg}</div>` : ''}
+        `;
+
+    } else {
+        if (c.id === 'dragon') S.combo = 0;
+        html = `
+            <div class="res-tag tag-draw">🤝 引き分け</div>
+            <div class="log-txt">お互い${JANKEN[pc].label}で引き分け！ ダメージなし。</div>
+        `;
+    }
+
+    // 盾ターン消費（毎ラウンド終了時）
+    if (S.shieldTurns > 0) {
+        S.shieldTurns--;
+        refreshShield();
+    }
+
+    $('logBox').innerHTML = html;
+    refreshHp();
+    refreshCombo();
+    refreshGauge();
+
+    setTimeout(() => {
+        if (S.playerHp <= 0) {
+            showDefeat();
+        } else if (S.enemyHp <= 0) {
+            handleEnemyDown();
+        } else {
+            S.busy = false;
+            setBtns(true);
+        }
+    }, 620);
+}
+
+// ════════════════════════════════════
+//  END CONDITIONS
+// ════════════════════════════════════
+
+function handleEnemyDown() {
+    const eEl = $('eIcon');
+    eEl.classList.add('anim-spin-out');
+
+    setTimeout(() => {
+        eEl.classList.remove('anim-spin-out');
+
+        if (S.enemyIdx >= ENEMIES.length - 1) {
+            showClear();
+        } else {
+            const beaten = ENEMIES[S.enemyIdx];
+
+            // 回復量: 10, 30, 50, 70（敵ごとに20ずつ増加）
+            const healAmt = 10 + S.enemyIdx * 20;
+            const before  = S.playerHp;
+            S.playerHp    = Math.min(S.char.maxHp, S.playerHp + healAmt);
+            const actual  = S.playerHp - before;
+            refreshHp();
+
+            // HP バーにヒールエフェクト
+            const bar = $('pHpBar');
+            bar.classList.remove('anim-heal');
+            void bar.offsetWidth;
+            bar.classList.add('anim-heal');
+
+            $('ovWinTitle').textContent = `${beaten.name}を倒した！`;
+            $('ovWinDesc').textContent  = `次の敵「${ENEMIES[S.enemyIdx + 1].name}」が待ち構えている…`;
+            $('ovWinHeal').textContent  = `💚 HP +${actual} 回復！（${before} → ${S.playerHp}）`;
+            show('ovWin');
+        }
+        S.busy = false;
+    }, 560);
+}
+
+function nextEnemy() {
+    hide('ovWin');
+    S.enemyIdx++;
+    S.combo = 0;
+    loadEnemy();
+}
+
+function showDefeat() {
+    setTimeout(() => {
+        $('ovDefeatDesc').textContent =
+            `${ENEMIES[S.enemyIdx].name}に敗れた… もう一度挑戦しよう！`;
+        show('ovDefeat');
+        S.busy = false;
+    }, 300);
+}
+
+function showClear() {
+    spawnStars();
+    setTimeout(() => show('ovClear'), 700);
+}
+
+// ════════════════════════════════════
+//  UI HELPERS
+// ════════════════════════════════════
+
+function refreshHp() {
+    const c = S.char;
+    const e = ENEMIES[S.enemyIdx];
+    const pp = Math.max(0, S.playerHp / c.maxHp * 100);
+    const ep = Math.max(0, S.enemyHp  / e.maxHp  * 100);
+
+    $('pHpBar').style.width = pp + '%';
+    $('eHpBar').style.width = ep + '%';
+    $('pHpLbl').textContent = `HP: ${Math.max(0, S.playerHp)} / ${c.maxHp}`;
+    $('eHpLbl').textContent = `HP: ${Math.max(0, S.enemyHp)}  / ${e.maxHp}`;
+
+    const bar = $('pHpBar');
+    if (pp < 25)      bar.style.background = 'linear-gradient(90deg,#f44336,#FF5722)';
+    else if (pp < 50) bar.style.background = 'linear-gradient(90deg,#FF9800,#FFC107)';
+    else              bar.style.background = 'linear-gradient(90deg,#4CAF50,#8BC34A)';
+}
+
+function refreshCombo() {
+    for (let i = 0; i < 3; i++) {
+        const d = $('cd' + i);
+        if (d) d.className = 'c-dot' + (i < S.combo ? ' lit' : '');
+    }
+}
+
+function refreshItems() {
+    ITEMS.forEach(item => {
+        const btn = $(item.btnId);
+        if (btn) btn.disabled = S.itemUsed[item.id];
+    });
+}
+
+function refreshShield() {
+    const badge = $('shieldBadge');
+    if (S.shieldTurns > 0) {
+        badge.style.display = 'inline-flex';
+        $('shieldCnt').textContent = S.shieldTurns;
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function useItem(id) {
+    if (S.busy || S.itemUsed[id]) return;
+
+    const c = S.char;
+    const e = ENEMIES[S.enemyIdx];
+    let logHtml = '';
+
+    if (id === 'herb') {
+        const before = S.playerHp;
+        S.playerHp = Math.min(c.maxHp, S.playerHp + 40);
+        const healed = S.playerHp - before;
+        const bar = $('pHpBar');
+        bar.classList.remove('anim-heal'); void bar.offsetWidth; bar.classList.add('anim-heal');
+        logHtml = `
+            <div class="res-tag" style="color:#4CAF50">🌿 薬草を使った！</div>
+            <div class="log-txt">HP が <strong>+${healed}</strong> 回復した！（${before} → ${S.playerHp}）</div>
+        `;
+        refreshHp();
+
+    } else if (id === 'bomb') {
+        S.enemyHp = Math.max(0, S.enemyHp - 50);
+        anim($('eIcon'), 'anim-shake');
+        logHtml = `
+            <div class="res-tag" style="color:#FF5722">💣 爆弾を投げた！</div>
+            <div class="log-txt">${e.name}に <strong>50</strong> ダメージ！</div>
+        `;
+        refreshHp();
+
+    } else if (id === 'shield') {
+        S.shieldTurns = 5;
+        refreshShield();
+        logHtml = `
+            <div class="res-tag" style="color:#64B5F6">🛡️ 盾を構えた！</div>
+            <div class="log-txt">5ターンの間、受けるダメージが半減する！</div>
+        `;
+    }
+
+    S.itemUsed[id] = true;
+    refreshItems();
+    $('logBox').innerHTML = logHtml;
+
+    // 爆弾で敵を倒した場合
+    if (id === 'bomb' && S.enemyHp <= 0) {
+        S.busy = true;
+        setBtns(false);
+        setTimeout(() => handleEnemyDown(), 700);
+    }
+}
+
+function refreshGauge() {
+    for (let i = 0; i < 3; i++) {
+        $('g' + i).className = 'g-orb' + (i < S.gauge ? ' lit' : '');
+    }
+    const full = S.gauge >= 3;
+    $('ultWrap').style.display = full ? 'block' : 'none';
+    if (full && S.char) {
+        $('ultLabel').textContent = S.char.ultName + ' ─ 必殺技！';
+    }
+}
+
+function useUltimate() {
+    if (S.busy || S.gauge < 3) return;
+    S.busy = true;
+    setBtns(false);
+    $('ultWrap').style.display = 'none';
+
+    const c = S.char;
+    const e = ENEMIES[S.enemyIdx];
+    const eEl = $('eIcon');
+    const pEl = $('pIcon');
+
+    let dmg = 0, healAmt = 0, extraMsg = '';
+
+    if (c.id === 'hero') {
+        dmg = 60;
+    } else if (c.id === 'mage') {
+        dmg = 105;
+    } else if (c.id === 'ninja') {
+        dmg = 60;
+        S.nextDodge = true;
+        extraMsg = '<div class="abi-txt">💨 次のラウンドのダメージを無効化！</div>';
+    } else if (c.id === 'knight') {
+        dmg = 45;
+        healAmt = 40;
+    } else if (c.id === 'dragon') {
+        dmg = 90;
+        S.combo = 3;
+        extraMsg = '<div class="abi-txt">🐉 コンボMAX！</div>';
+    }
+
+    S.enemyHp = Math.max(0, S.enemyHp - dmg);
+    if (healAmt > 0) S.playerHp = Math.min(c.maxHp, S.playerHp + healAmt);
+    S.gauge = 0;
+
+    $('pChoice').textContent = '💥';
+    $('eChoice').textContent = '💥';
+
+    anim(eEl, 'anim-ult-flash');
+    anim(eEl, 'anim-shake');
+    anim(pEl, 'anim-bounce');
+
+    $('logBox').innerHTML = `
+        <div class="res-tag" style="color:#ffd700">💥 ${c.ultName}！</div>
+        <div class="log-txt">${e.name}に <strong>${dmg}</strong> ダメージ！</div>
+        ${healAmt > 0 ? `<div class="abi-txt">💚 HP +${healAmt} 回復！</div>` : ''}
+        ${extraMsg}
+    `;
+
+    refreshHp();
+    refreshCombo();
+    refreshGauge();
+
+    setTimeout(() => {
+        if (S.enemyHp <= 0) {
+            handleEnemyDown();
+        } else {
+            S.busy = false;
+            setBtns(true);
+        }
+    }, 700);
+}
+
+function setBtns(on) {
+    ['btnGu','btnChoki','btnPa'].forEach(id => { $(id).disabled = !on; });
+    // アイテムはアニメーション中だけ封鎖（使用済みは refreshItems で管理）
+    ITEMS.forEach(item => {
+        const btn = $(item.btnId);
+        if (btn && !S.itemUsed[item.id]) btn.disabled = !on;
+    });
+}
+
+function anim(el, cls) {
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), 400);
+}
+
+function show(id) { $(id).style.display = 'flex'; }
+function hide(id) { $(id).style.display = 'none'; }
+function $(id)    { return document.getElementById(id); }
+
+function spawnStars() {
+    const c = $('stars');
+    c.innerHTML = '';
+    const emojis = ['⭐','🌟','✨','💫','🏆','👑','🎉','🎊'];
+    for (let i = 0; i < 32; i++) {
+        const s = document.createElement('div');
+        s.className = 'star';
+        s.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        s.style.left = Math.random() * 100 + '%';
+        s.style.animationDelay  = Math.random() * 1.8 + 's';
+        s.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+        c.appendChild(s);
+    }
+    setTimeout(() => { c.innerHTML = ''; }, 4500);
+}
+
+// Init
+showScreen('title');
+</script>
+</body>
+</html>
