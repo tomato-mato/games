@@ -423,6 +423,39 @@ body {
     50%      { box-shadow: 0 0 8px 3px rgba(33,150,243,.15); }
 }
 
+/* ── Level & EXP ── */
+.lv-row { display: flex; justify-content: center; margin: 3px 0 5px; }
+.lv-badge {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    font-size: .72em;
+    font-weight: bold;
+    padding: 2px 11px;
+    border-radius: 20px;
+    letter-spacing: .06em;
+}
+.exp-wrap {
+    height: 5px;
+    background: rgba(255,255,255,.1);
+    border-radius: 3px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+.exp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #a78bfa);
+    border-radius: 3px;
+    transition: width .4s ease;
+}
+.exp-lbl { font-size: .6em; color: #9b8fc4; margin-top: 2px; }
+
+@keyframes lvupBurst {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.5); box-shadow: 0 0 18px rgba(167,139,250,.95); }
+    100% { transform: scale(1); }
+}
+.anim-lvup { animation: lvupBurst .65s ease-out; }
+
 /* ═══ RESPONSIVE ═══ */
 
 /* ── タブレット・大型スマホ ── */
@@ -593,8 +626,11 @@ body {
             <div class="fighter">
                 <span class="f-icon" id="pIcon">⚔️</span>
                 <div class="f-name" id="pName">勇者</div>
+                <div class="lv-row"><span class="lv-badge" id="lvBadge">Lv.1</span></div>
                 <div class="hp-wrap"><div class="hp-bar hp-p" id="pHpBar" style="width:100%"></div></div>
                 <div class="hp-lbl" id="pHpLbl">100 / 100</div>
+                <div class="exp-wrap"><div class="exp-fill" id="expBar" style="width:0%"></div></div>
+                <div class="exp-lbl" id="expLbl">EXP 0 / 30</div>
                 <div class="gauge-row">
                     <span class="gauge-lbl">必殺ゲージ</span>
                     <div class="gauge-orbs">
@@ -735,7 +771,7 @@ body {
 const CHARS = [
     {
         id: 'hero', name: '勇者', emoji: '⚔️',
-        maxHp: 100, dmg: 20,
+        maxHp: 150, dmg: 20,
         hpR: .63, atkR: .57,
         desc: 'バランス型の戦士',
         abi: 'HP50%以下でダメージ2倍',
@@ -744,7 +780,7 @@ const CHARS = [
     },
     {
         id: 'mage', name: '魔法使い', emoji: '🔮',
-        maxHp: 70, dmg: 35,
+        maxHp: 110, dmg: 35,
         hpR: .44, atkR: 1.0,
         desc: '高火力の魔法使い',
         abi: '25%の確率でダメージ2倍',
@@ -753,7 +789,7 @@ const CHARS = [
     },
     {
         id: 'ninja', name: '忍者', emoji: '🥷',
-        maxHp: 110, dmg: 20,
+        maxHp: 165, dmg: 20,
         hpR: .69, atkR: .57,
         desc: '身軽な忍者',
         abi: '負け時20%で攻撃を回避',
@@ -762,7 +798,7 @@ const CHARS = [
     },
     {
         id: 'knight', name: '騎士', emoji: '🛡️',
-        maxHp: 160, dmg: 15,
+        maxHp: 240, dmg: 15,
         hpR: 1.0, atkR: .43,
         desc: '重鎧の守護騎士',
         abi: '受けるダメージを常に30%軽減',
@@ -771,7 +807,7 @@ const CHARS = [
     },
     {
         id: 'dragon', name: 'ドラゴン使い', emoji: '🐉',
-        maxHp: 90, dmg: 15,
+        maxHp: 130, dmg: 15,
         hpR: .56, atkR: .43,
         desc: 'ドラゴンと契約した者',
         abi: '連勝でダメージUP（最大3連勝で×2）',
@@ -817,6 +853,9 @@ const S = {
     nextDodge: false, // 忍者必殺技の次ラウンド回避フラグ
     itemUsed: { herb: false, bomb: false, shield: false },
     shieldTurns: 0,   // 盾の残りターン数
+    level: 1,
+    exp: 0,
+    maxHp: 0,         // レベルアップで増加する最大HP
     busy: false,
 };
 
@@ -880,12 +919,15 @@ function pickChar(i) {
 
 function startBattle() {
     if (!S.char) return;
-    S.playerHp = S.char.maxHp;
+    S.maxHp    = S.char.maxHp;
+    S.playerHp = S.maxHp;
+    S.level    = 1;
+    S.exp      = 0;
     S.enemyIdx = 0;
-    S.combo = 0;
-    S.gauge = 0;
-    S.nextDodge = false;
-    S.itemUsed = { herb: false, bomb: false, shield: false };
+    S.combo    = 0;
+    S.gauge    = 0;
+    S.nextDodge  = false;
+    S.itemUsed   = { herb: false, bomb: false, shield: false };
     S.shieldTurns = 0;
     S.lastPlayerChoice = null;
     showScreen('battle');
@@ -924,6 +966,7 @@ function loadEnemy() {
     refreshGauge();
     refreshItems();
     refreshShield();
+    refreshLevel();
     renderProgress();
 
     S.lastPlayerChoice = null; // 敵が変わったら読み履歴リセット
@@ -998,7 +1041,7 @@ function resolve(result, pc, ec) {
     if (result === 'win') {
         let dmg = c.dmg;
 
-        if (c.id === 'hero' && S.playerHp <= c.maxHp * 0.5) {
+        if (c.id === 'hero' && S.playerHp <= S.maxHp * 0.5) {
             dmg *= 2;
             abiMsg = c.abiName + '発動！ ダメージ2倍！';
         } else if (c.id === 'mage' && Math.random() < 0.25) {
@@ -1011,8 +1054,12 @@ function resolve(result, pc, ec) {
             if (S.combo > 1) abiMsg = c.abiName + ` ${S.combo}連勝！ ダメージ×${mult}！`;
         }
 
+        // レベルダメージ補正（+10%/レベル）
+        dmg = Math.floor(dmg * (1 + (S.level - 1) * 0.1));
+
         S.enemyHp = Math.max(0, S.enemyHp - dmg);
         S.gauge = Math.min(3, S.gauge + 1);
+        gainExp(10);
         anim(eEl, 'anim-shake');
         anim(pEl, 'anim-bounce');
 
@@ -1116,7 +1163,7 @@ function handleEnemyDown() {
             // 回復量: 10, 30, 50, 70（敵ごとに20ずつ増加）
             const healAmt = 10 + S.enemyIdx * 20;
             const before  = S.playerHp;
-            S.playerHp    = Math.min(S.char.maxHp, S.playerHp + healAmt);
+            S.playerHp    = Math.min(S.maxHp, S.playerHp + healAmt);
             const actual  = S.playerHp - before;
             refreshHp();
 
@@ -1163,12 +1210,12 @@ function showClear() {
 function refreshHp() {
     const c = S.char;
     const e = ENEMIES[S.enemyIdx];
-    const pp = Math.max(0, S.playerHp / c.maxHp * 100);
+    const pp = Math.max(0, S.playerHp / S.maxHp * 100);
     const ep = Math.max(0, S.enemyHp  / e.maxHp  * 100);
 
     $('pHpBar').style.width = pp + '%';
     $('eHpBar').style.width = ep + '%';
-    $('pHpLbl').textContent = `HP: ${Math.max(0, S.playerHp)} / ${c.maxHp}`;
+    $('pHpLbl').textContent = `HP: ${Math.max(0, S.playerHp)} / ${S.maxHp}`;
     $('eHpLbl').textContent = `HP: ${Math.max(0, S.enemyHp)}  / ${e.maxHp}`;
 
     const bar = $('pHpBar');
@@ -1182,6 +1229,45 @@ function refreshCombo() {
         const d = $('cd' + i);
         if (d) d.className = 'c-dot' + (i < S.combo ? ' lit' : '');
     }
+}
+
+function gainExp(amount) {
+    S.exp += amount;
+    if (S.exp >= 30) {
+        S.exp -= 30;
+        levelUp();
+    }
+    refreshLevel();
+}
+
+function levelUp() {
+    S.level++;
+    const hpGain = 15;
+    S.maxHp    += hpGain;
+    S.playerHp  = Math.min(S.maxHp, S.playerHp + hpGain);
+    refreshHp();
+
+    // ログにレベルアップ通知を追記
+    const mult = (1 + (S.level - 1) * 0.1).toFixed(1);
+    $('logBox').innerHTML += `
+        <div style="color:#a78bfa;font-size:.88em;margin-top:6px;font-weight:bold">
+            ✨ レベルアップ！ Lv.${S.level}<br>
+            <span style="font-size:.9em;font-weight:normal">ダメージ×${mult} / 最大HP+${hpGain}</span>
+        </div>`;
+
+    // バッジにアニメーション
+    const badge = $('lvBadge');
+    badge.classList.remove('anim-lvup');
+    void badge.offsetWidth;
+    badge.classList.add('anim-lvup');
+    setTimeout(() => badge.classList.remove('anim-lvup'), 700);
+}
+
+function refreshLevel() {
+    $('lvBadge').textContent = `Lv.${S.level}`;
+    const pct = Math.min(100, (S.exp / 30) * 100);
+    $('expBar').style.width = pct + '%';
+    $('expLbl').textContent = `EXP ${S.exp} / 30`;
 }
 
 function refreshItems() {
@@ -1210,7 +1296,7 @@ function useItem(id) {
 
     if (id === 'herb') {
         const before = S.playerHp;
-        S.playerHp = Math.min(c.maxHp, S.playerHp + 40);
+        S.playerHp = Math.min(S.maxHp, S.playerHp + 40);
         const healed = S.playerHp - before;
         const bar = $('pHpBar');
         bar.classList.remove('anim-heal'); void bar.offsetWidth; bar.classList.add('anim-heal');
@@ -1276,9 +1362,9 @@ function useUltimate() {
 
     if (c.id === 'hero') {
         dmg = 60;
-        if (S.playerHp <= c.maxHp * 0.5) {
+        if (S.playerHp <= S.maxHp * 0.5) {
             dmg = 120;
-            extraMsg = '<div class="abi-txt">🔥 闘志発動！ ダメージ2倍（120）！</div>';
+            extraMsg = '<div class="abi-txt">🔥 闘志発動！ ダメージ2倍！</div>';
         }
     } else if (c.id === 'mage') {
         dmg = 105;
@@ -1295,8 +1381,12 @@ function useUltimate() {
         extraMsg = '<div class="abi-txt">🐉 コンボMAX！</div>';
     }
 
+    // レベルダメージ補正
+    dmg = Math.floor(dmg * (1 + (S.level - 1) * 0.1));
+
     S.enemyHp = Math.max(0, S.enemyHp - dmg);
-    if (healAmt > 0) S.playerHp = Math.min(c.maxHp, S.playerHp + healAmt);
+    if (healAmt > 0) S.playerHp = Math.min(S.maxHp, S.playerHp + healAmt);
+    gainExp(10);
     S.gauge = 0;
 
     $('pChoice').textContent = '💥';
