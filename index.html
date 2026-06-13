@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マイゲームズ | My Game Arcade</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #00ffcc;
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+        }
+        /* ゲーム一覧を並べるグリッド */
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        /* ゲーム1つのカードデザイン */
+        .game-card {
+            background-color: #1e1e1e;
+            border: 2px solid #333;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s, border-color 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            border-color: #00ffcc;
+        }
+        .game-info {
+            padding: 20px;
+        }
+        .game-title {
+            font-size: 1.4rem;
+            margin: 0 0 10px 0;
+            color: #fff;
+        }
+        .game-desc {
+            color: #aaa;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎮 MY GAME ARCADE</h1>
+
+    <div class="game-grid">
+
+        <a href="games/coinCollector/" class="game-card">
+            <div class="game-info">
+                <h2 class="game-title">🪙 コインコレクター</h2>
+                <p class="game-desc">落ちてくるコインをたくさん集めるシンプル爽快ゲーム！</p>
+            </div>
+        </a>
+
+        </div>
+
+</body>
+</html>
