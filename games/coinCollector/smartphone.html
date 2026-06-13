@@ -155,8 +155,11 @@ canvas { display:block; }
       <tr><td>🔷</td><td>盾 — ダメージブロック×5回</td></tr>
       <tr><td>💣</td><td>爆弾 — 近くの敵を最大5体爆破</td></tr>
       <tr><td>❄</td><td>凍結 — 5秒間動けなくなる！（危険）</td></tr>
+      <tr><td>🥶</td><td>極寒 — 10秒間動けなくなる！（超危険・レア出現）</td></tr>
       <tr><td>💀</td><td>即死アイテム — 触れると即死！盾で−1に軽減（超危険）</td></tr>
       <tr><td>🧊</td><td>敵凍結 — 5秒間すべての敵の動きが止まる！</td></tr>
+      <tr><td>⛄</td><td>大凍結 — 10秒間すべての敵の動きが止まる！（レア出現）</td></tr>
+      <tr><td>💊</td><td>全回復 — ライフを全回復！満タンなら+500pt（レア出現）</td></tr>
       <tr><td>😈</td><td>敵マグネット — 8秒間敵が追跡！</td></tr>
       <tr><td>☄</td><td>全滅ボム — 画面上の全敵を一掃！（各+150pt）レア出現</td></tr>
       <tr><td>❓</td><td>ミステリーボックス — 触れるとランダムアイテム2〜4個出現！（危険なものも…）</td></tr>
@@ -268,7 +271,7 @@ document.addEventListener('touchcancel',e=>{
 let P,coins,enemies,particles,popups,powerups;
 let score,best,lives,level,levelXP,bestLevel,bestTime,prevRank,bestRank;
 let over,started,paused;
-let t,coinTimer,enemyTimer,pwTimer,deathTimer,bigStarTimer,squareTimer,enemyMagTimer,heavyEnemyTimer,healEnemyTimer,heal2EnemyTimer,fullHealEnemyTimer,allBombTimer,randBoxTimer;
+let t,coinTimer,enemyTimer,pwTimer,deathTimer,bigStarTimer,squareTimer,enemyMagTimer,heavyEnemyTimer,healEnemyTimer,heal2EnemyTimer,fullHealEnemyTimer,allBombTimer,randBoxTimer,bigFreezeTimer,fullHealTimer,bigColdTimer;
 let bonusDone,bigStarBonusDone,bigStar2BonusDone,squareBonusDone,squareBonus2Done;
 let lastTs,rafId,shakeT;
 const keys={};
@@ -333,13 +336,38 @@ function burst(x,y,col,n){
 }
 function popup(x,y,txt,col){ popups.push({x,y,vy:-75,txt,col,life:1}); }
 
+// ── Audio ─────────────────────────────────────
+let _ac=null;
+function playCoin(pts){
+  try{
+    if(!_ac)_ac=new(window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended')_ac.resume();
+    const now=_ac.currentTime;
+    const notes=pts>=1000?[[440,0],[880,0.06],[1320,0.12]]
+               :pts>=500 ?[[880,0],[1320,0.05],[1760,0.10]]
+               :pts>=100 ?[[880,0],[1320,0.04]]
+               :          [[740,0],[1100,0.03]];
+    const dur=pts>=1000?0.28:pts>=500?0.22:0.14;
+    for(const[f,d] of notes){
+      const osc=_ac.createOscillator(),g=_ac.createGain();
+      osc.connect(g);g.connect(_ac.destination);
+      osc.type='sine';
+      osc.frequency.setValueAtTime(f,now+d);
+      g.gain.setValueAtTime(0,now+d);
+      g.gain.linearRampToValueAtTime(0.18,now+d+0.005);
+      g.gain.exponentialRampToValueAtTime(0.001,now+d+dur);
+      osc.start(now+d);osc.stop(now+d+dur+0.01);
+    }
+  }catch(e){}
+}
+
 // ── Lifecycle ─────────────────────────────────
 function startGame(){
   P=mkPlayer();
   coins=[];enemies=[];particles=[];popups=[];powerups=[];
   score=0;lives=3;level=1;levelXP=0;prevRank='';
   t=0;coinTimer=0;enemyTimer=10;pwTimer=18;deathTimer=25;
-  bigStarTimer=40;squareTimer=30;enemyMagTimer=20;heavyEnemyTimer=15;healEnemyTimer=20;heal2EnemyTimer=32;fullHealEnemyTimer=45;allBombTimer=20;randBoxTimer=25;
+  bigStarTimer=40;squareTimer=30;enemyMagTimer=20;heavyEnemyTimer=15;healEnemyTimer=20;heal2EnemyTimer=32;fullHealEnemyTimer=45;allBombTimer=20;randBoxTimer=25;bigFreezeTimer=35;fullHealTimer=45;bigColdTimer=40;
   bonusDone=bigStarBonusDone=bigStar2BonusDone=squareBonusDone=squareBonus2Done=false;
   shakeT=0;over=false;started=true;paused=false;
   best    =+(localStorage.getItem('cc-best')||0);
@@ -450,6 +478,21 @@ function update(dt){
     const[rbx,rby]=safePos(120);
     powerups.push({x:rbx,y:rby,r:16,type:'randbox',age:0});
   }
+  if(t>=bigFreezeTimer&&!powerups.some(p=>p.type==='bigfreeze')){
+    bigFreezeTimer=t+rnd(40,60);
+    const[bfx,bfy]=safePos(120);
+    powerups.push({x:bfx,y:bfy,r:15,type:'bigfreeze',age:0});
+  }
+  if(t>=bigColdTimer&&!powerups.some(p=>p.type==='bigcold')){
+    bigColdTimer=t+rnd(50,75);
+    const[bcx,bcy]=safePos(120);
+    powerups.push({x:bcx,y:bcy,r:15,type:'bigcold',age:0});
+  }
+  if(t>=fullHealTimer&&!powerups.some(p=>p.type==='fullheal')){
+    fullHealTimer=t+rnd(55,80);
+    const[fhx,fhy]=safePos(120);
+    powerups.push({x:fhx,y:fhy,r:15,type:'fullheal',age:0});
+  }
   if(t>=allBombTimer&&!powerups.some(p=>p.type==='allbomb')){
     allBombTimer=t+rnd(45,70);
     const[abx,aby]=safePos(130);
@@ -501,7 +544,7 @@ function update(dt){
     c.x+=c.vx*dt;c.y+=c.vy*dt;
     if(dist(P.x,P.y,c.x,c.y)<P.r+c.r){
       const pts=c.type==='square'?1000:c.type==='bigstar'?500:c.type==='purple'?200:c.type==='green'?100:c.type==='star'?30:10;
-      score+=pts;levelXP+=pts;
+      score+=pts;levelXP+=pts;playCoin(pts);
       const bc=c.type==='square'?'#00e5ff':c.type==='bigstar'?'#fff':c.type==='purple'?'#ce93d8':c.type==='green'?'#69f0ae':c.type==='star'?'#ffd600':'#ffca28';
       burst(c.x,c.y,bc,c.type==='square'?60:c.type==='bigstar'?50:c.type==='purple'?14:c.type==='green'?12:c.type==='star'?20:10);
       if(c.type==='square'){burst(c.x,c.y,'#fff',40);burst(c.x,c.y,'#aa00ff',30);shakeT=0.4;}
@@ -550,16 +593,19 @@ function update(dt){
         case'shield':P.shieldT=6;burst(pw.x,pw.y,'#00e676',16);popup(pw.x,pw.y,'🛡 シールド！','#69f0ae');break;
         case'speed':P.speedT=5;burst(pw.x,pw.y,'#ffd600',16);popup(pw.x,pw.y,'⚡ スピード！','#ffff00');break;
         case'freeze':P.freezeT=5;burst(pw.x,pw.y,'#80deea',16);popup(pw.x,pw.y,'❄ 凍結！','#80deea');break;
+        case'bigcold':P.freezeT=10;shakeT=0.5;burst(pw.x,pw.y,'#b2ebf2',40);burst(pw.x,pw.y,'#ffffff',28);burst(pw.x,pw.y,'#80deea',18);popup(P.x,P.y-28,'🥶 極寒！10秒間動けない！！','#b2ebf2');break;
         case'enemyfreeze':P.enemyFreezeT=5;burst(pw.x,pw.y,'#40c4ff',24);burst(pw.x,pw.y,'#ffffff',14);popup(pw.x,pw.y,'🧊 敵が凍った！5秒間停止！','#40c4ff');break;
+        case'bigfreeze':P.enemyFreezeT=10;burst(pw.x,pw.y,'#00b0ff',40);burst(pw.x,pw.y,'#ffffff',28);burst(pw.x,pw.y,'#80d8ff',18);shakeT=0.3;popup(pw.x,pw.y-10,'⛄ 大凍結！10秒間停止！','#00b0ff');break;
         case'instadeath':onInstantKill();burst(pw.x,pw.y,'#aa00ff',40);burst(pw.x,pw.y,'#ff1744',20);popup(P.x,P.y-28,'💀 即死アイテム！','#ea80ff');break;
         case'heart':if(lives<3){lives++;burst(pw.x,pw.y,'#ff4081',20);popup(pw.x,pw.y,'💖 回復！','#ff80ab');}else{score+=100;popup(pw.x,pw.y,'+100 満タン！','#ff80ab');}break;
         case'armor':P.armorCount=5;burst(pw.x,pw.y,'#4fc3f7',20);popup(pw.x,pw.y,'🔷 盾装備！×5','#4fc3f7');break;
         case'bomb':{const targets=[...enemies].sort((a,b)=>dist(P.x,P.y,a.x,a.y)-dist(P.x,P.y,b.x,b.y)).slice(0,5);for(const e of targets){burst(e.x,e.y,'#ff6d00',28);burst(e.x,e.y,'#ffab40',18);burst(e.x,e.y,'#fff',10);score+=100;enemies.splice(enemies.indexOf(e),1);}burst(pw.x,pw.y,'#ff1744',35);burst(pw.x,pw.y,'#ffd600',25);shakeT=0.65;popup(P.x,P.y-34,`💣 ${targets.length}体爆破！`,'#ff6d00');break;}
         case'enemymagnet':P.enemyMagT=8;shakeT=0.3;burst(pw.x,pw.y,'#ff1744',20);popup(pw.x,pw.y,'😈 敵が引き寄せられた！','#ff6d00');break;
         case'randbox':{
-          const pool=['magnet','shield','speed','heart','armor','bomb','enemyfreeze','magnet','shield','speed','heart'];
+          const pool=['magnet','shield','speed','heart','armor','bomb','enemyfreeze','bigfreeze','fullheal','magnet','shield','speed','heart'];
           if(Math.random()<0.22)pool.push('enemymagnet');
           if(Math.random()<0.15)pool.push('freeze');
+          if(Math.random()<0.10)pool.push('bigcold');
           const cnt=2+Math.floor(Math.random()*3);
           for(let i=0;i<cnt;i++){const type=pool[0|rnd(0,pool.length)];const[rx,ry]=safePos(60);powerups.push({x:rx,y:ry,r:15,type,age:0});}
           burst(pw.x,pw.y,'#ffd600',35);burst(pw.x,pw.y,'#ff00e5',22);burst(pw.x,pw.y,'#00e5ff',18);
@@ -567,6 +613,7 @@ function update(dt){
           break;
         }
         case'allbomb':{const cnt=enemies.length;for(const e of [...enemies]){burst(e.x,e.y,'#ff6d00',24);burst(e.x,e.y,'#ffff00',16);burst(e.x,e.y,'#fff',8);score+=150;}enemies.length=0;burst(pw.x,pw.y,'#ff6d00',60);burst(pw.x,pw.y,'#ffff00',50);burst(pw.x,pw.y,'#fff',30);shakeT=0.9;popup(P.x,P.y-40,`☄ 全${cnt}体撃破！`,'#ffff00');break;}
+        case'fullheal':{const added=3-lives;lives=3;burst(pw.x,pw.y,'#00e676',40);burst(pw.x,pw.y,'#b9f6ca',24);burst(pw.x,pw.y,'#ffffff',16);shakeT=0.3;if(added>0)popup(pw.x,pw.y-12,'💊 全回復！','#00e676');else{score+=500;popup(pw.x,pw.y-12,'💊 +500 満タン！','#00e676');}break;}
       }
       powerups.splice(i,1);
     }
@@ -762,8 +809,8 @@ function drawDeathEnemy(e){
   ctx.shadowColor='#aa00ff';ctx.shadowBlur=10;ctx.fillStyle='#fff';ctx.font='bold 12px "Segoe UI"';ctx.fillText('即　死',0,-(e.r+10));ctx.restore();
 }
 function drawPowerup(pw){
-  const cols={magnet:'#2979ff',shield:'#00e676',speed:'#ffd600',heart:'#ff4081',enemymagnet:'#ff1744',armor:'#4fc3f7',bomb:'#ff3d00',freeze:'#80deea',instadeath:'#aa00ff',enemyfreeze:'#40c4ff',allbomb:'#ff6d00',randbox:'#ffd600'};
-  const icons={magnet:'🧲',shield:'🛡',speed:'⚡',heart:'💖',enemymagnet:'😈',armor:'🔷',bomb:'💣',freeze:'❄',instadeath:'💀',enemyfreeze:'🧊',allbomb:'☄',randbox:'❓'};
+  const cols={magnet:'#2979ff',shield:'#00e676',speed:'#ffd600',heart:'#ff4081',enemymagnet:'#ff1744',armor:'#4fc3f7',bomb:'#ff3d00',freeze:'#80deea',instadeath:'#aa00ff',enemyfreeze:'#40c4ff',allbomb:'#ff6d00',randbox:'#ffd600',bigfreeze:'#00b0ff',fullheal:'#00e676',bigcold:'#b2ebf2'};
+  const icons={magnet:'🧲',shield:'🛡',speed:'⚡',heart:'💖',enemymagnet:'😈',armor:'🔷',bomb:'💣',freeze:'❄',instadeath:'💀',enemyfreeze:'🧊',allbomb:'☄',randbox:'❓',bigfreeze:'⛄',fullheal:'💊',bigcold:'🥶'};
   const pulse=1+Math.sin(pw.age*4)*0.11;
   ctx.save();ctx.translate(pw.x,pw.y);ctx.shadowColor=cols[pw.type];ctx.shadowBlur=24;
   ctx.beginPath();ctx.arc(0,0,pw.r*pulse,0,pi2);ctx.fillStyle=cols[pw.type]+'28';ctx.fill();
@@ -771,8 +818,11 @@ function drawPowerup(pw){
   ctx.shadowBlur=0;ctx.font=`${pw.r*1.5}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(icons[pw.type],0,1);
   if(pw.type==='armor'){ctx.fillStyle='#fff';ctx.font='bold 10px "Segoe UI"';ctx.fillText('×5',0,pw.r*0.9);}
   if(pw.type==='bomb'){const ring=1+Math.sin(pw.age*8)*0.3;ctx.strokeStyle='#ffab40';ctx.lineWidth=1.5;ctx.globalAlpha=0.5+Math.sin(pw.age*8)*0.4;ctx.beginPath();ctx.arc(0,0,pw.r*ring*1.5,0,pi2);ctx.stroke();ctx.globalAlpha=1;}
+  if(pw.type==='bigfreeze'){const ic=1+Math.sin(pw.age*4)*0.22;ctx.strokeStyle='#00b0ff';ctx.lineWidth=2.5;ctx.globalAlpha=0.55+Math.sin(pw.age*4)*0.3;ctx.beginPath();ctx.arc(0,0,pw.r*ic*1.7,0,pi2);ctx.stroke();ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.globalAlpha=0.3+Math.sin(pw.age*4+Math.PI)*0.2;ctx.beginPath();ctx.arc(0,0,pw.r*ic*2.3,0,pi2);ctx.stroke();ctx.globalAlpha=1;}
   if(pw.type==='allbomb'){const r1=1+Math.sin(pw.age*5)*0.35;ctx.strokeStyle='#ffff00';ctx.lineWidth=2;ctx.globalAlpha=0.55+Math.sin(pw.age*5)*0.3;ctx.beginPath();ctx.arc(0,0,pw.r*r1*1.7,0,pi2);ctx.stroke();const r2=1+Math.sin(pw.age*5+Math.PI)*0.35;ctx.strokeStyle='#ff6d00';ctx.lineWidth=1.5;ctx.globalAlpha=0.35+Math.sin(pw.age*5+Math.PI)*0.25;ctx.beginPath();ctx.arc(0,0,pw.r*r2*2.3,0,pi2);ctx.stroke();ctx.globalAlpha=1;}
   if(pw.type==='randbox'){const hue=(t*110+pw.age*60)%360;ctx.shadowColor=`hsl(${hue},100%,65%)`;ctx.shadowBlur=28;for(let ri=0;ri<3;ri++){const rh=(hue+ri*120)%360,rr=1+Math.sin(pw.age*5+ri*2.1)*0.28;ctx.strokeStyle=`hsl(${rh},100%,65%)`;ctx.lineWidth=1.8;ctx.globalAlpha=0.45+Math.sin(pw.age*4+ri)*0.3;ctx.beginPath();ctx.arc(0,0,pw.r*rr*(1.6+ri*0.4),0,pi2);ctx.stroke();}ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.font=`${pw.r*1.8}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('❓',0,1);}
+  if(pw.type==='fullheal'){const p1=1+Math.sin(pw.age*5)*0.28,p2=1+Math.sin(pw.age*5+Math.PI)*0.28;ctx.strokeStyle='#00e676';ctx.lineWidth=2.2;ctx.globalAlpha=0.6+Math.sin(pw.age*5)*0.3;ctx.beginPath();ctx.arc(0,0,pw.r*p1*1.7,0,pi2);ctx.stroke();ctx.strokeStyle='#b9f6ca';ctx.lineWidth=1.5;ctx.globalAlpha=0.35+Math.sin(pw.age*5+Math.PI)*0.25;ctx.beginPath();ctx.arc(0,0,pw.r*p2*2.3,0,pi2);ctx.stroke();ctx.globalAlpha=1;}
+  if(pw.type==='bigcold'){for(let ri=0;ri<3;ri++){const rr=1+Math.sin(pw.age*6+ri*1.8)*0.32;ctx.strokeStyle=ri===0?'#b2ebf2':ri===1?'#80deea':'#e0f7fa';ctx.lineWidth=2-ri*0.4;ctx.globalAlpha=0.6+Math.sin(pw.age*5+ri)*0.28;ctx.beginPath();ctx.arc(0,0,pw.r*rr*(1.6+ri*0.5),0,pi2);ctx.stroke();}ctx.globalAlpha=1;}
   ctx.restore();
 }
 function drawPlayer(){
