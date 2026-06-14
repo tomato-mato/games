@@ -123,7 +123,6 @@ canvas { display:block; }
       <tr><td>😈</td><td>敵マグネット — 8秒間すべての敵が追いかけてくる！</td></tr>
       <tr><td>❄</td><td>凍結 — 5秒間動けなくなる！（危険）</td></tr>
       <tr><td>🥶</td><td>極寒 — 10秒間動けなくなる！（超危険・レア出現）</td></tr>
-      <tr><td>🌨</td><td>パーマフロスト — 50秒間動けなくなる！！（絶望的危険・超レア）</td></tr>
       <tr><td>💀</td><td>即死アイテム — 触れると即死！盾で−1に軽減（超危険）</td></tr>
       <tr><td>☄</td><td>全滅ボム — 画面上の全敵を一掃！（各+150pt）レア出現</td></tr>
       <tr><td>❓</td><td>ミステリーボックス — 触れるとランダムアイテム2〜4個出現！（危険なものも…）</td></tr>
@@ -173,7 +172,7 @@ const pi2   = Math.PI*2;
 let P, coins, enemies, particles, popups, powerups;
 let score, best, lives, level, levelXP, bestLevel, bestTime, prevRank, bestRank;
 let over, started, paused;
-let t, coinTimer, enemyTimer, pwTimer, deathTimer, bigStarTimer, squareTimer, enemyMagTimer, heavyEnemyTimer, healEnemyTimer, heal2EnemyTimer, fullHealEnemyTimer, allBombTimer, randBoxTimer, bigFreezeTimer, fullHealTimer, bigColdTimer, permafrostTimer, bonusDone, bigStarBonusDone, bigStar2BonusDone, squareBonusDone, squareBonus2Done;
+let t, coinTimer, enemyTimer, pwTimer, deathTimer, bigStarTimer, squareTimer, enemyMagTimer, heavyEnemyTimer, healEnemyTimer, heal2EnemyTimer, fullHealEnemyTimer, allBombTimer, randBoxTimer, bigFreezeTimer, fullHealTimer, bigColdTimer, bonusDone, bigStarBonusDone, bigStar2BonusDone, squareBonusDone, squareBonus2Done;
 let lastTs, rafId, shakeT;
 const keys = {};
 
@@ -414,7 +413,7 @@ function startGame() {
   P = mkPlayer();
   coins=[]; enemies=[]; particles=[]; popups=[]; powerups=[];
   score=0; lives=3; level=1; levelXP=0; prevRank='';
-  t=0; coinTimer=0; enemyTimer=10; pwTimer=18; deathTimer=25; bigStarTimer=40; squareTimer=30; enemyMagTimer=20; heavyEnemyTimer=15; healEnemyTimer=20; heal2EnemyTimer=32; fullHealEnemyTimer=45; allBombTimer=20; randBoxTimer=25; bigFreezeTimer=35; fullHealTimer=45; bigColdTimer=40; permafrostTimer=60; bonusDone=false; bigStarBonusDone=false; bigStar2BonusDone=false; squareBonusDone=false; squareBonus2Done=false;
+  t=0; coinTimer=0; enemyTimer=10; pwTimer=18; deathTimer=25; bigStarTimer=40; squareTimer=30; enemyMagTimer=20; heavyEnemyTimer=15; healEnemyTimer=20; heal2EnemyTimer=32; fullHealEnemyTimer=45; allBombTimer=20; randBoxTimer=25; bigFreezeTimer=35; fullHealTimer=45; bigColdTimer=40; bonusDone=false; bigStarBonusDone=false; bigStar2BonusDone=false; squareBonusDone=false; squareBonus2Done=false;
   shakeT=0; over=false; started=true; paused=false;
   best      = +(localStorage.getItem('cc-best')||0);
   bestLevel = +(localStorage.getItem('cc-bestlv')||1);
@@ -569,13 +568,6 @@ function update(dt) {
     randBoxTimer=t+rnd(35,55);
     const [rbx,rby]=safePos(120);
     powerups.push({x:rbx,y:rby,r:16,type:'randbox',age:0});
-  }
-
-  // Permafrost spawning（60秒後から、80〜120秒ごと・同時1個まで）
-  if(t>=permafrostTimer && !powerups.some(p=>p.type==='permafrost')){
-    permafrostTimer=t+rnd(80,120);
-    const [pfx,pfy]=safePos(130);
-    powerups.push({x:pfx,y:pfy,r:16,type:'permafrost',age:0});
   }
 
   // Big cold spawning（40秒後から、50〜75秒ごと・同時1個まで）
@@ -830,11 +822,6 @@ function update(dt) {
           burst(pw.x,pw.y,'#b2ebf2',40); burst(pw.x,pw.y,'#ffffff',28); burst(pw.x,pw.y,'#80deea',18);
           popup(P.x,P.y-28,'🥶 極寒！10秒間動けない！！','#b2ebf2');
           break;
-        case'permafrost':
-          P.freezeT=50; shakeT=0.9;
-          burst(pw.x,pw.y,'#e1f5fe',60); burst(pw.x,pw.y,'#ffffff',50); burst(pw.x,pw.y,'#80deea',40); burst(pw.x,pw.y,'#b2ebf2',30);
-          popup(P.x,P.y-36,'🌨 パーマフロスト！50秒間動けない！！','#e1f5fe');
-          break;
         case'enemyfreeze':
           P.enemyFreezeT=5; playFreeze();
           burst(pw.x,pw.y,'#40c4ff',24); burst(pw.x,pw.y,'#ffffff',14);
@@ -857,7 +844,6 @@ function update(dt) {
           if(Math.random()<0.22) pool.push('enemymagnet');
           if(Math.random()<0.15) pool.push('freeze');
           if(Math.random()<0.10) pool.push('bigcold');
-          if(Math.random()<0.05) pool.push('permafrost');
           const cnt=2+Math.floor(Math.random()*3); // 2〜4個
           for(let i=0;i<cnt;i++){
             const type=pool[0|rnd(0,pool.length)];
@@ -1330,8 +1316,8 @@ function drawDeathEnemy(e) {
 
 // ── Draw: power-ups ───────────────────────────
 function drawPowerup(pw) {
-  const cols={magnet:'#2979ff',shield:'#00e676',speed:'#ffd600',heart:'#ff4081',enemymagnet:'#ff1744',armor:'#4fc3f7',bomb:'#ff3d00',freeze:'#80deea',instadeath:'#aa00ff',enemyfreeze:'#40c4ff',allbomb:'#ff6d00',randbox:'#ffd600',bigfreeze:'#00b0ff',fullheal:'#00e676',bigcold:'#b2ebf2',permafrost:'#e1f5fe'};
-  const icons={magnet:'🧲',shield:'🛡',speed:'⚡',heart:'💖',enemymagnet:'😈',armor:'🔷',bomb:'💣',freeze:'❄',instadeath:'💀',enemyfreeze:'🧊',allbomb:'☄',randbox:'❓',bigfreeze:'⛄',fullheal:'💊',bigcold:'🥶',permafrost:'🌨'};
+  const cols={magnet:'#2979ff',shield:'#00e676',speed:'#ffd600',heart:'#ff4081',enemymagnet:'#ff1744',armor:'#4fc3f7',bomb:'#ff3d00',freeze:'#80deea',instadeath:'#aa00ff',enemyfreeze:'#40c4ff',allbomb:'#ff6d00',randbox:'#ffd600',bigfreeze:'#00b0ff',fullheal:'#00e676',bigcold:'#b2ebf2'};
+  const icons={magnet:'🧲',shield:'🛡',speed:'⚡',heart:'💖',enemymagnet:'😈',armor:'🔷',bomb:'💣',freeze:'❄',instadeath:'💀',enemyfreeze:'🧊',allbomb:'☄',randbox:'❓',bigfreeze:'⛄',fullheal:'💊',bigcold:'🥶'};
   const pulse=1+Math.sin(pw.age*4)*0.11;
   ctx.save();
   ctx.translate(pw.x,pw.y);
@@ -1406,21 +1392,6 @@ function drawPowerup(pw) {
       ctx.beginPath(); ctx.arc(0,0,pw.r*rr*(1.6+ri*0.5),0,pi2); ctx.stroke();
     }
     ctx.globalAlpha=1;
-  }
-  if(pw.type==='permafrost'){
-    // 不吉な白い多重リング＋点滅
-    for(let ri=0;ri<4;ri++){
-      const rr=1+Math.sin(pw.age*7+ri*1.5)*0.38;
-      const col=ri%2===0?'#e1f5fe':'#ffffff';
-      ctx.strokeStyle=col; ctx.lineWidth=2.5-ri*0.4;
-      ctx.globalAlpha=(0.65+Math.sin(pw.age*8+ri)*0.3)*Math.abs(Math.sin(pw.age*3));
-      ctx.beginPath(); ctx.arc(0,0,pw.r*rr*(1.5+ri*0.55),0,pi2); ctx.stroke();
-    }
-    ctx.globalAlpha=1;
-    // 中央に ！マーク
-    ctx.fillStyle='#fff'; ctx.font=`bold 10px "Segoe UI"`;
-    ctx.textAlign='center'; ctx.textBaseline='bottom';
-    ctx.fillText('50秒！',0,pw.r*1.1);
   }
   ctx.restore();
 }
