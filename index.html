@@ -1,121 +1,301 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>マイゲームズ | My Game Arcade</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #121212;
-            color: #ffffff;
-            margin: 0;
-            padding: 40px 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #00ffcc;
-            font-size: 2.5rem;
-            margin-bottom: 40px;
-        }
-        /* ゲーム一覧を並べるグリッド */
-        .game-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-        /* ゲーム1つのカードデザイン */
-        .game-card {
-            background-color: #1e1e1e;
-            border: 2px solid #333;
-            border-radius: 12px;
-            overflow: hidden;
-            transition: transform 0.2s, border-color 0.2s;
-            text-decoration: none;
-            color: inherit;
-            display: flex;
-            flex-direction: column;
-        }
-        .game-card:hover {
-            transform: translateY(-5px);
-            border-color: #00ffcc;
-        }
-        .game-info {
-            padding: 20px;
-        }
-        .game-title {
-            font-size: 1.4rem;
-            margin: 0 0 10px 0;
-            color: #fff;
-        }
-        .game-desc {
-            color: #aaa;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            margin: 0;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マイゲームズ | My Game Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0b14;
+      --surface: #181826;
+      --surface-light: #20202f;
+      --border: #2c2c40;
+      --text: #f5f5fa;
+      --text-muted: #9b9bb5;
+
+      --cyan: #00f5d4;
+      --cyan-glow: rgba(0, 245, 212, 0.35);
+      --magenta: #ff3d7f;
+      --magenta-glow: rgba(255, 61, 127, 0.35);
+      --yellow: #ffd83d;
+      --yellow-glow: rgba(255, 216, 61, 0.35);
+      --green: #7cff6b;
+      --green-glow: rgba(124, 255, 107, 0.35);
+      --purple: #b986ff;
+      --purple-glow: rgba(185, 134, 255, 0.35);
+      --orange: #ff9f45;
+      --orange-glow: rgba(255, 159, 69, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 60px 20px 80px;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(circle at 20% 0%, rgba(0, 245, 212, 0.06), transparent 40%),
+        radial-gradient(circle at 80% 10%, rgba(255, 61, 127, 0.06), transparent 40%);
+      color: var(--text);
+      font-family: 'Zen Maru Gothic', 'Segoe UI', sans-serif;
+    }
+
+    /* ===== ヘッダー（マーキー風タイトル） ===== */
+    .arcade-header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .arcade-header h1 {
+      font-family: 'Press Start 2P', 'Zen Maru Gothic', sans-serif;
+      font-size: clamp(1.6rem, 6vw, 2.8rem);
+      letter-spacing: 0.1em;
+      margin: 0 0 16px;
+      color: var(--cyan);
+      text-shadow:
+        0 0 6px var(--cyan-glow),
+        0 0 18px var(--cyan-glow),
+        0 0 2px var(--magenta);
+      animation: flicker 6s infinite;
+    }
+
+    .arcade-header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+    }
+
+    @keyframes flicker {
+      0%, 91%, 100% { opacity: 1; }
+      92% { opacity: 0.75; }
+      93% { opacity: 1; }
+      95% { opacity: 0.85; }
+      96% { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .arcade-header h1 {
+        animation: none;
+      }
+    }
+
+    /* ===== ゲーム一覧グリッド ===== */
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 24px;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    /* ===== ゲームカード ===== */
+    .game-card {
+      display: flex;
+      flex-direction: column;
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .game-card:hover,
+    .game-card:focus-visible {
+      transform: translateY(-6px);
+      border-color: var(--accent);
+      box-shadow: 0 12px 24px -8px var(--accent-glow);
+      outline: none;
+    }
+
+    /* カード上部：アイコン表示エリア（CRT風スキャンライン） */
+    .card-screen {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 120px;
+      background-color: var(--surface-light);
+      background-image: repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.025) 0px,
+        rgba(255, 255, 255, 0.025) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      border-bottom: 2px solid var(--accent);
+      font-size: 3rem;
+    }
+
+    .card-number {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      font-family: 'Press Start 2P', sans-serif;
+      font-size: 0.7rem;
+      color: var(--accent);
+      opacity: 0.8;
+    }
+
+    /* カード下部：テキスト情報 */
+    .game-info {
+      padding: 18px 20px 22px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+
+    .game-title {
+      font-size: 1.2rem;
+      margin: 0 0 8px;
+      color: var(--text);
+    }
+
+    .game-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin: 0 0 18px;
+      flex-grow: 1;
+    }
+
+    .play-btn {
+      align-self: flex-start;
+      font-family: 'Press Start 2P', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .play-btn .arrow {
+      transition: transform 0.2s ease;
+    }
+
+    .game-card:hover .play-btn .arrow,
+    .game-card:focus-visible .play-btn .arrow {
+      transform: translateX(4px);
+    }
+
+    /* ===== カードごとのアクセントカラー（6色を順番に割り当て） ===== */
+    .game-card:nth-child(6n + 1) { --accent: var(--cyan);    --accent-glow: var(--cyan-glow); }
+    .game-card:nth-child(6n + 2) { --accent: var(--magenta); --accent-glow: var(--magenta-glow); }
+    .game-card:nth-child(6n + 3) { --accent: var(--yellow);  --accent-glow: var(--yellow-glow); }
+    .game-card:nth-child(6n + 4) { --accent: var(--green);   --accent-glow: var(--green-glow); }
+    .game-card:nth-child(6n + 5) { --accent: var(--purple);  --accent-glow: var(--purple-glow); }
+    .game-card:nth-child(6n + 6) { --accent: var(--orange);  --accent-glow: var(--orange-glow); }
+
+    /* ===== スマホ対応 ===== */
+    @media (max-width: 480px) {
+      body {
+        padding: 40px 14px 60px;
+      }
+
+      .arcade-header {
+        margin-bottom: 36px;
+      }
+
+      .game-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+
+      .card-screen {
+        height: 100px;
+        font-size: 2.5rem;
+      }
+    }
+  </style>
 </head>
 <body>
+  <header class="arcade-header">
+    <h1>MY GAME ARCADE</h1>
+    <p>あそびたいゲームを選んでね</p>
+  </header>
 
-    <h1>🎮 MY GAME ARCADE</h1>
+  <div class="game-grid">
 
-    <div class="game-grid">
+    <a href="games/coinCollector/smartphone.html" class="game-card">
+      <div class="card-screen">
+        <span class="card-number">01</span>
+        <span>🪙</span>
+      </div>
+      <div class="game-info">
+        <h2 class="game-title">コインコレクター（スマホ）</h2>
+        <p class="game-desc">落ちてくるコインをたくさん集めるシンプル爽快ゲーム！</p>
+        <span class="play-btn">PLAY <span class="arrow">▶</span></span>
+      </div>
+    </a>
 
-        <a href="games/coinCollector/smartphone.html" class="game-card">
-            <div class="game-info">
-                <h2 class="game-title">🪙 コインコレクター（スマホ）</h2>
-                <p class="game-desc">落ちてくるコインをたくさん集めるシンプル爽快ゲーム！</p>
-            </div>
-        </a>
+    <a href="games/coinCollector/pc.html" class="game-card">
+      <div class="card-screen">
+        <span class="card-number">02</span>
+        <span>🪙</span>
+      </div>
+      <div class="game-info">
+        <h2 class="game-title">コインコレクター（PC）</h2>
+        <p class="game-desc">落ちてくるコインをたくさん集めるシンプル爽快ゲーム！</p>
+        <span class="play-btn">PLAY <span class="arrow">▶</span></span>
+      </div>
+    </a>
 
-        </div>
-        <div class="game-grid">
+    <a href="games/breakOut/index.html" class="game-card">
+      <div class="card-screen">
+        <span class="card-number">03</span>
+        <span>🧱</span>
+      </div>
+      <div class="game-info">
+        <h2 class="game-title">ブロック崩し</h2>
+        <p class="game-desc">あのブロック崩しが新しくなって登場！</p>
+        <span class="play-btn">PLAY <span class="arrow">▶</span></span>
+      </div>
+    </a>
 
-        <a href="games/coinCollector/pc.html" class="game-card">
-            <div class="game-info">
-                <h2 class="game-title">🪙 コインコレクター（PC）</h2>
-                <p class="game-desc">落ちてくるコインをたくさん集めるシンプル爽快ゲーム！</p>
-            </div>
-        </a>
-        </div>
-            <div class="game-grid">
+    <a href="games/fishAttack/index.html" class="game-card">
+      <div class="card-screen">
+        <span class="card-number">04</span>
+        <span>🐟</span>
+      </div>
+      <div class="game-info">
+        <h2 class="game-title">魚ゲーム</h2>
+        <p class="game-desc">魚を食べると頭がよくなるよ！</p>
+        <span class="play-btn">PLAY <span class="arrow">▶</span></span>
+      </div>
+    </a>
 
-        <a href="games/breakOut/index.html" class="game-card">
-            <div class="game-info">
-                <h2 class="game-title">🪙 ブロック崩し</h2>
-                <p class="game-desc">あのブロック崩しが新しくなって登場！</p>
-            </div>
-        </a>
-        </div>
-                <div class="game-grid">
+    <a href="games/jankenBattle/index.html" class="game-card">
+      <div class="card-screen">
+        <span class="card-number">05</span>
+        <span>✊</span>
+      </div>
+      <div class="game-info">
+        <h2 class="game-title">じゃんけんバトル</h2>
+        <p class="game-desc">じゃんけんで敵を倒すゲーム！</p>
+        <span class="play-btn">PLAY <span class="arrow">▶</span></span>
+      </div>
+    </a>
 
-        <a href="games/fishAttack/index.html" class="game-card">
-            <div class="game-info">
-                <h2 class="game-title">🪙 魚ゲーム</h2>
-                <p class="game-desc">魚を食べると頭がよくなるよ！</p>
-            </div>
-        </a>
-        </div>
-        <div class="game-grid">
+    <a href="games/avatarCreator/index.html" class="game-card">
+      <div class="card-screen">
+        <span class="card-number">06</span>
+        <span>🎨</span>
+      </div>
+      <div class="game-info">
+        <h2 class="game-title">アバターメーカー</h2>
+        <p class="game-desc">アバターを作成するゲーム！</p>
+        <span class="play-btn">PLAY <span class="arrow">▶</span></span>
+      </div>
+    </a>
 
-        <a href="games/jankenBattle/index.html" class="game-card">
-            <div class="game-info">
-                <h2 class="game-title">🪙 じゃんけんバトル</h2>
-                <p class="game-desc">じゃんけんで敵を倒すゲーム！</p>
-        </a>
-
-        </div>
-        <div class="game-grid">
-
-        <a href="games/avatarCreator/index.html" class="game-card">
-            <div class="game-info">
-                <h2 class="game-title">🪙 アバターメーカー</h2>
-                <p class="game-desc">アバターを作成するゲーム！</p>
-            </div>
-        </a>
-    </div>
+  </div>
 </body>
 </html>
