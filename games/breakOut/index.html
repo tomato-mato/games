@@ -53,25 +53,129 @@
       letter-spacing: 2px;
       text-align: center;
     }
-    #startBtn {
-      margin-top: 8px;
-      padding: 10px 36px;
-      font-size: clamp(0.85rem, 3vw, 1rem);
-      background: transparent;
-      color: #7df9ff;
-      border: 2px solid #7df9ff;
-      border-radius: 30px;
-      cursor: pointer;
-      letter-spacing: 2px;
-      transition: background 0.2s, color 0.2s;
-    }
-    #startBtn:hover, #startBtn:active { background: #7df9ff22; }
     #hint {
       margin-top: 6px;
       font-size: clamp(0.65rem, 2.5vw, 0.85rem);
       color: #aaa;
       text-align: center;
     }
+    #btnRow {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #startBtn, #rulesBtn {
+      padding: 10px 28px;
+      font-size: clamp(0.85rem, 3vw, 1rem);
+      background: transparent;
+      border-radius: 30px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: background 0.2s;
+    }
+    #startBtn {
+      color: #7df9ff;
+      border: 2px solid #7df9ff;
+    }
+    #startBtn:hover, #startBtn:active { background: #7df9ff22; }
+    #rulesBtn {
+      color: #ffd700;
+      border: 2px solid #ffd700;
+    }
+    #rulesBtn:hover, #rulesBtn:active { background: #ffd70022; }
+
+    /* ── ルールモーダル ── */
+    #rulesOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 10, 0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    #rulesOverlay.show { display: flex; }
+    #rulesBox {
+      background: #0d0d2a;
+      border: 2px solid #7df9ff44;
+      border-radius: 12px;
+      box-shadow: 0 0 40px #7df9ff22;
+      padding: 24px 28px;
+      max-width: 520px;
+      width: 100%;
+      max-height: 90dvh;
+      overflow-y: auto;
+      color: #ddd;
+      font-size: clamp(0.8rem, 2.5vw, 0.95rem);
+      line-height: 1.7;
+    }
+    #rulesBox h2 {
+      color: #7df9ff;
+      font-size: clamp(1rem, 4vw, 1.4rem);
+      letter-spacing: 3px;
+      text-align: center;
+      margin-bottom: 18px;
+      text-shadow: 0 0 12px #7df9ff88;
+    }
+    #rulesBox h3 {
+      color: #ffd700;
+      font-size: 0.9em;
+      margin: 16px 0 6px;
+      border-left: 3px solid #ffd700;
+      padding-left: 8px;
+      letter-spacing: 1px;
+    }
+    .item-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 5px 0;
+    }
+    .item-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: bold;
+      font-size: 0.85em;
+      min-width: 46px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .bomb-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: bold;
+      font-size: 0.85em;
+      background: #1c0000;
+      color: #ff6644;
+      border: 1px solid #ff3300;
+      flex-shrink: 0;
+    }
+    #rulesBox .note {
+      font-size: 0.82em;
+      color: #888;
+      margin-top: 4px;
+    }
+    #closeRulesBtn {
+      display: block;
+      margin: 22px auto 0;
+      padding: 9px 32px;
+      font-size: 1rem;
+      background: transparent;
+      color: #7df9ff;
+      border: 2px solid #7df9ff;
+      border-radius: 30px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: background 0.2s;
+    }
+    #closeRulesBtn:hover { background: #7df9ff22; }
   </style>
 </head>
 <body>
@@ -83,101 +187,250 @@
   </div>
   <canvas id="canvas" width="560" height="520"></canvas>
   <div id="message"></div>
-  <button id="startBtn">スタート</button>
+  <div id="btnRow">
+    <button id="startBtn">スタート</button>
+    <button id="rulesBtn">ルール確認</button>
+  </div>
   <div id="hint">← → キー / マウス / タッチで操作</div>
+
+  <!-- ルールモーダル -->
+  <div id="rulesOverlay">
+    <div id="rulesBox">
+      <h2>BLOCK BREAKER ルール</h2>
+
+      <h3>操作方法</h3>
+      <p>← → キー / マウス移動 / 画面タッチでパドルを動かしてボールを跳ね返す</p>
+
+      <h3>アイテムブロック</h3>
+      <p>光るボーダーとラベルが付いたブロック。ボールが当たった瞬間に効果が発動する。</p>
+      <div class="item-row">
+        <span class="item-badge" style="background:#1a5c2a;color:#6bcb77;border:1px solid #6bcb77">WIDE</span>
+        <span>パドルが拡張される <span class="note">（約8秒間）</span></span>
+      </div>
+      <div class="item-row">
+        <span class="item-badge" style="background:#0d3d6b;color:#4fc3f7;border:1px solid #4fc3f7">SLOW</span>
+        <span>ボールが低速化する <span class="note">（約7秒間）</span></span>
+      </div>
+      <div class="item-row">
+        <span class="item-badge" style="background:#7a5a00;color:#ffd700;border:1px solid #ffd700">LIFE</span>
+        <span>残機が +1 増える <span class="note">（最大9）</span></span>
+      </div>
+      <div class="item-row">
+        <span class="item-badge" style="background:#6b0000;color:#ff6b6b;border:1px solid #ff6b6b">THRU</span>
+        <span>ボールがブロックを貫通する <span class="note">（約6秒間）</span></span>
+      </div>
+      <p class="note">※ ミスすると取得済みのパワーアップは失われる</p>
+
+      <h3>爆弾ブロック</h3>
+      <div class="item-row">
+        <span class="bomb-badge">BOMB</span>
+        <span>ボールが当たると周囲1マスのブロックを一括破壊！<br>
+          巻き込まれたアイテムブロックの効果も同時に発動する。</span>
+      </div>
+      <p class="note">※ 各レベルに2個配置される</p>
+
+      <h3>レベルアップ</h3>
+      <p>スコアが <strong style="color:#ffd700">600点に達するごと</strong>にレベルアップ。レベル上限はなく無限に続く。</p>
+      <p class="note">レベルが上がるごとにボールが速くなる（最高速度あり）</p>
+      <p class="note">ブロックを全滅させると同レベルのまま新しい地形が出現する</p>
+
+      <h3>スコア</h3>
+      <p>上の行のブロックほど高得点。爆弾で連鎖破壊するとまとめて加算される。<br>
+      600点ごとにレベルアップ（例: 600・1200・1800…）。</p>
+
+      <button id="closeRulesBtn">閉じる</button>
+    </div>
+  </div>
 
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
 
-    // キャンバスを画面サイズに合わせてスケーリング
+    // ── レスポンシブ ──────────────────────────────────────
     function fitCanvas() {
-      const pad = 16;
       const uiH = document.querySelector('h1').offsetHeight
                 + document.getElementById('info').offsetHeight
                 + document.getElementById('message').offsetHeight
                 + document.getElementById('startBtn').offsetHeight
-                + document.getElementById('hint').offsetHeight
-                + 80;
-      const availW = window.innerWidth - pad;
-      const availH = window.innerHeight - uiH;
-      const scale = Math.min(availW / W, availH / H, 1);
+                + document.getElementById('hint').offsetHeight + 80;
+      const scale = Math.min((window.innerWidth - 16) / W, (window.innerHeight - uiH) / H, 1);
       canvas.style.width  = Math.floor(W * scale) + 'px';
       canvas.style.height = Math.floor(H * scale) + 'px';
     }
     window.addEventListener('resize', fitCanvas);
 
-    // スクリーン座標 → キャンバス座標
     function toCanvasX(clientX) {
       const rect = canvas.getBoundingClientRect();
       return (clientX - rect.left) * (W / rect.width);
     }
 
+    // ── 音声 (Web Audio API) ──────────────────────────────
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playExplosion() {
+      try {
+        const ac = ensureAudio();
+        const t  = ac.currentTime;
+
+        // ノイズバースト（ゴォ音）
+        const bufLen = Math.floor(ac.sampleRate * 0.7);
+        const buf    = ac.createBuffer(1, bufLen, ac.sampleRate);
+        const data   = buf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+
+        const noise = ac.createBufferSource();
+        noise.buffer = buf;
+
+        const lp = ac.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(1800, t);
+        lp.frequency.exponentialRampToValueAtTime(40, t + 0.5);
+        lp.Q.value = 1;
+
+        const noiseGain = ac.createGain();
+        noiseGain.gain.setValueAtTime(1.2, t);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+
+        noise.connect(lp);
+        lp.connect(noiseGain);
+        noiseGain.connect(ac.destination);
+        noise.start(t);
+        noise.stop(t + 0.7);
+
+        // 低音ドン
+        const osc = ac.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(130, t);
+        osc.frequency.exponentialRampToValueAtTime(25, t + 0.35);
+
+        const oscGain = ac.createGain();
+        oscGain.gain.setValueAtTime(1.5, t);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+
+        osc.connect(oscGain);
+        oscGain.connect(ac.destination);
+        osc.start(t);
+        osc.stop(t + 0.35);
+
+        // 高音パチっ
+        const click = ac.createOscillator();
+        click.type = 'square';
+        click.frequency.setValueAtTime(800, t);
+        click.frequency.exponentialRampToValueAtTime(60, t + 0.08);
+
+        const clickGain = ac.createGain();
+        clickGain.gain.setValueAtTime(0.6, t);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+
+        click.connect(clickGain);
+        clickGain.connect(ac.destination);
+        click.start(t);
+        click.stop(t + 0.1);
+      } catch (e) { /* 音声非対応環境では無視 */ }
+    }
+
+    // ── 定数 ──────────────────────────────────────────────
     const COLS = 10, ROWS = 5;
     const BW = 46, BH = 18, BGAP = 6;
     const BOFF_X = (W - (BW + BGAP) * COLS + BGAP) / 2;
     const BOFF_Y = 20;
-
     const BASE_PADDLE_W = 90, PADDLE_H = 12, PADDLE_Y = H - 52;
     const BALL_R = 8;
+    const BOMB_COUNT  = 2;
+    const ITEM_CHANCE = 0.07;
 
     const BLOCK_COLORS = [
-      ['#ff6b6b', '#cc0000'],
-      ['#ff9f43', '#cc6600'],
-      ['#ffd700', '#aa8800'],
-      ['#6bcb77', '#227733'],
-      ['#4fc3f7', '#1155aa'],
+      ['#ff6b6b','#cc0000'],['#ff9f43','#cc6600'],
+      ['#ffd700','#aa8800'],['#6bcb77','#227733'],['#4fc3f7','#1155aa'],
     ];
 
     const ITEM_TYPES = [
-      { id: 'wide', color: '#6bcb77', dark: '#1a5c2a', label: 'WIDE', desc: 'パドル拡張', duration: 480 },
-      { id: 'slow', color: '#4fc3f7', dark: '#0d3d6b', label: 'SLOW', desc: 'ボール低速化', duration: 420 },
-      { id: 'life', color: '#ffd700', dark: '#7a5a00', label: 'LIFE', desc: '残機+1', duration: 0 },
-      { id: 'thru', color: '#ff6b6b', dark: '#6b0000', label: 'THRU', desc: '貫通ボール', duration: 360 },
+      { id:'wide', color:'#6bcb77', dark:'#1a5c2a', label:'WIDE', duration:480 },
+      { id:'slow', color:'#4fc3f7', dark:'#0d3d6b', label:'SLOW', duration:420 },
+      { id:'life', color:'#ffd700', dark:'#7a5a00', label:'LIFE', duration:0   },
+      { id:'thru', color:'#ff6b6b', dark:'#6b0000', label:'THRU', duration:360 },
     ];
 
-    let score, lives, level, blocks, ball, paddle, dx, dy;
-    let keys, running, animId;
-    let items, powerups, popups;
+    const SPARK_COLORS = ['#ff4400','#ff7700','#ffcc00','#ffffff','#ff2200','#ffaa00'];
 
-    function currentPaddleW() {
-      return powerups.wide > 0 ? 140 : BASE_PADDLE_W;
+    // ── 状態 ──────────────────────────────────────────────
+    let score, lives, level, nextLevelScore, blocks, ball, paddle, dx, dy;
+    let keys, running, animId, tick;
+    let powerups, popups, particles, flashes, shake, levelUpMsg;
+
+    function currentPaddleW() { return powerups.wide > 0 ? 140 : BASE_PADDLE_W; }
+
+    // ランダム地形パターン
+    function randomLayoutFn() {
+      const t = Math.floor(Math.random() * 9);
+      return (r, c) => {
+        switch (t) {
+          case 0: return Math.random() < 0.78;                                            // ランダム高密度
+          case 1: return Math.random() < 0.48;                                            // ランダム低密度
+          case 2: return c >= r && c < COLS - r;                                          // ピラミッド
+          case 3: return c >= (ROWS-1-r) && c <= COLS-1-(ROWS-1-r);                      // 逆ピラミッド
+          case 4: return (r + c) % 2 === 0;                                               // チェッカー
+          case 5: return r % 2 === 0;                                                     // 偶数行のみ
+          case 6: return r===0||r===ROWS-1||c===0||c===COLS-1||Math.random()<0.38;        // 外枠+散らばり
+          case 7: return (c + r * 3) % 5 !== 0;                                           // 斜め縞
+          case 8: return Math.abs(c - 4.5) <= (ROWS - r - 0.5);                          // 下広がり扇
+        }
+      };
     }
 
     function initLevel(lvl) {
+      const layoutFn = randomLayoutFn();
       blocks = [];
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
+          if (!layoutFn(r, c)) continue;
           blocks.push({
             x: BOFF_X + c * (BW + BGAP),
             y: BOFF_Y + r * (BH + BGAP),
-            alive: true,
-            row: r,
-            item: Math.random() < 0.12 ? ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)] : null,
+            alive: true, row: r, col: c, item: null, bomb: false,
           });
         }
       }
-      const speed = 2.5 + (lvl - 1) * 0.4;
-      ball = { x: W / 2, y: PADDLE_Y - BALL_R - 2 };
-      dx = speed * (Math.random() > 0.5 ? 1 : -1);
-      dy = -speed;
-      paddle = { x: W / 2 - BASE_PADDLE_W / 2 };
-      items = [];
+      // 最低ブロック数を保証
+      if (blocks.length < 12) {
+        for (let r = 0; r < ROWS; r++)
+          for (let c = 0; c < COLS; c++)
+            if (!blocks.find(b => b.row===r && b.col===c) && Math.random()<0.5)
+              blocks.push({ x: BOFF_X+c*(BW+BGAP), y: BOFF_Y+r*(BH+BGAP), alive:true, row:r, col:c, item:null, bomb:false });
+      }
+      for (const b of blocks) {
+        if (Math.random() < ITEM_CHANCE)
+          b.item = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
+      }
+      const nonItem = blocks.filter(b => !b.item);
+      for (let i = 0; i < BOMB_COUNT && nonItem.length > 0; i++) {
+        const idx = Math.floor(Math.random() * nonItem.length);
+        nonItem[idx].bomb = true;
+        nonItem.splice(idx, 1);
+      }
+      const spd = Math.min(2.5 + (lvl - 1) * 0.3, 8.0);
+      ball    = { x: W / 2, y: PADDLE_Y - BALL_R - 2 };
+      dx      = spd * (Math.random() > 0.5 ? 1 : -1);
+      dy      = -spd;
+      paddle  = { x: W / 2 - BASE_PADDLE_W / 2 };
       powerups = { wide: 0, slow: 0, thru: 0 };
     }
 
     function init() {
-      score = 0;
-      lives = 3;
-      level = 1;
-      keys = {};
-      running = false;
-      popups = [];
+      score = 0; lives = 3; level = 1; nextLevelScore = 600;
+      keys = {}; running = false; tick = 0;
+      popups = []; particles = []; flashes = [];
+      shake = { x: 0, y: 0, life: 0 };
+      levelUpMsg = { text: '', life: 0 };
       initLevel(level);
       document.getElementById('message').textContent = '';
-      updateHUD();
-      draw();
+      updateHUD(); draw();
     }
 
     function updateHUD() {
@@ -186,9 +439,132 @@
       document.getElementById('levelVal').textContent = level;
     }
 
+    // ── エフェクト ────────────────────────────────────────
+
+    function spawnExplosion(cx, cy) {
+      // スパーク
+      for (let i = 0; i < 32; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const spd   = 1.5 + Math.random() * 5;
+        particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd - 1,
+          life: 35 + Math.random() * 25,
+          maxLife: 60,
+          size: 2 + Math.random() * 4,
+          color: SPARK_COLORS[Math.floor(Math.random() * SPARK_COLORS.length)],
+        });
+      }
+      // フラッシュ
+      flashes.push({ x: cx, y: cy, r: 0, maxR: 70, life: 14, maxLife: 14 });
+      // 画面シェイク
+      shake.life = 18;
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x  += p.vx; p.y += p.vy;
+        p.vy += 0.18; // 重力
+        p.vx *= 0.97;
+        if (--p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function updateFlashes() {
+      for (let i = flashes.length - 1; i >= 0; i--) {
+        const f = flashes[i];
+        f.r = f.maxR * (1 - f.life / f.maxLife);
+        if (--f.life <= 0) flashes.splice(i, 1);
+      }
+    }
+
+    function updateShake() {
+      if (shake.life > 0) {
+        const s = shake.life / 18;
+        shake.x = (Math.random() - 0.5) * 10 * s;
+        shake.y = (Math.random() - 0.5) * 10 * s;
+        shake.life--;
+      } else { shake.x = 0; shake.y = 0; }
+    }
+
     // ── 描画 ──────────────────────────────────────────────
 
+    function drawBombBlock(b) {
+      const pulse = 0.5 + 0.5 * Math.sin(tick * 0.12);
+
+      // ベース
+      ctx.fillStyle = '#100000';
+      ctx.fillRect(b.x + 2, b.y + 2, BW, BH);
+      ctx.fillStyle = '#1c0000';
+      ctx.fillRect(b.x, b.y, BW, BH);
+
+      // 斜線ストライプ（警告柄）
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(b.x, b.y, BW, BH);
+      ctx.clip();
+      const sw = 7;
+      for (let i = -(BH + sw); i < BW + BH + sw; i += sw * 2) {
+        ctx.fillStyle = `rgba(220, 50, 0, ${0.25 + 0.15 * pulse})`;
+        ctx.beginPath();
+        ctx.moveTo(b.x + i,        b.y);
+        ctx.lineTo(b.x + i + sw,   b.y);
+        ctx.lineTo(b.x + i + sw + BH, b.y + BH);
+        ctx.lineTo(b.x + i + BH,   b.y + BH);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // 暗めオーバーレイ
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(b.x, b.y, BW, BH);
+
+      // 爆弾アイコン（円 + ヒューズ）
+      const cx = b.x + BW / 2 - 6;
+      const cy = b.y + BH / 2 + 1;
+      const br = 5;
+      ctx.fillStyle = '#333';
+      ctx.beginPath(); ctx.arc(cx, cy, br, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#666';
+      ctx.beginPath(); ctx.arc(cx - 1, cy - 1, 1.5, 0, Math.PI * 2); ctx.fill();
+      // ヒューズ
+      ctx.strokeStyle = '#888';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx + 3, cy - 4);
+      ctx.quadraticCurveTo(cx + 7, cy - 9, cx + 5, cy - 12);
+      ctx.stroke();
+      // 火花（点滅）
+      if (pulse > 0.5) {
+        ctx.fillStyle = `rgba(255, ${150 + Math.floor(pulse * 100)}, 0, ${pulse})`;
+        ctx.beginPath();
+        ctx.arc(cx + 5, cy - 12, 2.5 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // "BOMB" ラベル
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = `rgba(255, ${100 + Math.floor(100 * pulse)}, 0, ${0.8 + 0.2 * pulse})`;
+      ctx.fillText('BOMB', b.x + BW / 2 + 6, b.y + BH / 2 + 1);
+
+      // パルスボーダー
+      ctx.save();
+      ctx.strokeStyle = `rgba(255, ${60 + Math.floor(60 * pulse)}, 0, ${0.7 + 0.3 * pulse})`;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#ff3300';
+      ctx.shadowBlur  = 8 + 8 * pulse;
+      ctx.strokeRect(b.x + 1, b.y + 1, BW - 2, BH - 2);
+      ctx.restore();
+    }
+
     function drawBlock(b) {
+      if (b.bomb) { drawBombBlock(b); return; }
+
       const [fill, shadow] = BLOCK_COLORS[b.row];
       ctx.fillStyle = shadow;
       ctx.fillRect(b.x + 2, b.y + 2, BW, BH);
@@ -196,6 +572,7 @@
       ctx.fillRect(b.x, b.y, BW, BH);
       ctx.fillStyle = 'rgba(255,255,255,0.18)';
       ctx.fillRect(b.x + 3, b.y + 3, BW - 6, 5);
+
       if (b.item) {
         ctx.save();
         ctx.strokeStyle = b.item.color;
@@ -214,8 +591,7 @@
 
     function drawPaddle() {
       const pw = currentPaddleW();
-      const x = paddle.x, y = PADDLE_Y;
-      const grad = ctx.createLinearGradient(x, y, x, y + PADDLE_H);
+      const grad = ctx.createLinearGradient(paddle.x, PADDLE_Y, paddle.x, PADDLE_Y + PADDLE_H);
       if (powerups.wide > 0) {
         grad.addColorStop(0, '#a0ffb0'); grad.addColorStop(1, '#228833');
       } else {
@@ -223,77 +599,76 @@
       }
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.roundRect(x, y, pw, PADDLE_H, 6);
+      ctx.roundRect(paddle.x, PADDLE_Y, pw, PADDLE_H, 6);
       ctx.fill();
     }
 
     function drawBall() {
       const grad = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 1, ball.x, ball.y, BALL_R);
       if (powerups.thru > 0) {
-        grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.4, '#ff9999'); grad.addColorStop(1, '#cc0000');
+        grad.addColorStop(0, '#fff'); grad.addColorStop(0.4, '#ff9999'); grad.addColorStop(1, '#cc0000');
       } else {
-        grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.5, '#ffd700'); grad.addColorStop(1, '#ff6b00');
+        grad.addColorStop(0, '#fff'); grad.addColorStop(0.5, '#ffd700'); grad.addColorStop(1, '#ff6b00');
       }
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
-      ctx.fill();
+      ctx.fillStyle = grad; ctx.fill();
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, BALL_R + 4, 0, Math.PI * 2);
       ctx.fillStyle = powerups.thru > 0 ? 'rgba(255,0,0,0.12)' : 'rgba(255,180,0,0.12)';
       ctx.fill();
     }
 
-    function drawItems() {
+    function drawParticles() {
       ctx.save();
-      ctx.font = 'bold 10px monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      for (const item of items) {
-        const { type, x, y } = item;
-        ctx.fillStyle = type.dark;
+      for (const p of particles) {
+        const alpha = p.life / p.maxLife;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
         ctx.beginPath();
-        ctx.roundRect(x - 22, y - 10 + 2, 44, 20, 5);
+        ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = type.color;
-        ctx.beginPath();
-        ctx.roundRect(x - 22, y - 10, 44, 20, 5);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.25)';
-        ctx.fillRect(x - 18, y - 7, 36, 4);
-        ctx.fillStyle = '#fff';
-        ctx.fillText(type.label, x, y + 1);
       }
+      ctx.globalAlpha = 1;
       ctx.restore();
     }
 
+    function drawFlashes() {
+      for (const f of flashes) {
+        const alpha = f.life / f.maxLife;
+        const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, Math.max(1, f.r));
+        grad.addColorStop(0,   `rgba(255, 220, 80,  ${alpha * 0.9})`);
+        grad.addColorStop(0.4, `rgba(255, 100, 0,   ${alpha * 0.6})`);
+        grad.addColorStop(1,   `rgba(255,  50, 0,   0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, Math.max(1, f.r), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     function drawPowerupBar() {
-      const barDefs = [
-        { key: 'wide', max: 480, color: '#6bcb77', label: 'WIDE パドル拡張' },
-        { key: 'slow', max: 420, color: '#4fc3f7', label: 'SLOW 低速化' },
-        { key: 'thru', max: 360, color: '#ff6b6b', label: 'THRU 貫通' },
+      const defs = [
+        { key:'wide', max:480, color:'#6bcb77', label:'WIDE パドル拡張' },
+        { key:'slow', max:420, color:'#4fc3f7', label:'SLOW 低速化' },
+        { key:'thru', max:360, color:'#ff6b6b', label:'THRU 貫通' },
       ];
-      const active = barDefs.filter(d => powerups[d.key] > 0);
-      if (active.length === 0) return;
-
+      const active = defs.filter(d => powerups[d.key] > 0);
+      if (!active.length) return;
       const barW = 150, barH = 8, gap = 14;
-      const totalW = active.length * barW + (active.length - 1) * gap;
-      let startX = (W - totalW) / 2;
+      let x = (W - (active.length * barW + (active.length - 1) * gap)) / 2;
       const y = H - 16;
-
       ctx.save();
       ctx.font = '9px monospace';
       ctx.textBaseline = 'bottom';
       for (const d of active) {
-        const ratio = powerups[d.key] / d.max;
         ctx.fillStyle = '#1a1a2e';
-        ctx.beginPath(); ctx.roundRect(startX, y, barW, barH, 3); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(x, y, barW, barH, 3); ctx.fill();
         ctx.fillStyle = d.color;
-        ctx.beginPath(); ctx.roundRect(startX, y, barW * ratio, barH, 3); ctx.fill();
-        ctx.fillStyle = d.color;
-        ctx.textAlign = 'left';
-        ctx.fillText(d.label, startX, y - 1);
-        startX += barW + gap;
+        ctx.beginPath(); ctx.roundRect(x, y, barW * (powerups[d.key] / d.max), barH, 3); ctx.fill();
+        ctx.fillStyle = d.color; ctx.textAlign = 'left';
+        ctx.fillText(d.label, x, y - 1);
+        x += barW + gap;
       }
       ctx.restore();
     }
@@ -313,80 +688,99 @@
 
     function draw() {
       ctx.clearRect(0, 0, W, H);
+      ctx.save();
+      ctx.translate(shake.x, shake.y);
+
+      // グリッド
       ctx.strokeStyle = 'rgba(125,249,255,0.04)';
       ctx.lineWidth = 1;
-      for (let i = 0; i < W; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke(); }
-      for (let j = 0; j < H; j += 40) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(W, j); ctx.stroke(); }
+      for (let i = 0; i < W; i += 40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,H); ctx.stroke(); }
+      for (let j = 0; j < H; j += 40) { ctx.beginPath(); ctx.moveTo(0,j); ctx.lineTo(W,j); ctx.stroke(); }
 
       blocks.forEach(b => { if (b.alive) drawBlock(b); });
-      drawItems();
+      drawFlashes();
+      drawParticles();
       drawPaddle();
       drawBall();
       drawPowerupBar();
       drawPopups();
+
+      // レベルアップ大文字演出
+      if (levelUpMsg.life > 0) {
+        const a = Math.min(1, levelUpMsg.life / 20);
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.font = 'bold 38px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#7df9ff';
+        ctx.shadowBlur = 24;
+        ctx.fillStyle = '#7df9ff';
+        ctx.fillText(levelUpMsg.text, W / 2, H / 2);
+        ctx.restore();
+        levelUpMsg.life--;
+      }
+
+      ctx.restore();
     }
 
-    // ── 更新 ──────────────────────────────────────────────
+    // ── ロジック ──────────────────────────────────────────
 
     function applyItem(type) {
-      if (type.id === 'wide')      { powerups.wide = type.duration; addPopup('WIDE パドル拡張!', type.color); }
-      else if (type.id === 'slow') { powerups.slow = type.duration; addPopup('SLOW ボール低速化!', type.color); }
+      if      (type.id === 'wide') { powerups.wide = type.duration; addPopup('WIDE パドル拡張!', type.color); }
+      else if (type.id === 'slow') { powerups.slow = type.duration; addPopup('SLOW 低速化!', type.color); }
       else if (type.id === 'life') { lives = Math.min(lives + 1, 9); updateHUD(); addPopup('LIFE 残機+1!', type.color); }
-      else if (type.id === 'thru') { powerups.thru = type.duration; addPopup('THRU 貫通ボール!', type.color); }
+      else if (type.id === 'thru') { powerups.thru = type.duration; addPopup('THRU 貫通!', type.color); }
+    }
+
+    function explodeBomb(bomb) {
+      const cx = bomb.x + BW / 2;
+      const cy = bomb.y + BH / 2;
+      playExplosion();
+      spawnExplosion(cx, cy);
+      addPopup('💥 爆発!', '#ff4400');
+      for (const b of blocks) {
+        if (!b.alive || b === bomb) continue;
+        if (Math.abs(b.row - bomb.row) <= 1 && Math.abs(b.col - bomb.col) <= 1) {
+          b.alive = false;
+          score += (ROWS - b.row) * 10;
+          if (b.item) applyItem(b.item);
+        }
+      }
+      updateHUD();
     }
 
     function addPopup(text, color) {
       popups.push({ text, color, x: W / 2, y: PADDLE_Y - 30, life: 60 });
     }
 
-    function updateItems() {
-      const pw = currentPaddleW();
-      for (let i = items.length - 1; i >= 0; i--) {
-        const item = items[i];
-        item.y += item.vy;
-        if (
-          item.y + 10 >= PADDLE_Y && item.y - 10 <= PADDLE_Y + PADDLE_H &&
-          item.x >= paddle.x && item.x <= paddle.x + pw
-        ) {
-          applyItem(item.type);
-          items.splice(i, 1);
-        } else if (item.y - 10 > H) {
-          items.splice(i, 1);
-        }
-      }
-    }
-
-    function updatePowerupTimers() {
-      if (powerups.wide > 0) powerups.wide--;
-      if (powerups.slow > 0) powerups.slow--;
-      if (powerups.thru > 0) powerups.thru--;
-    }
-
-    function updatePopups() {
-      for (let i = popups.length - 1; i >= 0; i--) {
-        popups[i].y -= 0.5;
-        popups[i].life--;
-        if (popups[i].life <= 0) popups.splice(i, 1);
-      }
-    }
-
     function movePaddle() {
       const pw = currentPaddleW();
-      const speed = 7;
-      if (keys['ArrowLeft']  || keys['a'] || keys['A']) paddle.x -= speed;
-      if (keys['ArrowRight'] || keys['d'] || keys['D']) paddle.x += speed;
+      const spd = 7;
+      if (keys['ArrowLeft']  || keys['a'] || keys['A']) paddle.x -= spd;
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) paddle.x += spd;
       paddle.x = Math.max(0, Math.min(W - pw, paddle.x));
     }
 
     function update() {
+      tick++;
       movePaddle();
-      updateItems();
-      updatePowerupTimers();
-      updatePopups();
+      updateParticles();
+      updateFlashes();
+      updateShake();
 
-      const speedMult = powerups.slow > 0 ? 0.6 : 1;
-      ball.x += dx * speedMult;
-      ball.y += dy * speedMult;
+      if (powerups.wide > 0) powerups.wide--;
+      if (powerups.slow > 0) powerups.slow--;
+      if (powerups.thru > 0) powerups.thru--;
+
+      for (let i = popups.length - 1; i >= 0; i--) {
+        popups[i].y -= 0.5;
+        if (--popups[i].life <= 0) popups.splice(i, 1);
+      }
+
+      const sm = powerups.slow > 0 ? 0.6 : 1;
+      ball.x += dx * sm;
+      ball.y += dy * sm;
 
       if (ball.x - BALL_R < 0) { ball.x = BALL_R;     dx =  Math.abs(dx); }
       if (ball.x + BALL_R > W) { ball.x = W - BALL_R; dx = -Math.abs(dx); }
@@ -402,36 +796,28 @@
         dy = -Math.abs(dy);
         ball.y = PADDLE_Y - BALL_R;
         const rel = (ball.x - (paddle.x + pw / 2)) / (pw / 2);
-        const speed = Math.sqrt(dx * dx + dy * dy);
-        dx = rel * speed * 1.2;
-        const minDy = speed * 0.5;
-        dy = -Math.sqrt(Math.max(minDy * minDy, speed * speed - dx * dx));
+        const spd = Math.sqrt(dx * dx + dy * dy);
+        dx = rel * spd * 1.2;
+        dy = -Math.sqrt(Math.max((spd * 0.5) ** 2, spd * spd - dx * dx));
       }
 
-      let remaining = 0;
       for (const b of blocks) {
         if (!b.alive) continue;
-        remaining++;
-        if (
-          ball.x + BALL_R > b.x && ball.x - BALL_R < b.x + BW &&
-          ball.y + BALL_R > b.y && ball.y - BALL_R < b.y + BH
-        ) {
-          b.alive = false;
-          remaining--;
-          score += (ROWS - b.row) * 10;
-          updateHUD();
-          if (b.item) {
-            items.push({ x: b.x + BW / 2, y: b.y + BH / 2, type: b.item, vy: 2.2 });
-          }
-          if (!powerups.thru) {
-            const overlapL = (ball.x + BALL_R) - b.x;
-            const overlapR = (b.x + BW) - (ball.x - BALL_R);
-            const overlapT = (ball.y + BALL_R) - b.y;
-            const overlapB = (b.y + BH) - (ball.y - BALL_R);
-            if (Math.min(overlapL, overlapR) < Math.min(overlapT, overlapB)) dx = -dx;
-            else dy = -dy;
-            break;
-          }
+        if (!(ball.x + BALL_R > b.x && ball.x - BALL_R < b.x + BW &&
+              ball.y + BALL_R > b.y && ball.y - BALL_R < b.y + BH)) continue;
+
+        b.alive = false;
+        score += (ROWS - b.row) * 10;
+        updateHUD();
+
+        if (b.bomb)       explodeBomb(b);
+        else if (b.item)  applyItem(b.item);
+
+        if (!powerups.thru) {
+          const oL = (ball.x + BALL_R) - b.x, oR = (b.x + BW) - (ball.x - BALL_R);
+          const oT = (ball.y + BALL_R) - b.y, oB = (b.y + BH) - (ball.y - BALL_R);
+          if (Math.min(oL, oR) < Math.min(oT, oB)) dx = -dx; else dy = -dy;
+          break;
         }
       }
 
@@ -440,17 +826,26 @@
         updateHUD();
         if (lives <= 0) { endGame(false); return; }
         ball = { x: W / 2, y: PADDLE_Y - BALL_R - 2 };
-        const speed = 2.5 + (level - 1) * 0.4;
-        dx = speed * (Math.random() > 0.5 ? 1 : -1);
-        dy = -speed;
+        const spd = Math.min(2.5 + (level - 1) * 0.3, 8.0);
+        dx = spd * (Math.random() > 0.5 ? 1 : -1);
+        dy = -spd;
         powerups = { wide: 0, slow: 0, thru: 0 };
-        items = [];
       }
 
-      if (remaining === 0) {
-        level++;
+      // スコアによるレベルアップ
+      if (score >= nextLevelScore) {
+        while (score >= nextLevelScore) {
+          level++;
+          nextLevelScore += 600;
+        }
         updateHUD();
-        if (level > 3) { endGame(true); return; }
+        levelUpMsg = { text: 'LEVEL ' + level + '!', life: 70 };
+        initLevel(level);
+        return;
+      }
+
+      // ブロック全滅 → 同レベルで新レイアウト
+      if (blocks.every(b => !b.alive)) {
         initLevel(level);
       }
     }
@@ -461,21 +856,33 @@
         ? '🎉 クリア！ スコア: ' + score
         : 'ゲームオーバー… スコア: ' + score;
       document.getElementById('startBtn').textContent = 'もう一度';
-      document.getElementById('startBtn').style.display = '';
+      document.getElementById('btnRow').style.display = 'flex';
     }
 
     function loop() {
-      update();
-      draw();
+      update(); draw();
       if (running) animId = requestAnimationFrame(loop);
     }
 
     document.getElementById('startBtn').addEventListener('click', () => {
+      ensureAudio();
       init();
       running = true;
-      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('btnRow').style.display = 'none';
       document.getElementById('message').textContent = '';
       animId = requestAnimationFrame(loop);
+    });
+
+    // ── ルールモーダル ──────────────────────────────────
+    const rulesOverlay = document.getElementById('rulesOverlay');
+    document.getElementById('rulesBtn').addEventListener('click', () => {
+      rulesOverlay.classList.add('show');
+    });
+    document.getElementById('closeRulesBtn').addEventListener('click', () => {
+      rulesOverlay.classList.remove('show');
+    });
+    rulesOverlay.addEventListener('click', e => {
+      if (e.target === rulesOverlay) rulesOverlay.classList.remove('show');
     });
 
     document.addEventListener('keydown', e => { keys[e.key] = true; });
@@ -483,15 +890,13 @@
 
     canvas.addEventListener('mousemove', e => {
       const mx = toCanvasX(e.clientX);
-      paddle.x = mx - currentPaddleW() / 2;
-      paddle.x = Math.max(0, Math.min(W - currentPaddleW(), paddle.x));
+      paddle.x = Math.max(0, Math.min(W - currentPaddleW(), mx - currentPaddleW() / 2));
     });
 
     canvas.addEventListener('touchmove', e => {
       e.preventDefault();
       const tx = toCanvasX(e.touches[0].clientX);
-      paddle.x = tx - currentPaddleW() / 2;
-      paddle.x = Math.max(0, Math.min(W - currentPaddleW(), paddle.x));
+      paddle.x = Math.max(0, Math.min(W - currentPaddleW(), tx - currentPaddleW() / 2));
     }, { passive: false });
 
     fitCanvas();
