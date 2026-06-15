@@ -234,6 +234,22 @@
       <p class="note">レベルが上がるごとにボールが速くなる（最高速度あり）</p>
       <p class="note">ブロックを全滅させると同レベルのまま新しい地形が出現する</p>
 
+      <h3>特殊ステージ</h3>
+      <p><strong style="color:#ffd700">3レベルごと</strong>（Lv.3, 6, 9…）に特殊形ステージが出現！</p>
+      <div class="item-row">
+        <span class="item-badge" style="background:#7a0000;color:#ff4444;border:1px solid #ff4444">鬼</span>
+        <span>二本の角と牙を持つ鬼の顔。赤いブロックで形成される。</span>
+      </div>
+      <div class="item-row">
+        <span class="item-badge" style="background:#3d0066;color:#cc44ff;border:1px solid #cc44ff">ドラゴン</span>
+        <span>翼を広げたドラゴンの正面像。紫のブロックで形成される。</span>
+      </div>
+      <div class="item-row">
+        <span class="item-badge" style="background:#7a5a00;color:#ffd700;border:1px solid #ffd700">神</span>
+        <span>王冠と光輪を持つ神の姿。金色のブロックで形成される。</span>
+      </div>
+      <p class="note">※ 形はランダムで選ばれる</p>
+
       <h3>スコア</h3>
       <p>上の行のブロックほど高得点。爆弾で連鎖破壊するとまとめて加算される。<br>
       600点ごとにレベルアップ（例: 600・1200・1800…）。</p>
@@ -335,6 +351,46 @@
       } catch (e) { /* 音声非対応環境では無視 */ }
     }
 
+    // 行が高いほど高音（row 0=880Hz → row 4=440Hz）
+    // 形ブロックはソフトなサイン波のオーバートーンを重ねる
+    function playBlockBreak(row, shape) {
+      try {
+        const ac = ensureAudio();
+        const t  = ac.currentTime;
+        const BASE_FREQS = [880, 740, 622, 524, 440];
+        const freq = BASE_FREQS[Math.min(row, BASE_FREQS.length - 1)];
+
+        const osc  = ac.createOscillator();
+        osc.type   = 'square';
+        osc.frequency.setValueAtTime(freq, t);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.45, t + 0.09);
+
+        const gain = ac.createGain();
+        gain.gain.setValueAtTime(0.22, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start(t); osc.stop(t + 0.1);
+
+        // 形ブロックだけソフトなサイン波を重ねる（やや神秘的な音）
+        if (shape >= 0) {
+          const osc2  = ac.createOscillator();
+          osc2.type   = 'sine';
+          osc2.frequency.setValueAtTime(freq * 1.5, t);
+          osc2.frequency.exponentialRampToValueAtTime(freq * 0.75, t + 0.18);
+
+          const gain2 = ac.createGain();
+          gain2.gain.setValueAtTime(0.18, t);
+          gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
+          osc2.connect(gain2);
+          gain2.connect(ac.destination);
+          osc2.start(t); osc2.stop(t + 0.2);
+        }
+      } catch (e) { /* 音声非対応環境では無視 */ }
+    }
+
     // ── 定数 ──────────────────────────────────────────────
     const COLS = 10, ROWS = 5;
     const BW = 46, BH = 18, BGAP = 6;
@@ -359,10 +415,45 @@
 
     const SPARK_COLORS = ['#ff4400','#ff7700','#ffcc00','#ffffff','#ff2200','#ffaa00'];
 
+    // ── 特殊ステージ（3レベルごと）──────────────────────
+    const SHAPE_NAMES = ['鬼', 'ドラゴン', '神'];
+    const SHAPE_COLORS = [
+      ['#ff4444','#7a0000','rgba(255,50,50,0.55)'],    // 鬼 - 赤
+      ['#cc44ff','#3d0066','rgba(160,0,255,0.55)'],    // ドラゴン - 紫
+      ['#ffd700','#7a5a00','rgba(255,215,0,0.55)'],    // 神 - 金
+    ];
+    const SHAPE_VIGNETTE = [
+      'rgba(160,0,0,0.12)',
+      'rgba(80,0,160,0.12)',
+      'rgba(160,130,0,0.12)',
+    ];
+    // 各パターンは ROWS=5 × COLS=10
+    const SHAPE_PATTERNS = [
+      // 鬼 — 二本の角・丸顔・目の穴・二本の牙
+      [[0,0,1,1,0,0,1,1,0,0],
+       [0,1,1,1,1,1,1,1,1,0],
+       [1,1,0,1,1,1,1,0,1,1],
+       [0,1,1,1,1,1,1,1,1,0],
+       [0,0,0,1,0,0,1,0,0,0]],
+      // ドラゴン — 翼を広げた正面ドラゴン
+      [[1,0,1,0,0,0,0,1,0,1],
+       [1,1,0,1,0,0,1,0,1,1],
+       [0,0,1,1,1,1,1,1,0,0],
+       [0,0,0,1,1,1,1,0,0,0],
+       [0,0,1,0,1,1,0,1,0,0]],
+      // 神 — 王冠＋光輪
+      [[0,1,0,1,0,0,1,0,1,0],
+       [1,1,1,1,1,1,1,1,1,1],
+       [0,0,1,1,1,1,1,1,0,0],
+       [0,1,1,0,0,0,0,1,1,0],
+       [0,0,1,1,1,1,1,1,0,0]],
+    ];
+
     // ── 状態 ──────────────────────────────────────────────
     let score, lives, level, nextLevelScore, blocks, ball, paddle, dx, dy;
     let keys, running, animId, tick;
     let powerups, popups, particles, flashes, shake, levelUpMsg;
+    let currentShape;
 
     function currentPaddleW() { return powerups.wide > 0 ? 140 : BASE_PADDLE_W; }
 
@@ -371,21 +462,32 @@
       const t = Math.floor(Math.random() * 9);
       return (r, c) => {
         switch (t) {
-          case 0: return Math.random() < 0.78;                                            // ランダム高密度
-          case 1: return Math.random() < 0.48;                                            // ランダム低密度
-          case 2: return c >= r && c < COLS - r;                                          // ピラミッド
-          case 3: return c >= (ROWS-1-r) && c <= COLS-1-(ROWS-1-r);                      // 逆ピラミッド
-          case 4: return (r + c) % 2 === 0;                                               // チェッカー
-          case 5: return r % 2 === 0;                                                     // 偶数行のみ
-          case 6: return r===0||r===ROWS-1||c===0||c===COLS-1||Math.random()<0.38;        // 外枠+散らばり
-          case 7: return (c + r * 3) % 5 !== 0;                                           // 斜め縞
-          case 8: return Math.abs(c - 4.5) <= (ROWS - r - 0.5);                          // 下広がり扇
+          case 0: return Math.random() < 0.78;
+          case 1: return Math.random() < 0.48;
+          case 2: return c >= r && c < COLS - r;
+          case 3: return c >= (ROWS-1-r) && c <= COLS-1-(ROWS-1-r);
+          case 4: return (r + c) % 2 === 0;
+          case 5: return r % 2 === 0;
+          case 6: return r===0||r===ROWS-1||c===0||c===COLS-1||Math.random()<0.38;
+          case 7: return (c + r * 3) % 5 !== 0;
+          case 8: return Math.abs(c - 4.5) <= (ROWS - r - 0.5);
         }
       };
     }
 
     function initLevel(lvl) {
-      const layoutFn = randomLayoutFn();
+      const isShapeStage = lvl % 3 === 0;
+      let layoutFn;
+
+      if (isShapeStage) {
+        currentShape = Math.floor(Math.random() * 3);
+        const pat = SHAPE_PATTERNS[currentShape];
+        layoutFn = (r, c) => pat[r][c] === 1;
+      } else {
+        currentShape = -1;
+        layoutFn = randomLayoutFn();
+      }
+
       blocks = [];
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
@@ -394,32 +496,57 @@
             x: BOFF_X + c * (BW + BGAP),
             y: BOFF_Y + r * (BH + BGAP),
             alive: true, row: r, col: c, item: null, bomb: false,
+            shape: currentShape,
           });
         }
       }
-      // 最低ブロック数を保証
-      if (blocks.length < 12) {
+      // 通常ステージのみ最低ブロック数を保証
+      if (!isShapeStage && blocks.length < 12) {
         for (let r = 0; r < ROWS; r++)
           for (let c = 0; c < COLS; c++)
             if (!blocks.find(b => b.row===r && b.col===c) && Math.random()<0.5)
-              blocks.push({ x: BOFF_X+c*(BW+BGAP), y: BOFF_Y+r*(BH+BGAP), alive:true, row:r, col:c, item:null, bomb:false });
+              blocks.push({ x: BOFF_X+c*(BW+BGAP), y: BOFF_Y+r*(BH+BGAP), alive:true, row:r, col:c, item:null, bomb:false, shape:-1 });
       }
+
+      const itemChance = isShapeStage ? 0.04 : ITEM_CHANCE;
+      const bombCount  = isShapeStage ? 1 : BOMB_COUNT;
+
       for (const b of blocks) {
-        if (Math.random() < ITEM_CHANCE)
+        if (Math.random() < itemChance)
           b.item = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
       }
       const nonItem = blocks.filter(b => !b.item);
-      for (let i = 0; i < BOMB_COUNT && nonItem.length > 0; i++) {
+      for (let i = 0; i < bombCount && nonItem.length > 0; i++) {
         const idx = Math.floor(Math.random() * nonItem.length);
         nonItem[idx].bomb = true;
         nonItem.splice(idx, 1);
       }
+
       const spd = Math.min(2.5 + (lvl - 1) * 0.3, 8.0);
       ball    = { x: W / 2, y: PADDLE_Y - BALL_R - 2 };
       dx      = spd * (Math.random() > 0.5 ? 1 : -1);
       dy      = -spd;
       paddle  = { x: W / 2 - BASE_PADDLE_W / 2 };
       powerups = { wide: 0, slow: 0, thru: 0 };
+
+      // 形ステージ突入アナウンス
+      if (isShapeStage) {
+        levelUpMsg.subtext  = '★ ' + SHAPE_NAMES[currentShape] + ' ★';
+        levelUpMsg.subcolor = SHAPE_COLORS[currentShape][0];
+        if (levelUpMsg.life < 50) levelUpMsg.life = 100;
+      }
+
+      // ボス前ステージ警告（次のレベルが形ステージ = lvl % 3 === 2）
+      if (!isShapeStage && lvl % 3 === 2) {
+        if (levelUpMsg.life > 0) {
+          levelUpMsg.subtext  = '⚠  次はボス戦！';
+          levelUpMsg.subcolor = '#ff9900';
+          levelUpMsg.life     = Math.max(levelUpMsg.life, 110);
+          levelUpMsg.warn     = true;
+        } else {
+          levelUpMsg = { text: '⚠  次はボス戦！', subtext: '', life: 110, color: '#ff9900', subcolor: '', warn: true };
+        }
+      }
     }
 
     function init() {
@@ -427,7 +554,8 @@
       keys = {}; running = false; tick = 0;
       popups = []; particles = []; flashes = [];
       shake = { x: 0, y: 0, life: 0 };
-      levelUpMsg = { text: '', life: 0 };
+      levelUpMsg = { text: '', subtext: '', life: 0, color: '#7df9ff', subcolor: '#fff' };
+      currentShape = -1;
       initLevel(level);
       document.getElementById('message').textContent = '';
       updateHUD(); draw();
@@ -565,11 +693,21 @@
     function drawBlock(b) {
       if (b.bomb) { drawBombBlock(b); return; }
 
-      const [fill, shadow] = BLOCK_COLORS[b.row];
+      const isShape = b.shape >= 0;
+      const fill   = isShape ? SHAPE_COLORS[b.shape][0] : BLOCK_COLORS[b.row][0];
+      const shadow = isShape ? SHAPE_COLORS[b.shape][1] : BLOCK_COLORS[b.row][1];
+
+      ctx.save();
+      if (isShape) {
+        ctx.shadowColor = SHAPE_COLORS[b.shape][2];
+        ctx.shadowBlur  = 10 + 5 * Math.sin(tick * 0.07);
+      }
       ctx.fillStyle = shadow;
       ctx.fillRect(b.x + 2, b.y + 2, BW, BH);
       ctx.fillStyle = fill;
       ctx.fillRect(b.x, b.y, BW, BH);
+      ctx.restore();
+
       ctx.fillStyle = 'rgba(255,255,255,0.18)';
       ctx.fillRect(b.x + 3, b.y + 3, BW - 6, 5);
 
@@ -691,8 +829,19 @@
       ctx.save();
       ctx.translate(shake.x, shake.y);
 
+      // 形ステージ背景ヴィネット
+      if (currentShape >= 0) {
+        const vg = ctx.createRadialGradient(W/2, H/2, H*0.25, W/2, H/2, H*0.85);
+        vg.addColorStop(0, 'transparent');
+        vg.addColorStop(1, SHAPE_VIGNETTE[currentShape]);
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, W, H);
+      }
+
       // グリッド
-      ctx.strokeStyle = 'rgba(125,249,255,0.04)';
+      ctx.strokeStyle = currentShape >= 0
+        ? SHAPE_COLORS[currentShape][2].replace('0.55', '0.06')
+        : 'rgba(125,249,255,0.04)';
       ctx.lineWidth = 1;
       for (let i = 0; i < W; i += 40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,H); ctx.stroke(); }
       for (let j = 0; j < H; j += 40) { ctx.beginPath(); ctx.moveTo(0,j); ctx.lineTo(W,j); ctx.stroke(); }
@@ -705,20 +854,50 @@
       drawPowerupBar();
       drawPopups();
 
-      // レベルアップ大文字演出
+      // レベルアップ＆形ステージ＆ボス前警告 演出
       if (levelUpMsg.life > 0) {
-        const a = Math.min(1, levelUpMsg.life / 20);
+        const a       = Math.min(1, levelUpMsg.life / 20);
+        const hasMain = !!levelUpMsg.text;
+        const hasSub  = !!levelUpMsg.subtext;
+        const isWarn  = !!levelUpMsg.warn;
+        const mainY   = hasSub ? H / 2 - 26 : H / 2;
+
         ctx.save();
         ctx.globalAlpha = a;
-        ctx.font = 'bold 38px monospace';
-        ctx.textAlign = 'center';
+        ctx.textAlign   = 'center';
         ctx.textBaseline = 'middle';
-        ctx.shadowColor = '#7df9ff';
-        ctx.shadowBlur = 24;
-        ctx.fillStyle = '#7df9ff';
-        ctx.fillText(levelUpMsg.text, W / 2, H / 2);
+
+        if (hasMain) {
+          // 警告テキストは高速点滅（赤⇔橙）
+          const warnPulse = isWarn ? 0.5 + 0.5 * Math.sin(tick * 0.35) : 1;
+          const color = isWarn
+            ? (Math.sin(tick * 0.35) > 0 ? '#ff9900' : '#ff3300')
+            : (levelUpMsg.color || '#7df9ff');
+          ctx.shadowColor = color;
+          ctx.shadowBlur  = isWarn ? 28 + 16 * warnPulse : 24;
+          ctx.fillStyle   = color;
+          ctx.font = 'bold 38px monospace';
+          ctx.fillText(levelUpMsg.text, W / 2, mainY);
+        }
+
+        if (hasSub) {
+          const isSubWarn = isWarn;
+          const subPulse  = isSubWarn
+            ? 0.5 + 0.5 * Math.sin(tick * 0.35)
+            : 0.85 + 0.15 * Math.sin(tick * 0.12);
+          const subColor  = isSubWarn
+            ? (Math.sin(tick * 0.35) > 0 ? '#ff9900' : '#ff3300')
+            : levelUpMsg.subcolor;
+          ctx.shadowColor = subColor;
+          ctx.shadowBlur  = isSubWarn ? 28 + 16 * subPulse : 30 * subPulse;
+          ctx.fillStyle   = subColor;
+          ctx.font = 'bold 42px sans-serif';
+          ctx.fillText(levelUpMsg.subtext, W / 2, H / 2 + (hasMain ? 28 : 0));
+        }
+
         ctx.restore();
         levelUpMsg.life--;
+        if (levelUpMsg.life === 0) { levelUpMsg.subtext = ''; levelUpMsg.warn = false; }
       }
 
       ctx.restore();
@@ -810,8 +989,12 @@
         score += (ROWS - b.row) * 10;
         updateHUD();
 
-        if (b.bomb)       explodeBomb(b);
-        else if (b.item)  applyItem(b.item);
+        if (b.bomb) {
+          explodeBomb(b);
+        } else {
+          playBlockBreak(b.row, b.shape);
+          if (b.item) applyItem(b.item);
+        }
 
         if (!powerups.thru) {
           const oL = (ball.x + BALL_R) - b.x, oR = (b.x + BW) - (ball.x - BALL_R);
@@ -839,7 +1022,7 @@
           nextLevelScore += 600;
         }
         updateHUD();
-        levelUpMsg = { text: 'LEVEL ' + level + '!', life: 70 };
+        levelUpMsg = { text: 'LEVEL ' + level + '!', subtext: '', life: 70, color: '#7df9ff', subcolor: '#fff' };
         initLevel(level);
         return;
       }
