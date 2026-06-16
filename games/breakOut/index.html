@@ -391,6 +391,49 @@
       } catch (e) { /* 音声非対応環境では無視 */ }
     }
 
+    function playFireballSpawn() {
+      try {
+        const ac = ensureAudio(); const t = ac.currentTime;
+        const osc = ac.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(500, t);
+        osc.frequency.exponentialRampToValueAtTime(160, t + 0.18);
+        const gain = ac.createGain();
+        gain.gain.setValueAtTime(0.18, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        osc.connect(gain); gain.connect(ac.destination);
+        osc.start(t); osc.stop(t + 0.18);
+      } catch(e) {}
+    }
+
+    function playFireballHit() {
+      try {
+        const ac = ensureAudio(); const t = ac.currentTime;
+        // 低音ドン
+        const osc = ac.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(90, t);
+        osc.frequency.exponentialRampToValueAtTime(28, t + 0.28);
+        const gain = ac.createGain();
+        gain.gain.setValueAtTime(0.9, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        osc.connect(gain); gain.connect(ac.destination);
+        osc.start(t); osc.stop(t + 0.3);
+        // ノイズ層
+        const bufLen = Math.floor(ac.sampleRate * 0.15);
+        const buf = ac.createBuffer(1, bufLen, ac.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+        const ns = ac.createBufferSource(); ns.buffer = buf;
+        const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 800;
+        const ng = ac.createGain();
+        ng.gain.setValueAtTime(0.4, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        ns.connect(hp); hp.connect(ng); ng.connect(ac.destination);
+        ns.start(t); ns.stop(t + 0.15);
+      } catch(e) {}
+    }
+
     // ── 定数 ──────────────────────────────────────────────
     const COLS = 10, ROWS = 5;
     const BW = 46, BH = 18, BGAP = 6;
@@ -453,7 +496,7 @@
     let score, lives, level, nextLevelScore, blocks, ball, paddle, dx, dy;
     let keys, running, animId, tick;
     let powerups, popups, particles, flashes, shake, levelUpMsg;
-    let currentShape;
+    let currentShape, fireballs;
 
     function currentPaddleW() { return powerups.wide > 0 ? 140 : BASE_PADDLE_W; }
 
@@ -476,6 +519,7 @@
     }
 
     function initLevel(lvl) {
+      fireballs = [];
       const isShapeStage = lvl % 3 === 0;
       let layoutFn;
 
@@ -556,6 +600,7 @@
       shake = { x: 0, y: 0, life: 0 };
       levelUpMsg = { text: '', subtext: '', life: 0, color: '#7df9ff', subcolor: '#fff' };
       currentShape = -1;
+      fireballs = [];
       initLevel(level);
       document.getElementById('message').textContent = '';
       updateHUD(); draw();
@@ -824,6 +869,34 @@
       ctx.restore();
     }
 
+    function drawFireballs() {
+      for (const f of fireballs) {
+        const pulse = 0.75 + 0.25 * Math.sin(f.age * 0.25);
+        const r = f.r * pulse;
+
+        // 外炎グロー
+        const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r * 2.4);
+        grad.addColorStop(0,   'rgba(255,255,180,0.95)');
+        grad.addColorStop(0.2, 'rgba(255,160, 20,0.85)');
+        grad.addColorStop(0.5, 'rgba(220, 40,  0,0.55)');
+        grad.addColorStop(1,   'rgba(120,  0,  0,0)');
+        ctx.save();
+        ctx.shadowColor = '#ff6600';
+        ctx.shadowBlur  = 18 * pulse;
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, r * 2.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // コア白点
+        ctx.fillStyle = 'rgba(255,255,220,0.95)';
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, r * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
     function draw() {
       ctx.clearRect(0, 0, W, H);
       ctx.save();
@@ -849,6 +922,7 @@
       blocks.forEach(b => { if (b.alive) drawBlock(b); });
       drawFlashes();
       drawParticles();
+      drawFireballs();
       drawPaddle();
       drawBall();
       drawPowerupBar();
@@ -1013,6 +1087,56 @@
         dx = spd * (Math.random() > 0.5 ? 1 : -1);
         dy = -spd;
         powerups = { wide: 0, slow: 0, thru: 0 };
+      }
+
+      // ── ボス攻撃（形ステージのみ）────────────────────
+      if (currentShape >= 0) {
+        // レベルが上がるほど頻繁・速くなる
+        const interval = Math.max(55, 130 - level * 4);
+        const maxFB    = Math.min(6, 1 + Math.floor(level / 3));
+        if (tick % interval === 0 && fireballs.length < maxFB) {
+          const src = blocks.filter(b => b.alive && b.shape >= 0);
+          if (src.length > 0) {
+            const o = src[Math.floor(Math.random() * src.length)];
+            fireballs.push({
+              x: o.x + BW / 2,
+              y: o.y + BH + 4,
+              vx: (Math.random() - 0.5) * 2.5,
+              vy: 2.2 + Math.random() * 1.5 + level * 0.08,
+              r:  9 + Math.random() * 4,
+              phase: Math.random() * Math.PI * 2,
+              age: 0,
+            });
+            playFireballSpawn();
+          }
+        }
+
+        // 火の玉 移動・判定
+        const pw = currentPaddleW();
+        for (let i = fireballs.length - 1; i >= 0; i--) {
+          const f = fireballs[i];
+          f.age++;
+          f.x += f.vx + Math.sin(f.age * 0.09 + f.phase) * 1.1;
+          f.y += f.vy;
+          // 左右の壁で反射
+          if (f.x - f.r < 0)  { f.x = f.r;     f.vx =  Math.abs(f.vx); }
+          if (f.x + f.r > W)  { f.x = W - f.r; f.vx = -Math.abs(f.vx); }
+          // 画面下で消滅
+          if (f.y - f.r > H)  { fireballs.splice(i, 1); continue; }
+          // パドルへの命中判定
+          if (f.y + f.r >= PADDLE_Y &&
+              f.y - f.r <= PADDLE_Y + PADDLE_H &&
+              f.x + f.r >= paddle.x &&
+              f.x - f.r <= paddle.x + pw) {
+            fireballs.splice(i, 1);
+            lives--;
+            updateHUD();
+            playFireballHit();
+            shake.life = 22;
+            addPopup('🔥 ダメージ！', '#ff4400');
+            if (lives <= 0) { endGame(false); return; }
+          }
+        }
       }
 
       // スコアによるレベルアップ
