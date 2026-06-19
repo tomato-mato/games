@@ -85,6 +85,49 @@
       border: 2px solid #ffd700;
     }
     #rulesBtn:hover, #rulesBtn:active { background: #ffd70022; }
+    #autoPlayBtn {
+      padding: 10px 24px;
+      font-size: clamp(0.85rem, 3vw, 1rem);
+      background: transparent;
+      border: 2px solid #6bcb77;
+      border-radius: 30px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: background 0.2s, box-shadow 0.2s;
+      color: #6bcb77;
+    }
+    #autoPlayBtn:hover, #autoPlayBtn:active { background: #6bcb7722; }
+    #autoPlayBtn.on {
+      background: #6bcb7733;
+      color: #ccffcc;
+      box-shadow: 0 0 14px #6bcb7799;
+    }
+    #speedRow {
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: clamp(0.7rem, 2.5vw, 0.82rem);
+      color: #aaa;
+    }
+    .speedBtn {
+      padding: 3px 10px;
+      font-size: clamp(0.68rem, 2.3vw, 0.8rem);
+      background: transparent;
+      border: 1.5px solid #444;
+      border-radius: 20px;
+      cursor: pointer;
+      color: #777;
+      letter-spacing: 1px;
+      transition: all 0.15s;
+    }
+    .speedBtn:hover { border-color: #7df9ff88; color: #7df9ff; }
+    .speedBtn.on {
+      border-color: #7df9ff;
+      color: #7df9ff;
+      background: #7df9ff18;
+      box-shadow: 0 0 8px #7df9ff44;
+    }
 
     /* ── ルールモーダル ── */
     #rulesOverlay {
@@ -189,7 +232,16 @@
   <div id="message"></div>
   <div id="btnRow">
     <button id="startBtn">スタート</button>
+    <button id="autoPlayBtn">🤖 AUTO</button>
     <button id="rulesBtn">ルール確認</button>
+  </div>
+  <div id="speedRow">
+    スピード:
+    <button class="speedBtn on" data-mult="1">1x</button>
+    <button class="speedBtn" data-mult="2">2x</button>
+    <button class="speedBtn" data-mult="3">3x</button>
+    <button class="speedBtn" data-mult="4">4x</button>
+    <button class="speedBtn" data-mult="5">5x</button>
   </div>
   <div id="hint">← → キー / マウス / タッチで操作</div>
 
@@ -230,9 +282,12 @@
       <p class="note">※ 各レベルに2個配置される</p>
 
       <h3>レベルアップ</h3>
-      <p>スコアが <strong style="color:#ffd700">600点に達するごと</strong>にレベルアップ。レベル上限はなく無限に続く。</p>
-      <p class="note">レベルが上がるごとにボールが速くなる（最高速度あり）</p>
-      <p class="note">ブロックを全滅させると同レベルのまま新しい地形が出現する</p>
+      <p><strong style="color:#ffd700">ブロックを全て破壊する</strong>と次のレベルへ進む。レベル上限はなく無限に続く。</p>
+      <p class="note">レベルが上がるごとにボールの基本速度が上がる（最高速度あり）</p>
+
+      <h3>スピード切り替え</h3>
+      <p>画面下の <strong style="color:#7df9ff">1x〜5x</strong> ボタンでボール速度を変更できる。ゲーム中でも即時反映。</p>
+      <p class="note">高速モードでも衝突判定はサブステップで処理されるのでブロックを貫通しない</p>
 
       <h3>特殊ステージ</h3>
       <p><strong style="color:#ffd700">3レベルごと</strong>（Lv.3, 6, 9…）に特殊形ステージが出現！</p>
@@ -493,10 +548,12 @@
     ];
 
     // ── 状態 ──────────────────────────────────────────────
-    let score, lives, level, nextLevelScore, blocks, ball, paddle, dx, dy;
-    let keys, running, animId, tick;
+    let score, lives, level, blocks, ball, paddle, dx, dy;
+    let keys, running, animId, tick, autoMode;
     let powerups, popups, particles, flashes, shake, levelUpMsg;
     let currentShape, fireballs;
+    let autoPlay = false, aiTargetX = 0;
+    let speedMult = 1;
 
     function currentPaddleW() { return powerups.wide > 0 ? 140 : BASE_PADDLE_W; }
 
@@ -594,7 +651,7 @@
     }
 
     function init() {
-      score = 0; lives = 3; level = 1; nextLevelScore = 600;
+      score = 0; lives = 3; level = 1;
       keys = {}; running = false; tick = 0;
       popups = []; particles = []; flashes = [];
       shake = { x: 0, y: 0, life: 0 };
@@ -974,6 +1031,20 @@
         if (levelUpMsg.life === 0) { levelUpMsg.subtext = ''; levelUpMsg.warn = false; }
       }
 
+      // AUTO PLAY バッジ（右上）
+      if (autoPlay) {
+        const pulse = 0.7 + 0.3 * Math.sin(tick * 0.08);
+        ctx.save();
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.shadowColor = '#6bcb77';
+        ctx.shadowBlur  = 8 * pulse;
+        ctx.fillStyle   = `rgba(107,203,119,${0.75 + 0.25 * pulse})`;
+        ctx.fillText('🤖 AUTO PLAY', W - 8, 6);
+        ctx.restore();
+      }
+
       ctx.restore();
     }
 
@@ -1007,11 +1078,117 @@
       popups.push({ text, color, x: W / 2, y: PADDLE_Y - 30, life: 60 });
     }
 
+    // ボールが PADDLE_Y に到達する X 座標を壁反射込みでシミュレーション予測
+    function predictBallLandingX() {
+      const sm = powerups.slow > 0 ? 0.6 : 1;
+      let x = ball.x, y = ball.y, vx = dx * sm, vy = dy * sm;
+      for (let i = 0; i < 4000; i++) {
+        x += vx; y += vy;
+        if (x - BALL_R < 0) { x = BALL_R;     vx =  Math.abs(vx); }
+        if (x + BALL_R > W) { x = W - BALL_R; vx = -Math.abs(vx); }
+        if (y - BALL_R < 0) { y = BALL_R;     vy =  Math.abs(vy); }
+        if (y + BALL_R >= PADDLE_Y) return x;
+      }
+      return x;
+    }
+
+    // 各ブロックをスコアリングして最適な狙い先を選び、パドル中心位置を返す
+    function calcAimCenter(landingX) {
+      const pw   = currentPaddleW();
+      const alive = blocks.filter(b => b.alive);
+      if (alive.length === 0) return landingX;
+
+      const sm  = powerups.slow > 0 ? 0.6 : 1;
+      const spd = Math.sqrt(dx * dx + dy * dy) * sm;
+
+      // 列ごとのブロック数（密集列を優遇するため）
+      const colCount = new Array(COLS).fill(0);
+      for (const b of alive) colCount[b.col]++;
+
+      let bestBlock = null;
+      let bestScore = -Infinity;
+
+      for (const b of alive) {
+        const bx    = b.x + BW / 2;
+        const by    = b.y + BH / 2;
+        const diffX = bx - landingX;
+        const diffY = PADDLE_Y - by;                    // 正値（ブロックは上）
+        const hyp   = Math.sqrt(diffX * diffX + diffY * diffY);
+        const ratio = hyp > 0 ? Math.abs(diffX) / hyp : 0;
+
+        if (ratio > 0.82) continue;                     // 角度が急すぎる → スキップ
+
+        // スコア: 上段ほど高得点・同列ブロック密集ほど加点・角度がきついほど減点
+        const score = colCount[b.col] * 2.5
+                    + (ROWS - b.row) * 1.5
+                    - ratio * 4;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestBlock = { x: bx, y: by };
+        }
+      }
+
+      // 急角度ブロックしかない場合: 角度制限を緩めて最も近い列を選ぶ
+      if (!bestBlock) {
+        let minRatio = Infinity;
+        for (const b of alive) {
+          const bx    = b.x + BW / 2;
+          const by    = b.y + BH / 2;
+          const diffX = bx - landingX;
+          const diffY = PADDLE_Y - by;
+          const hyp   = Math.sqrt(diffX * diffX + diffY * diffY);
+          const ratio = hyp > 0 ? Math.abs(diffX) / hyp : 0;
+          if (ratio < minRatio) { minRatio = ratio; bestBlock = { x: bx, y: by }; }
+        }
+      }
+
+      const diffX = bestBlock.x - landingX;
+      const diffY = PADDLE_Y - bestBlock.y;
+      const hyp   = Math.sqrt(diffX * diffX + diffY * diffY);
+
+      let wantDx = hyp > 0 ? (diffX / hyp) * spd : 0;
+      wantDx = Math.max(-spd * 0.75, Math.min(spd * 0.75, wantDx));
+
+      const rel    = wantDx / (spd * 1.2);
+      const center = landingX - rel * (pw / 2);
+      return Math.max(pw / 2, Math.min(W - pw / 2, center));
+    }
+
     function movePaddle() {
       const pw = currentPaddleW();
-      const spd = 7;
-      if (keys['ArrowLeft']  || keys['a'] || keys['A']) paddle.x -= spd;
-      if (keys['ArrowRight'] || keys['d'] || keys['D']) paddle.x += spd;
+      if (autoPlay) {
+        // ── AI ──────────────────────────────────────────
+        // 常に着地点を予測（上昇中も跳ね返り後の着地を先読み）し、
+        // ブロック重心を狙えるパドル位置へ移動する
+        const landingX = predictBallLandingX();
+        let target     = calcAimCenter(landingX);
+
+        // 下半分に火の玉が来たら予測位置へ回避（ボス戦）
+        for (const f of fireballs) {
+          if (f.y < H * 0.5) continue;
+          const ttp = Math.max(1, (PADDLE_Y - f.y) / Math.max(0.1, f.vy));
+          const px  = f.x + f.vx * ttp;
+          const cx  = paddle.x + pw / 2;
+          if (Math.abs(px - cx) < pw * 0.8) {
+            target = px < W / 2 ? W * 0.78 : W * 0.22;
+            break;
+          }
+        }
+
+        // 残りフレームから必要速度を算出して確実に間に合うよう移動
+        const diff = target - (paddle.x + pw / 2);
+        const sm   = powerups.slow > 0 ? 0.6 : 1;
+        const framesLeft = Math.max(1, (PADDLE_Y - ball.y) / (Math.abs(dy) * sm));
+        const neededSpeed  = Math.abs(diff) / framesLeft;
+        const autoSpeed    = Math.max(neededSpeed * 1.3, 8);
+        paddle.x += Math.sign(diff) * Math.min(autoSpeed, Math.abs(diff));
+      } else {
+        // ── 手動 ────────────────────────────────────────
+        const spd = 7;
+        if (keys['ArrowLeft']  || keys['a'] || keys['A']) paddle.x -= spd;
+        if (keys['ArrowRight'] || keys['d'] || keys['D']) paddle.x += spd;
+      }
       paddle.x = Math.max(0, Math.min(W - pw, paddle.x));
     }
 
@@ -1031,54 +1208,61 @@
         if (--popups[i].life <= 0) popups.splice(i, 1);
       }
 
-      const sm = powerups.slow > 0 ? 0.6 : 1;
-      ball.x += dx * sm;
-      ball.y += dy * sm;
+      // ── ボール物理（speedMult 倍サブステップ、トンネル防止）──────
+      const smBase = powerups.slow > 0 ? 0.6 : 1;
+      let missed = false;
 
-      if (ball.x - BALL_R < 0) { ball.x = BALL_R;     dx =  Math.abs(dx); }
-      if (ball.x + BALL_R > W) { ball.x = W - BALL_R; dx = -Math.abs(dx); }
-      if (ball.y - BALL_R < 0) { ball.y = BALL_R;     dy =  Math.abs(dy); }
+      for (let step = 0; step < speedMult && !missed; step++) {
+        ball.x += dx * smBase;
+        ball.y += dy * smBase;
 
-      const pw = currentPaddleW();
-      if (
-        ball.y + BALL_R >= PADDLE_Y &&
-        ball.y + BALL_R <= PADDLE_Y + PADDLE_H + Math.abs(dy) &&
-        ball.x >= paddle.x - BALL_R &&
-        ball.x <= paddle.x + pw + BALL_R
-      ) {
-        dy = -Math.abs(dy);
-        ball.y = PADDLE_Y - BALL_R;
-        const rel = (ball.x - (paddle.x + pw / 2)) / (pw / 2);
-        const spd = Math.sqrt(dx * dx + dy * dy);
-        dx = rel * spd * 1.2;
-        dy = -Math.sqrt(Math.max((spd * 0.5) ** 2, spd * spd - dx * dx));
-      }
+        if (ball.x - BALL_R < 0) { ball.x = BALL_R;     dx =  Math.abs(dx); }
+        if (ball.x + BALL_R > W) { ball.x = W - BALL_R; dx = -Math.abs(dx); }
+        if (ball.y - BALL_R < 0) { ball.y = BALL_R;     dy =  Math.abs(dy); }
 
-      for (const b of blocks) {
-        if (!b.alive) continue;
-        if (!(ball.x + BALL_R > b.x && ball.x - BALL_R < b.x + BW &&
-              ball.y + BALL_R > b.y && ball.y - BALL_R < b.y + BH)) continue;
-
-        b.alive = false;
-        score += (ROWS - b.row) * 10;
-        updateHUD();
-
-        if (b.bomb) {
-          explodeBomb(b);
-        } else {
-          playBlockBreak(b.row, b.shape);
-          if (b.item) applyItem(b.item);
+        const pw = currentPaddleW();
+        if (
+          ball.y + BALL_R >= PADDLE_Y &&
+          ball.y + BALL_R <= PADDLE_Y + PADDLE_H + Math.abs(dy) &&
+          ball.x >= paddle.x - BALL_R &&
+          ball.x <= paddle.x + pw + BALL_R
+        ) {
+          dy = -Math.abs(dy);
+          ball.y = PADDLE_Y - BALL_R;
+          const rel = (ball.x - (paddle.x + pw / 2)) / (pw / 2);
+          const spd = Math.sqrt(dx * dx + dy * dy);
+          dx = rel * spd * 1.2;
+          dy = -Math.sqrt(Math.max((spd * 0.5) ** 2, spd * spd - dx * dx));
         }
 
-        if (!powerups.thru) {
-          const oL = (ball.x + BALL_R) - b.x, oR = (b.x + BW) - (ball.x - BALL_R);
-          const oT = (ball.y + BALL_R) - b.y, oB = (b.y + BH) - (ball.y - BALL_R);
-          if (Math.min(oL, oR) < Math.min(oT, oB)) dx = -dx; else dy = -dy;
-          break;
+        for (const b of blocks) {
+          if (!b.alive) continue;
+          if (!(ball.x + BALL_R > b.x && ball.x - BALL_R < b.x + BW &&
+                ball.y + BALL_R > b.y && ball.y - BALL_R < b.y + BH)) continue;
+
+          b.alive = false;
+          score += (ROWS - b.row) * 10;
+          updateHUD();
+
+          if (b.bomb) {
+            explodeBomb(b);
+          } else {
+            playBlockBreak(b.row, b.shape);
+            if (b.item) applyItem(b.item);
+          }
+
+          if (!powerups.thru) {
+            const oL = (ball.x + BALL_R) - b.x, oR = (b.x + BW) - (ball.x - BALL_R);
+            const oT = (ball.y + BALL_R) - b.y, oB = (b.y + BH) - (ball.y - BALL_R);
+            if (Math.min(oL, oR) < Math.min(oT, oB)) dx = -dx; else dy = -dy;
+            break;
+          }
         }
+
+        if (ball.y - BALL_R > H) { missed = true; }
       }
 
-      if (ball.y - BALL_R > H) {
+      if (missed) {
         lives--;
         updateHUD();
         if (lives <= 0) { endGame(false); return; }
@@ -1091,7 +1275,6 @@
 
       // ── ボス攻撃（形ステージのみ）────────────────────
       if (currentShape >= 0) {
-        // レベルが上がるほど頻繁・速くなる
         const interval = Math.max(55, 130 - level * 4);
         const maxFB    = Math.min(6, 1 + Math.floor(level / 3));
         if (tick % interval === 0 && fireballs.length < maxFB) {
@@ -1111,23 +1294,19 @@
           }
         }
 
-        // 火の玉 移動・判定
-        const pw = currentPaddleW();
+        const pwF = currentPaddleW();
         for (let i = fireballs.length - 1; i >= 0; i--) {
           const f = fireballs[i];
           f.age++;
           f.x += f.vx + Math.sin(f.age * 0.09 + f.phase) * 1.1;
           f.y += f.vy;
-          // 左右の壁で反射
           if (f.x - f.r < 0)  { f.x = f.r;     f.vx =  Math.abs(f.vx); }
           if (f.x + f.r > W)  { f.x = W - f.r; f.vx = -Math.abs(f.vx); }
-          // 画面下で消滅
           if (f.y - f.r > H)  { fireballs.splice(i, 1); continue; }
-          // パドルへの命中判定
           if (f.y + f.r >= PADDLE_Y &&
               f.y - f.r <= PADDLE_Y + PADDLE_H &&
               f.x + f.r >= paddle.x &&
-              f.x - f.r <= paddle.x + pw) {
+              f.x - f.r <= paddle.x + pwF) {
             fireballs.splice(i, 1);
             lives--;
             updateHUD();
@@ -1139,20 +1318,11 @@
         }
       }
 
-      // スコアによるレベルアップ
-      if (score >= nextLevelScore) {
-        while (score >= nextLevelScore) {
-          level++;
-          nextLevelScore += 600;
-        }
+      // ブロック全滅 → 次のレベルへ（スコアではなくブロック全破壊で進行）
+      if (!missed && blocks.every(b => !b.alive)) {
+        level++;
         updateHUD();
-        levelUpMsg = { text: 'LEVEL ' + level + '!', subtext: '', life: 70, color: '#7df9ff', subcolor: '#fff' };
-        initLevel(level);
-        return;
-      }
-
-      // ブロック全滅 → 同レベルで新レイアウト
-      if (blocks.every(b => !b.alive)) {
+        levelUpMsg = { text: 'LEVEL ' + level + '!', subtext: '', life: 70, color: '#7df9ff', subcolor: '', warn: false };
         initLevel(level);
       }
     }
@@ -1162,8 +1332,10 @@
       document.getElementById('message').textContent = win
         ? '🎉 クリア！ スコア: ' + score
         : 'ゲームオーバー… スコア: ' + score;
-      document.getElementById('startBtn').textContent = 'もう一度';
-      document.getElementById('btnRow').style.display = 'flex';
+      const sBtn = document.getElementById('startBtn');
+      sBtn.textContent = 'もう一度';
+      sBtn.style.display = '';
+      document.getElementById('rulesBtn').style.display = '';
     }
 
     function loop() {
@@ -1171,13 +1343,27 @@
       if (running) animId = requestAnimationFrame(loop);
     }
 
+    function setAutoPlay(on) {
+      autoPlay = on;
+      aiTargetX = paddle.x + currentPaddleW() / 2;
+      const btn = document.getElementById('autoPlayBtn');
+      btn.classList.toggle('on', on);
+      btn.textContent = on ? '🤖 AUTO ON' : '🤖 AUTO';
+    }
+
     document.getElementById('startBtn').addEventListener('click', () => {
       ensureAudio();
       init();
       running = true;
-      document.getElementById('btnRow').style.display = 'none';
+      aiTargetX = W / 2;
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('rulesBtn').style.display = 'none';
       document.getElementById('message').textContent = '';
       animId = requestAnimationFrame(loop);
+    });
+
+    document.getElementById('autoPlayBtn').addEventListener('click', () => {
+      setAutoPlay(!autoPlay);
     });
 
     // ── ルールモーダル ──────────────────────────────────
@@ -1192,16 +1378,25 @@
       if (e.target === rulesOverlay) rulesOverlay.classList.remove('show');
     });
 
+    document.querySelectorAll('.speedBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        speedMult = parseInt(btn.dataset.mult);
+        document.querySelectorAll('.speedBtn').forEach(b => b.classList.toggle('on', b === btn));
+      });
+    });
+
     document.addEventListener('keydown', e => { keys[e.key] = true; });
     document.addEventListener('keyup',   e => { keys[e.key] = false; });
 
     canvas.addEventListener('mousemove', e => {
+      if (autoPlay) return;
       const mx = toCanvasX(e.clientX);
       paddle.x = Math.max(0, Math.min(W - currentPaddleW(), mx - currentPaddleW() / 2));
     });
 
     canvas.addEventListener('touchmove', e => {
       e.preventDefault();
+      if (autoPlay) return;
       const tx = toCanvasX(e.touches[0].clientX);
       paddle.x = Math.max(0, Math.min(W - currentPaddleW(), tx - currentPaddleW() / 2));
     }, { passive: false });
