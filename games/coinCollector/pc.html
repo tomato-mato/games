@@ -79,6 +79,10 @@ canvas { display:block; }
     <button id="ob">ゲームスタート</button>
     <button id="hardBtn" onclick="toggleHard()" style="margin-top:4px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.2);border-radius:6px;color:rgba(255,255,255,.5);font-size:.78rem;font-weight:700;padding:5px 16px;cursor:pointer;letter-spacing:.06em;font-family:'Segoe UI','Yu Gothic UI',sans-serif;transition:all .2s">⚔ ハードモード: OFF</button>
     <button id="autoBtn" onclick="toggleAuto()" style="margin-top:4px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.2);border-radius:6px;color:rgba(255,255,255,.5);font-size:.78rem;font-weight:700;padding:5px 16px;cursor:pointer;letter-spacing:.06em;font-family:'Segoe UI','Yu Gothic UI',sans-serif;transition:all .2s">🤖 スーパープレイ: OFF</button>
+    <div style="margin-top:8px;display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap">
+      <span style="font-size:.7rem;color:rgba(255,255,255,.45);letter-spacing:.06em">🎨 キャラ色</span>
+      <div id="colorPicker" style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center"></div>
+    </div>
     <div id="rg" style="font-size:.78rem;opacity:.72;letter-spacing:.04em;text-align:center">
       <span style="color:#aaa">F</span> 100 &nbsp;/&nbsp;
       <span style="color:#00e5ff">B</span> 1,000 &nbsp;/&nbsp;
@@ -187,6 +191,33 @@ let lastTs, rafId, shakeT;
 let hardMode = false;
 let autoMode = false;
 const keys = {};
+
+const playerColors = [
+  {hi:'#80d8ff',mid:'#00b0ff',lo:'#006db3'},
+  {hi:'#ff8a80',mid:'#f44336',lo:'#b71c1c'},
+  {hi:'#b9f6ca',mid:'#00e676',lo:'#00695c'},
+  {hi:'#ea80ff',mid:'#e040fb',lo:'#6a0080'},
+  {hi:'#ffcc80',mid:'#ff9800',lo:'#e65100'},
+  {hi:'#ff80ab',mid:'#f06292',lo:'#880e4f'},
+  {hi:'#fff9c4',mid:'#ffd600',lo:'#f9a825'},
+  {hi:'#ffffff',mid:'#e0e0e0',lo:'#9e9e9e'},
+];
+let playerColorIdx = +(localStorage.getItem('cc-color')||0);
+(function(){
+  const picker=document.getElementById('colorPicker');
+  playerColors.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.style.cssText=`width:22px;height:22px;border-radius:50%;background:${c.mid};border:2.5px solid ${i===playerColorIdx?'#fff':'rgba(255,255,255,.25)'};cursor:pointer;padding:0;transition:all .18s;transform:${i===playerColorIdx?'scale(1.25)':'scale(1)'}`;
+    b.onclick=()=>{ playerColorIdx=i; localStorage.setItem('cc-color',i); updateColorPicker(); };
+    picker.appendChild(b);
+  });
+})();
+function updateColorPicker(){
+  document.getElementById('colorPicker').querySelectorAll('button').forEach((b,i)=>{
+    b.style.borderColor=i===playerColorIdx?'#fff':'rgba(255,255,255,.25)';
+    b.style.transform=i===playerColorIdx?'scale(1.25)':'scale(1)';
+  });
+}
 
 // ── Player init ───────────────────────────────
 function mkPlayer() {
@@ -1753,8 +1784,9 @@ function drawPlayer() {
   // Speed trail
   if(P.speedT>0){ ctx.shadowColor='#ffd600'; ctx.shadowBlur=18; }
   // Body
+  const pc=playerColors[playerColorIdx];
   const g=ctx.createRadialGradient(-P.r*.3,-P.r*.32,2,0,0,P.r);
-  g.addColorStop(0,'#80d8ff'); g.addColorStop(.6,'#00b0ff'); g.addColorStop(1,'#006db3');
+  g.addColorStop(0,pc.hi); g.addColorStop(.6,pc.mid); g.addColorStop(1,pc.lo);
   ctx.fillStyle=g;
   ctx.beginPath(); ctx.arc(0,0,P.r,0,pi2); ctx.fill();
   // Shine
