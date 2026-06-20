@@ -115,6 +115,10 @@ canvas { display:block; }
       <span style="font-size:.7rem;color:rgba(255,255,255,.45);letter-spacing:.06em">🎨 キャラ色</span>
       <div id="colorPicker" style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center"></div>
     </div>
+    <div style="margin-top:6px;display:flex;justify-content:center;align-items:center;gap:8px">
+      <span style="font-size:.7rem;color:rgba(255,255,255,.45);letter-spacing:.06em">🔷 キャラ形</span>
+      <div id="shapePicker" style="display:flex;gap:7px;align-items:center"></div>
+    </div>
     <div id="rg" style="font-size:.78rem;opacity:.72;letter-spacing:.04em;text-align:center">
       <span style="color:#aaa">F</span> 100 &nbsp;/&nbsp;
       <span style="color:#00e5ff">B</span> 1,000 &nbsp;/&nbsp;
@@ -318,6 +322,24 @@ function updateColorPicker(){
     b.style.transform=i===playerColorIdx?'scale(1.25)':'scale(1)';
   });
 }
+let playerShape=+(localStorage.getItem('cc-shape')||0);
+function initShapePicker(){
+  const picker=document.getElementById('shapePicker');
+  picker.innerHTML='';
+  if(+(localStorage.getItem('cc-best')||0)<100){
+    picker.innerHTML='<span style="font-size:.7rem;color:rgba(255,255,255,.3)">🔒 Fランク達成で解放</span>';
+    return;
+  }
+  [['●','まる'],['▲','さんかく']].forEach(([label],i)=>{
+    const b=document.createElement('button');
+    b.textContent=label;
+    const on=i===playerShape;
+    b.style.cssText=`background:${on?'rgba(255,255,255,.2)':'rgba(255,255,255,.05)'};border:1.5px solid ${on?'rgba(255,255,255,.8)':'rgba(255,255,255,.2)'};border-radius:6px;color:${on?'#fff':'rgba(255,255,255,.4)'};font-size:1rem;font-weight:700;padding:4px 12px;cursor:pointer;transition:all .18s;touch-action:manipulation`;
+    b.onclick=()=>{ playerShape=i; localStorage.setItem('cc-shape',i); initShapePicker(); };
+    picker.appendChild(b);
+  });
+}
+initShapePicker();
 
 function mkPlayer(){
   return{x:W/2,y:HUD+PH/2,r:20,vx:0,vy:0,speed:210,angle:0,sqX:1,sqY:1,
@@ -668,6 +690,7 @@ function endGame(){
     const[endRank]=getRank(score);
     if(rankGT(endRank,bestRank)){bestRank=endRank;localStorage.setItem('cc-bestrank',bestRank);}
   }
+  initShapePicker();
   showOv('GAME OVER','#ff1744',`スコア: ${score.toLocaleString()}　ベスト: ${best.toLocaleString()}`,'もう一度');
   if(autoMode) setTimeout(()=>{if(autoMode&&over)startGame();},2500);
 }
@@ -1218,12 +1241,22 @@ function drawPlayer(){
   if(P.shieldT>0){ctx.shadowColor='#00e676';ctx.shadowBlur=22;ctx.beginPath();ctx.arc(0,0,P.r+9,0,pi2);ctx.strokeStyle='#00e676';ctx.lineWidth=2.5;ctx.stroke();}
   if(P.speedT>0){ctx.shadowColor='#ffd600';ctx.shadowBlur=18;}
   const pc=playerColors[playerColorIdx];const g=ctx.createRadialGradient(-P.r*.3,-P.r*.32,2,0,0,P.r);g.addColorStop(0,pc.hi);g.addColorStop(.6,pc.mid);g.addColorStop(1,pc.lo);
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,P.r,0,pi2);ctx.fill();
-  ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.36)';ctx.beginPath();ctx.ellipse(-P.r*.22,-P.r*.3,P.r*.38,P.r*.2,-0.4,0,pi2);ctx.fill();
-  const a=P.angle,perp=a+Math.PI/2,ed=P.r*.38;
-  for(const[ex,ey] of [[Math.cos(a)*P.r*.28+Math.cos(perp)*ed*.55,Math.sin(a)*P.r*.28+Math.sin(perp)*ed*.55],[Math.cos(a)*P.r*.28-Math.cos(perp)*ed*.55,Math.sin(a)*P.r*.28-Math.sin(perp)*ed*.55]]){
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex,ey,5,0,pi2);ctx.fill();
-    ctx.fillStyle='#102040';ctx.beginPath();ctx.arc(ex+Math.cos(a)*1.5,ey+Math.sin(a)*1.5,3,0,pi2);ctx.fill();
+  ctx.fillStyle=g;
+  const a=P.angle;
+  if(playerShape===1){
+    ctx.beginPath();ctx.moveTo(Math.cos(a)*P.r,Math.sin(a)*P.r);ctx.lineTo(Math.cos(a+2*Math.PI/3)*P.r,Math.sin(a+2*Math.PI/3)*P.r);ctx.lineTo(Math.cos(a-2*Math.PI/3)*P.r,Math.sin(a-2*Math.PI/3)*P.r);ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.28)';ctx.beginPath();ctx.ellipse(Math.cos(a)*P.r*.38,Math.sin(a)*P.r*.38,P.r*.2,P.r*.11,a-0.5,0,pi2);ctx.fill();
+    const ex=Math.cos(a)*P.r*.55,ey=Math.sin(a)*P.r*.55;
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex,ey,4.5,0,pi2);ctx.fill();
+    ctx.fillStyle='#102040';ctx.beginPath();ctx.arc(ex+Math.cos(a)*1.5,ey+Math.sin(a)*1.5,2.5,0,pi2);ctx.fill();
+  } else {
+    ctx.beginPath();ctx.arc(0,0,P.r,0,pi2);ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.36)';ctx.beginPath();ctx.ellipse(-P.r*.22,-P.r*.3,P.r*.38,P.r*.2,-0.4,0,pi2);ctx.fill();
+    const perp=a+Math.PI/2,ed=P.r*.38;
+    for(const[ex,ey] of [[Math.cos(a)*P.r*.28+Math.cos(perp)*ed*.55,Math.sin(a)*P.r*.28+Math.sin(perp)*ed*.55],[Math.cos(a)*P.r*.28-Math.cos(perp)*ed*.55,Math.sin(a)*P.r*.28-Math.sin(perp)*ed*.55]]){
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex,ey,5,0,pi2);ctx.fill();
+      ctx.fillStyle='#102040';ctx.beginPath();ctx.arc(ex+Math.cos(a)*1.5,ey+Math.sin(a)*1.5,3,0,pi2);ctx.fill();
+    }
   }
   if(P.freezeT>0){
     ctx.save();ctx.shadowColor='#80deea';ctx.shadowBlur=20;ctx.globalAlpha=0.55+Math.sin(t*8)*0.15;
