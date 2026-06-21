@@ -55,6 +55,27 @@ canvas { display:block; }
   padding:7px 14px; cursor:pointer; touch-action:manipulation;
   font-family:'Segoe UI','Yu Gothic UI',sans-serif;
 }
+#settingBtn {
+  position:absolute; top:108px; right:8px; z-index:10;
+  background:rgba(255,255,255,0.11); border:1.5px solid rgba(255,255,255,0.3);
+  border-radius:6px; color:#fff; font-size:.85rem; font-weight:700;
+  padding:7px 14px; cursor:pointer; touch-action:manipulation;
+  font-family:'Segoe UI','Yu Gothic UI',sans-serif;
+}
+#settingPanel {
+  display:none; position:fixed; inset:0; z-index:300;
+  background:rgba(0,0,10,0.88); backdrop-filter:blur(10px);
+  align-items:center; justify-content:center;
+}
+#settingPanel.show { display:flex; }
+#settingBox {
+  background:rgba(8,8,24,0.98); border:1px solid rgba(255,255,255,0.14);
+  border-radius:14px; padding:20px 22px; max-width:360px; width:92vw;
+  color:#eee; font-family:'Segoe UI','Yu Gothic UI',sans-serif;
+}
+#settingBox h3 { font-size:1.1rem; margin-bottom:16px; color:#ffd600; text-align:center; }
+.ssec { margin-bottom:14px; }
+.ssec > b { color:#00e5ff; font-size:.76rem; letter-spacing:.12em; display:block; margin-bottom:8px; }
 #rulesPanel {
   display:none; position:fixed; inset:0; z-index:300;
   background:rgba(0,0,10,0.88); backdrop-filter:blur(10px);
@@ -111,14 +132,6 @@ canvas { display:block; }
     <button id="ob">ゲームスタート</button>
     <button id="hardBtn" onclick="toggleHard()" style="margin-top:4px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.2);border-radius:6px;color:rgba(255,255,255,.5);font-size:.78rem;font-weight:700;padding:5px 16px;cursor:pointer;letter-spacing:.06em;font-family:'Segoe UI','Yu Gothic UI',sans-serif;transition:all .2s;touch-action:manipulation">⚔ ハードモード: OFF</button>
     <button id="autoBtn" onclick="toggleAuto()" style="margin-top:4px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.2);border-radius:6px;color:rgba(255,255,255,.5);font-size:.78rem;font-weight:700;padding:5px 16px;cursor:pointer;letter-spacing:.06em;font-family:'Segoe UI','Yu Gothic UI',sans-serif;transition:all .2s;touch-action:manipulation">🤖 スーパープレイ: OFF</button>
-    <div style="margin-top:8px;display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap">
-      <span style="font-size:.7rem;color:rgba(255,255,255,.45);letter-spacing:.06em">🎨 キャラ色</span>
-      <div id="colorPicker" style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center"></div>
-    </div>
-    <div style="margin-top:6px;display:flex;justify-content:center;align-items:center;gap:8px">
-      <span style="font-size:.7rem;color:rgba(255,255,255,.45);letter-spacing:.06em">🔷 キャラ形</span>
-      <div id="shapePicker" style="display:flex;gap:7px;align-items:center"></div>
-    </div>
     <div id="rg" style="font-size:.78rem;opacity:.72;letter-spacing:.04em;text-align:center">
       <span style="color:#aaa">F</span> 100 &nbsp;/&nbsp;
       <span style="color:#00e5ff">B</span> 1,000 &nbsp;/&nbsp;
@@ -133,6 +146,21 @@ canvas { display:block; }
   </div>
   <button id="pbtn">⏸</button>
   <button id="ruleBtn">ルール</button>
+  <button id="settingBtn" onclick="openSettings()">⚙ 設定</button>
+</div>
+<div id="settingPanel" onclick="if(event.target===this)closeSettings()">
+  <div id="settingBox">
+    <h3>⚙ 設定</h3>
+    <div class="ssec">
+      <b>🎨 キャラ色</b>
+      <div id="colorPicker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+    <div class="ssec">
+      <b>🔷 キャラ形</b>
+      <div id="shapePicker" style="display:flex;gap:8px;align-items:center"></div>
+    </div>
+    <button onclick="closeSettings()" style="margin-top:6px;width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);border-radius:8px;color:rgba(255,255,255,.7);font-size:.9rem;font-weight:700;padding:10px;cursor:pointer;font-family:'Segoe UI','Yu Gothic UI',sans-serif;touch-action:manipulation">閉じる</button>
+  </div>
 </div>
 <div id="rulesPanel">
   <div id="rulesBox">
@@ -326,17 +354,27 @@ let playerShape=+(localStorage.getItem('cc-shape')||0);
 function initShapePicker(){
   const picker=document.getElementById('shapePicker');
   picker.innerHTML='';
-  if(+(localStorage.getItem('cc-best')||0)<100){
-    picker.innerHTML='<span style="font-size:.7rem;color:rgba(255,255,255,.3)">🔒 Fランク達成で解放</span>';
-    return;
-  }
-  [['●','まる'],['▲','さんかく']].forEach(([label],i)=>{
-    const b=document.createElement('button');
-    b.textContent=label;
-    const on=i===playerShape;
-    b.style.cssText=`background:${on?'rgba(255,255,255,.2)':'rgba(255,255,255,.05)'};border:1.5px solid ${on?'rgba(255,255,255,.8)':'rgba(255,255,255,.2)'};border-radius:6px;color:${on?'#fff':'rgba(255,255,255,.4)'};font-size:1rem;font-weight:700;padding:4px 12px;cursor:pointer;transition:all .18s;touch-action:manipulation`;
-    b.onclick=()=>{ playerShape=i; localStorage.setItem('cc-shape',i); initShapePicker(); };
-    picker.appendChild(b);
+  const best=+(localStorage.getItem('cc-best')||0);
+  const shapes=[
+    {label:'●',minPt:0},
+    {label:'▲',minPt:100,hint:'Fランク(100pt)'},
+    {label:'■',minPt:1000,hint:'Bランク(1000pt)'},
+  ];
+  shapes.forEach(({label,minPt,hint},i)=>{
+    if(best>=minPt){
+      const b=document.createElement('button');
+      b.textContent=label;
+      const on=i===playerShape;
+      b.style.cssText=`background:${on?'rgba(255,255,255,.2)':'rgba(255,255,255,.05)'};border:1.5px solid ${on?'rgba(255,255,255,.8)':'rgba(255,255,255,.2)'};border-radius:6px;color:${on?'#fff':'rgba(255,255,255,.4)'};font-size:1rem;font-weight:700;padding:4px 12px;cursor:pointer;transition:all .18s;touch-action:manipulation`;
+      b.onclick=()=>{ playerShape=i; localStorage.setItem('cc-shape',i); initShapePicker(); };
+      picker.appendChild(b);
+    } else {
+      const sp=document.createElement('span');
+      sp.style.cssText='font-size:.72rem;color:rgba(255,255,255,.28);padding:0 4px';
+      sp.title=hint+'で解放';
+      sp.textContent=label+'🔒';
+      picker.appendChild(sp);
+    }
   });
 }
 initShapePicker();
@@ -1249,6 +1287,17 @@ function drawPlayer(){
     const ex=Math.cos(a)*P.r*.55,ey=Math.sin(a)*P.r*.55;
     ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex,ey,4.5,0,pi2);ctx.fill();
     ctx.fillStyle='#102040';ctx.beginPath();ctx.arc(ex+Math.cos(a)*1.5,ey+Math.sin(a)*1.5,2.5,0,pi2);ctx.fill();
+  } else if(playerShape===2){
+    const s=P.r*0.86;
+    ctx.save();ctx.rotate(a);
+    ctx.beginPath();ctx.rect(-s,-s,s*2,s*2);ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.28)';
+    ctx.beginPath();ctx.rect(-s*.55,-s*.62,s*.65,s*.42);ctx.fill();
+    for(const eyo of [-s*.25,s*.25]){
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s*.8,eyo,4.5,0,pi2);ctx.fill();
+      ctx.fillStyle='#102040';ctx.beginPath();ctx.arc(s*.8+1.5,eyo,2.5,0,pi2);ctx.fill();
+    }
+    ctx.restore();
   } else {
     ctx.beginPath();ctx.arc(0,0,P.r,0,pi2);ctx.fill();
     ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.36)';ctx.beginPath();ctx.ellipse(-P.r*.22,-P.r*.3,P.r*.38,P.r*.2,-0.4,0,pi2);ctx.fill();
@@ -1306,6 +1355,11 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{keys[e.code]=false;});
 document.getElementById('ob').addEventListener('click',()=>{if(!started||over)startGame();else togglePause();});
 document.getElementById('pbtn').addEventListener('click',togglePause);
+
+// ── Settings ──────────────────────────────────
+let settingOpen=false,pausedBySetting=false;
+function openSettings(){settingOpen=true;if(started&&!over&&!paused){pausedBySetting=true;togglePause();}document.getElementById('settingPanel').classList.add('show');}
+function closeSettings(){settingOpen=false;document.getElementById('settingPanel').classList.remove('show');if(pausedBySetting){pausedBySetting=false;togglePause();}}
 
 // ── Rules ─────────────────────────────────────
 let rulesOpen=false,pausedByRules=false;
