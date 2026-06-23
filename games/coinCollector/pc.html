@@ -62,6 +62,56 @@ canvas { display:block; }
 #settingBox h3 { font-size:1.1rem; margin-bottom:16px; color:#ffd600; text-align:center; }
 .ssec { margin-bottom:14px; }
 .ssec > b { color:#00e5ff; font-size:.78rem; letter-spacing:.12em; display:block; margin-bottom:8px; }
+#gachaPanel {
+  display:none; position:fixed; inset:0; z-index:300;
+  background:rgba(0,0,10,0.88); backdrop-filter:blur(10px);
+  align-items:center; justify-content:center;
+}
+#gachaPanel.show { display:flex; }
+#gachaBox {
+  background:rgba(8,8,24,0.98); border:1px solid rgba(255,200,50,0.25);
+  border-radius:16px; padding:22px 24px; max-width:380px; width:92vw;
+  max-height:88vh; overflow-y:auto;
+  color:#eee; font-family:'Segoe UI','Yu Gothic UI',sans-serif;
+}
+#gachaBox h3 { font-size:1.1rem; margin-bottom:4px; color:#ffd600; text-align:center; }
+.g-ticket { text-align:center; font-size:.85rem; color:rgba(255,255,255,.6); margin-bottom:14px; }
+.g-ticket span { color:#ffe082; font-weight:700; font-size:1.1rem; }
+.g-result-wrap { text-align:center; margin-bottom:16px; }
+.g-orb { width:72px; height:72px; border-radius:16px; margin:0 auto 8px;
+  background:#333; transition:background .08s; border:2px solid rgba(255,255,255,.15); }
+.g-result-name { font-size:.95rem; font-weight:700; min-height:1.4em; }
+.g-result-stars { font-size:.85rem; color:#ffd600; margin-bottom:2px; min-height:1.2em; }
+.g-result-new { font-size:.75rem; color:#76ff03; font-weight:700; }
+.g-result-dup { font-size:.75rem; color:rgba(255,255,255,.38); }
+.g-pull-btn {
+  display:block; width:100%; padding:10px;
+  background:linear-gradient(135deg,#b8860b,#ffd700,#b8860b);
+  border:none; border-radius:10px; color:#1a1000; font-size:1rem; font-weight:700;
+  cursor:pointer; font-family:'Segoe UI','Yu Gothic UI',sans-serif;
+  transition:opacity .18s; margin-bottom:6px;
+}
+.g-pull-btn:disabled { opacity:.4; cursor:default; }
+.g-rate { text-align:center; font-size:.68rem; color:rgba(255,255,255,.35); margin-bottom:14px; }
+.g-coll-title { font-size:.75rem; color:#00e5ff; letter-spacing:.1em; margin-bottom:8px; }
+.g-coll { display:flex; flex-wrap:wrap; gap:6px; }
+.g-coll-item { width:52px; text-align:center; font-size:.52rem; }
+.g-coll-dot { width:36px; height:36px; border-radius:8px; margin:0 auto 3px;
+  border:2px solid rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center; }
+.g-coll-dot.owned { border-color:rgba(255,255,255,.4); }
+.g-close-btn {
+  display:block; width:100%; padding:8px; margin-top:10px;
+  background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.18);
+  border-radius:8px; color:rgba(255,255,255,.65); font-size:.85rem; font-weight:700;
+  cursor:pointer; font-family:'Segoe UI','Yu Gothic UI',sans-serif;
+}
+#gachaBtn {
+  position:fixed; bottom:56px; right:16px; z-index:200;
+  background:linear-gradient(135deg,rgba(184,134,11,.5),rgba(255,215,0,.35));
+  border:1.5px solid rgba(255,200,50,.5); border-radius:10px;
+  color:#ffe082; font-size:.82rem; font-weight:700; padding:7px 12px;
+  cursor:pointer; font-family:'Segoe UI','Yu Gothic UI',sans-serif; transition:all .18s;
+}
 #rulesPanel {
   display:none; position:fixed; inset:0; z-index:300;
   background:rgba(0,0,10,0.86); backdrop-filter:blur(10px);
@@ -111,6 +161,24 @@ canvas { display:block; }
   </div>
 </div>
 <button id="ruleBtn">ルール</button>
+<button id="gachaBtn" onclick="openGacha()">🎰 ガチャ</button>
+<div id="gachaPanel" onclick="if(event.target===this)closeGacha()">
+  <div id="gachaBox">
+    <h3>🎰 カラーガチャ</h3>
+    <div class="g-ticket">🎟 チケット: <span id="gachaTicketCount">0</span> 枚</div>
+    <div class="g-result-wrap">
+      <div class="g-orb" id="gachaOrb"></div>
+      <div class="g-result-stars" id="gachaStars"></div>
+      <div class="g-result-name" id="gachaResultName"></div>
+      <div id="gachaResultSub"></div>
+    </div>
+    <button class="g-pull-btn" id="gachaPullBtn" onclick="doGachaPull()">✨ 1回引く（🎟 ×1）</button>
+    <div class="g-rate">★ 60%　★★ 30%　★★★ 10%</div>
+    <div class="g-coll-title">🎨 コレクション</div>
+    <div class="g-coll" id="gachaColl"></div>
+    <button class="g-close-btn" onclick="closeGacha()">閉じる</button>
+  </div>
+</div>
 <button id="settingBtn" onclick="openSettings()">⚙ 設定</button>
 <div id="settingPanel" onclick="if(event.target===this)closeSettings()">
   <div id="settingBox">
@@ -122,6 +190,10 @@ canvas { display:block; }
     <div class="ssec">
       <b>🔷 キャラ形</b>
       <div id="shapePicker" style="display:flex;gap:8px;align-items:center"></div>
+    </div>
+    <div class="ssec">
+      <b>👁 目の色</b>
+      <div id="eyePicker" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:6px"></div>
     </div>
     <button onclick="closeSettings()" style="margin-top:6px;width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);border-radius:8px;color:rgba(255,255,255,.7);font-size:.85rem;font-weight:700;padding:8px;cursor:pointer;font-family:'Segoe UI','Yu Gothic UI',sans-serif">閉じる</button>
   </div>
@@ -219,7 +291,7 @@ const pi2   = Math.PI*2;
 let P, coins, enemies, particles, popups, powerups;
 let score, best, lives, level, levelXP, bestLevel, bestTime, prevRank, bestRank;
 let over, started, paused;
-let t, coinTimer, enemyTimer, pwTimer, deathTimer, bigStarTimer, squareTimer, enemyMagTimer, heavyEnemyTimer, healEnemyTimer, heal2EnemyTimer, fullHealEnemyTimer, allBombTimer, randBoxTimer, bigFreezeTimer, fullHealTimer, bigColdTimer, bossTimer, bonusDone, bigStarBonusDone, bigStar2BonusDone, squareBonusDone, squareBonus2Done;
+let t, coinTimer, enemyTimer, pwTimer, deathTimer, bigStarTimer, squareTimer, enemyMagTimer, heavyEnemyTimer, healEnemyTimer, heal2EnemyTimer, fullHealEnemyTimer, allBombTimer, randBoxTimer, bigFreezeTimer, fullHealTimer, bigColdTimer, bossTimer, bonusDone, bigStarBonusDone, bigStar2BonusDone, squareBonusDone, squareBonus2Done, ticketSpawnTimer;
 let lastTs, rafId, shakeT;
 let hardMode = false;
 let autoMode = false;
@@ -245,13 +317,149 @@ let playerColorIdx = +(localStorage.getItem('cc-color')||0);
     picker.appendChild(b);
   });
 })();
-function updateColorPicker(){
-  document.getElementById('colorPicker').querySelectorAll('button').forEach((b,i)=>{
-    b.style.borderColor=i===playerColorIdx?'#fff':'rgba(255,255,255,.25)';
-    b.style.transform=i===playerColorIdx?'scale(1.25)':'scale(1)';
+// ── Gacha system ─────────────────────────────────
+const gachaPool=[
+  {hi:'#fff59d',mid:'#f9a825',lo:'#e65100',name:'サンセット',r:1},
+  {hi:'#f8bbd0',mid:'#e91e63',lo:'#880e4f',name:'ローズ',r:1},
+  {hi:'#b3e5fc',mid:'#039be5',lo:'#01579b',name:'スカイ',r:1},
+  {hi:'#dcedc8',mid:'#7cb342',lo:'#33691e',name:'フォレスト',r:1},
+  {hi:'#ffe0b2',mid:'#ff9800',lo:'#bf360c',name:'マンゴー',r:1},
+  {hi:'#d7ccc8',mid:'#8d6e63',lo:'#3e2723',name:'チョコ',r:1},
+  {hi:'#fff9c4',mid:'#ffd600',lo:'#ff6f00',name:'ゴールド',r:2},
+  {hi:'#f5f5f5',mid:'#bdbdbd',lo:'#424242',name:'シルバー',r:2},
+  {hi:'#fbe9e7',mid:'#ff7043',lo:'#bf360c',name:'コッパー',r:2},
+  {hi:'#e8eaf6',mid:'#7986cb',lo:'#283593',name:'インディゴ',r:2},
+  {hi:'#fce4ec',mid:'#f48fb1',lo:'#880e4f',name:'チェリー',r:2},
+  {hi:'#e0f7fa',mid:'#26c6da',lo:'#006064',name:'オーロラ',r:3},
+  {hi:'#f3e5f5',mid:'#ce93d8',lo:'#4a148c',name:'ラベンダー',r:3},
+  {hi:'#fffde7',mid:'#ffee58',lo:'#f57f17',name:'サンシャイン',r:3},
+  {hi:'#fce4ec',mid:'#f06292',lo:'#ad1457',name:'さくら',r:3},
+];
+// weights: r1=6, r2=3, r3=1
+const gachaW=gachaPool.map(c=>c.r===1?6:c.r===2?3:1);
+const gachaTot=gachaW.reduce((a,b)=>a+b,0);
+function gachaRoll(){let r=Math.random()*gachaTot;for(let i=0;i<gachaW.length;i++){r-=gachaW[i];if(r<=0)return i;}return gachaW.length-1;}
+let gachaTickets=+(localStorage.getItem('cc-tickets')||3);
+let gachaOwned=JSON.parse(localStorage.getItem('cc-gacha-owned')||'[]');
+function saveGacha(){localStorage.setItem('cc-tickets',gachaTickets);localStorage.setItem('cc-gacha-owned',JSON.stringify(gachaOwned));}
+function getAllColors(){return[...playerColors,...gachaOwned.map(i=>gachaPool[i])];}
+function rebuildColorPicker(){
+  const picker=document.getElementById('colorPicker');
+  picker.innerHTML='';
+  getAllColors().forEach((c,i)=>{
+    const b=document.createElement('button');
+    const on=i===playerColorIdx;
+    b.title=c.name||'';
+    b.style.cssText=`width:22px;height:22px;border-radius:50%;background:${c.mid};border:2.5px solid ${on?'#fff':'rgba(255,255,255,.25)'};cursor:pointer;padding:0;transition:all .18s;transform:${on?'scale(1.25)':'scale(1)'}`;
+    b.onclick=()=>{ playerColorIdx=i; localStorage.setItem('cc-color',i); rebuildColorPicker(); };
+    picker.appendChild(b);
   });
 }
+rebuildColorPicker();
+let gachaAnimating=false;
+function buildGachaColl(){
+  const el=document.getElementById('gachaColl');
+  if(!el) return;
+  el.innerHTML='';
+  gachaPool.forEach((c,i)=>{
+    const owned=gachaOwned.includes(i);
+    const stars='★'.repeat(c.r)+'☆'.repeat(3-c.r);
+    const wrap=document.createElement('div'); wrap.className='g-coll-item';
+    const dot=document.createElement('div');
+    dot.className='g-coll-dot'+(owned?' owned':'');
+    dot.style.background=owned?c.mid:'#1a1a2e';
+    dot.innerHTML=owned?'':`<span style="font-size:1rem">❓</span>`;
+    const lbl=document.createElement('div');
+    lbl.style.cssText='color:'+( owned?'rgba(255,255,255,.7)':'rgba(255,255,255,.2)');
+    lbl.innerHTML=`<div style="color:#ffd600;font-size:.55rem">${stars}</div>${owned?c.name:'???'}`;
+    wrap.appendChild(dot); wrap.appendChild(lbl);
+    el.appendChild(wrap);
+  });
+}
+function updateGachaTicketUI(){
+  const el=document.getElementById('gachaTicketCount');
+  if(el) el.textContent=gachaTickets;
+  const btn=document.getElementById('gachaPullBtn');
+  if(btn) btn.disabled=gachaAnimating||gachaTickets<=0;
+}
+function doGachaPull(){
+  if(gachaAnimating||gachaTickets<=0) return;
+  gachaTickets--; saveGacha(); updateGachaTicketUI();
+  gachaAnimating=true;
+  const orb=document.getElementById('gachaOrb');
+  const stars=document.getElementById('gachaStars');
+  const rname=document.getElementById('gachaResultName');
+  const rsub=document.getElementById('gachaResultSub');
+  stars.textContent=''; rname.textContent=''; rsub.textContent='';
+  const rolled=gachaRoll();
+  const color=gachaPool[rolled];
+  const isNew=!gachaOwned.includes(rolled);
+  let count=0, total=22+Math.floor(Math.random()*6);
+  function spin(){
+    const tmp=gachaPool[Math.floor(Math.random()*gachaPool.length)];
+    orb.style.background=tmp.mid;
+    count++;
+    if(count<total){
+      const d=count<total*.55?50:count<total*.8?105:210;
+      setTimeout(spin,d);
+    } else {
+      orb.style.background=color.mid;
+      stars.textContent='★'.repeat(color.r)+'☆'.repeat(3-color.r);
+      rname.textContent=color.name;
+      if(isNew){
+        rsub.innerHTML='<span class="g-result-new">✨ NEW!</span>';
+        gachaOwned.push(rolled); gachaOwned.sort((a,b)=>a-b);
+        saveGacha(); rebuildColorPicker();
+      } else {
+        rsub.innerHTML='<span class="g-result-dup">（すでに持っています）</span>';
+      }
+      buildGachaColl();
+      gachaAnimating=false; updateGachaTicketUI();
+    }
+  }
+  spin();
+}
+let gachaOpen=false;
+function openGacha(){
+  gachaOpen=true;
+  updateGachaTicketUI(); buildGachaColl();
+  document.getElementById('gachaPanel').classList.add('show');
+}
+function closeGacha(){
+  gachaOpen=false;
+  document.getElementById('gachaPanel').classList.remove('show');
+}
 let playerShape=+(localStorage.getItem('cc-shape')||0);
+const eyeColors=[
+  {s:'#ffffff',p:'#102040'}, // 黒
+  {s:'#ffffff',p:'#cc1111'}, // 赤
+  {s:'#ffffff',p:'#1144dd'}, // 青
+  {s:'#ffffff',p:'#118822'}, // 緑
+  {s:'#ffeedd',p:'#aa6600'}, // 金
+  {s:'#ffeeff',p:'#9900cc'}, // 紫
+  {s:'#eeffff',p:'#007799'}, // 水色
+  {s:'#111111',p:'#ff3030'}, // 悪魔
+];
+let playerEyeIdx=+(localStorage.getItem('cc-eyecolor')||0);
+function initEyePicker(){
+  const picker=document.getElementById('eyePicker');
+  picker.innerHTML='';
+  if(+(localStorage.getItem('cc-best')||0)<1000){
+    picker.innerHTML='<span style="font-size:.72rem;color:rgba(255,255,255,.28)">🔒 Bランク(1000pt)達成で解放</span>';
+    return;
+  }
+  eyeColors.forEach(({s,p},i)=>{
+    const b=document.createElement('button');
+    const on=i===playerEyeIdx;
+    b.style.cssText=`width:28px;height:28px;border-radius:50%;background:${s};border:2.5px solid ${on?'rgba(255,255,255,.9)':'rgba(255,255,255,.2)'};cursor:pointer;padding:0;position:relative;transition:all .18s;transform:${on?'scale(1.25)':'scale(1)'}`;
+    const dot=document.createElement('span');
+    dot.style.cssText=`position:absolute;width:11px;height:11px;border-radius:50%;background:${p};top:50%;left:55%;transform:translate(-50%,-50%)`;
+    b.appendChild(dot);
+    b.onclick=()=>{ playerEyeIdx=i; localStorage.setItem('cc-eyecolor',i); initEyePicker(); };
+    picker.appendChild(b);
+  });
+}
+initEyePicker();
 function initShapePicker(){
   const picker=document.getElementById('shapePicker');
   picker.innerHTML='';
@@ -555,27 +763,35 @@ function playRankUp() {
     if(!_ac) _ac=new(window.AudioContext||window.webkitAudioContext)();
     if(_ac.state==='suspended') _ac.resume();
     const now=_ac.currentTime;
-    // コ コ（短い打撃音）
-    for(const d of [0, 0.09]){
-      const osc=_ac.createOscillator(),g=_ac.createGain();
+    // てれれれてれ ファンファーレ
+    // [周波数, 開始(秒), 長さ(秒), 音量]
+    const notes=[
+      [523.3,  0,    0.10, 0.40], // て  C5
+      [659.3,  0.10, 0.10, 0.42], // れ  E5
+      [784.0,  0.20, 0.10, 0.44], // れ  G5
+      [987.8,  0.30, 0.10, 0.46], // れ  B5
+      [1046.5, 0.42, 0.10, 0.48], // て  C6
+      [1318.5, 0.54, 0.70, 0.50], // れ～ E6 (長め)
+    ];
+    for(const [freq,nt,dur,vol] of notes){
+      const osc=_ac.createOscillator(), g=_ac.createGain();
       osc.connect(g); g.connect(_ac.destination);
       osc.type='triangle';
-      osc.frequency.setValueAtTime(1400,now+d);
-      osc.frequency.exponentialRampToValueAtTime(420,now+d+0.045);
-      g.gain.setValueAtTime(0.32,now+d);
-      g.gain.exponentialRampToValueAtTime(0.001,now+d+0.07);
-      osc.start(now+d); osc.stop(now+d+0.08);
-    }
-    // カーン（余韻のある金属音）
-    for(const[f,v] of [[880,0.26],[1760,0.15],[2200,0.09]]){
-      const osc=_ac.createOscillator(),g=_ac.createGain();
-      osc.connect(g); g.connect(_ac.destination);
-      osc.type='sine';
-      osc.frequency.setValueAtTime(f,now+0.19);
-      g.gain.setValueAtTime(0,now+0.19);
-      g.gain.linearRampToValueAtTime(v,now+0.193);
-      g.gain.exponentialRampToValueAtTime(0.001,now+0.95);
-      osc.start(now+0.19); osc.stop(now+0.97);
+      osc.frequency.setValueAtTime(freq, now+nt);
+      g.gain.setValueAtTime(0, now+nt);
+      g.gain.linearRampToValueAtTime(vol, now+nt+0.012);
+      g.gain.setValueAtTime(vol, now+nt+dur*0.55);
+      g.gain.exponentialRampToValueAtTime(0.001, now+nt+dur);
+      osc.start(now+nt); osc.stop(now+nt+dur+0.05);
+      // ハーモニー（1オクターブ下を薄く重ねる）
+      const osc2=_ac.createOscillator(), g2=_ac.createGain();
+      osc2.connect(g2); g2.connect(_ac.destination);
+      osc2.type='sine';
+      osc2.frequency.setValueAtTime(freq/2, now+nt);
+      g2.gain.setValueAtTime(0, now+nt);
+      g2.gain.linearRampToValueAtTime(vol*0.22, now+nt+0.012);
+      g2.gain.exponentialRampToValueAtTime(0.001, now+nt+dur);
+      osc2.start(now+nt); osc2.stop(now+nt+dur+0.05);
     }
   } catch(e){}
 }
@@ -636,7 +852,7 @@ function startGame() {
   P = mkPlayer();
   coins=[]; enemies=[]; particles=[]; popups=[]; powerups=[];
   score=0; lives=3; level=1; levelXP=0; prevRank='';
-  t=0; coinTimer=0; enemyTimer=10; pwTimer=18; deathTimer=25; bigStarTimer=40; squareTimer=30; enemyMagTimer=20; heavyEnemyTimer=15; healEnemyTimer=20; heal2EnemyTimer=32; fullHealEnemyTimer=45; allBombTimer=20; randBoxTimer=25; bigFreezeTimer=35; fullHealTimer=45; bigColdTimer=40; bossTimer=60; bonusDone=false; bigStarBonusDone=false; bigStar2BonusDone=false; squareBonusDone=false; squareBonus2Done=false;
+  t=0; coinTimer=0; enemyTimer=10; pwTimer=18; deathTimer=25; bigStarTimer=40; squareTimer=30; enemyMagTimer=20; heavyEnemyTimer=15; healEnemyTimer=20; heal2EnemyTimer=32; fullHealEnemyTimer=45; allBombTimer=20; randBoxTimer=25; bigFreezeTimer=35; fullHealTimer=45; bigColdTimer=40; bossTimer=60; bonusDone=false; bigStarBonusDone=false; bigStar2BonusDone=false; squareBonusDone=false; squareBonus2Done=false; ticketSpawnTimer=rnd(30,50);
   shakeT=0; over=false; started=true; paused=false;
   best      = +(localStorage.getItem('cc-best')||0);
   bestLevel = +(localStorage.getItem('cc-bestlv')||1);
@@ -701,7 +917,7 @@ function endGame() {
     const [endRank]=getRank(score);
     if(rankGT(endRank,bestRank)){ bestRank=endRank; localStorage.setItem('cc-bestrank',bestRank); }
   }
-  initShapePicker();
+  initShapePicker(); initEyePicker();
   showOv('GAME OVER','#ff1744',
     `スコア: ${score.toLocaleString()}　ベスト: ${best.toLocaleString()}`,
     'もう一度');
@@ -891,6 +1107,13 @@ function update(dt) {
     bigColdTimer=t+rnd(50,75);
     const [bcx,bcy]=safePos(120);
     powerups.push({x:bcx,y:bcy,r:15,type:'bigcold',age:0});
+  }
+
+  // Gacha ticket spawning（30〜50秒後から、40〜70秒ごと・同時1個まで）
+  if(t>=ticketSpawnTimer && !powerups.some(p=>p.type==='ticket')){
+    ticketSpawnTimer=t+rnd(40,70);
+    const [tx,ty]=safePos(100);
+    powerups.push({x:tx,y:ty,r:16,type:'ticket',age:0});
   }
 
   // Full heal spawning（45秒後から、55〜80秒ごと・同時1個まで）
@@ -1170,6 +1393,11 @@ function update(dt) {
           P.enemyMagT=8; shakeT=0.3; playEnemyMagnet();
           burst(pw.x,pw.y,'#ff1744',20); burst(pw.x,pw.y,'#ff6d00',14);
           popup(pw.x,pw.y,'😈 敵が引き寄せられた！','#ff6d00');
+          break;
+        case'ticket':
+          gachaTickets++; saveGacha();
+          burst(pw.x,pw.y,'#ffd600',28); burst(pw.x,pw.y,'#fff9c4',16);
+          popup(pw.x,pw.y,'🎟 ガチャチケット +1！','#ffd600');
           break;
         case'randbox': {
           let pool;
@@ -1715,8 +1943,8 @@ function drawBoss(e) {
 
 // ── Draw: power-ups ───────────────────────────
 function drawPowerup(pw) {
-  const cols={magnet:'#2979ff',shield:'#00e676',speed:'#ffd600',heart:'#ff4081',enemymagnet:'#ff1744',armor:'#4fc3f7',bomb:'#ff3d00',freeze:'#80deea',instadeath:'#aa00ff',enemyfreeze:'#40c4ff',allbomb:'#ff6d00',randbox:'#ffd600',bigfreeze:'#00b0ff',fullheal:'#00e676',bigcold:'#b2ebf2'};
-  const icons={magnet:'🧲',shield:'🛡',speed:'⚡',heart:'💖',enemymagnet:'😈',armor:'🔷',bomb:'💣',freeze:'❄',instadeath:'💀',enemyfreeze:'🧊',allbomb:'☄',randbox:'❓',bigfreeze:'⛄',fullheal:'💊',bigcold:'🥶'};
+  const cols={magnet:'#2979ff',shield:'#00e676',speed:'#ffd600',heart:'#ff4081',enemymagnet:'#ff1744',armor:'#4fc3f7',bomb:'#ff3d00',freeze:'#80deea',instadeath:'#aa00ff',enemyfreeze:'#40c4ff',allbomb:'#ff6d00',randbox:'#ffd600',bigfreeze:'#00b0ff',fullheal:'#00e676',bigcold:'#b2ebf2',ticket:'#ffb300'};
+  const icons={magnet:'🧲',shield:'🛡',speed:'⚡',heart:'💖',enemymagnet:'😈',armor:'🔷',bomb:'💣',freeze:'❄',instadeath:'💀',enemyfreeze:'🧊',allbomb:'☄',randbox:'❓',bigfreeze:'⛄',fullheal:'💊',bigcold:'🥶',ticket:'🎟'};
   const pulse=1+Math.sin(pw.age*4)*0.11;
   ctx.save();
   ctx.translate(pw.x,pw.y);
@@ -1792,6 +2020,24 @@ function drawPowerup(pw) {
     }
     ctx.globalAlpha=1;
   }
+  if(pw.type==='ticket'){
+    // 回転する金のリング
+    const rr=1+Math.sin(pw.age*6)*0.22;
+    ctx.strokeStyle='#ffd600'; ctx.lineWidth=2.5;
+    ctx.globalAlpha=0.7+Math.sin(pw.age*6)*0.25;
+    ctx.beginPath(); ctx.arc(0,0,pw.r*rr*1.7,0,pi2); ctx.stroke();
+    ctx.strokeStyle='#ffe082'; ctx.lineWidth=1.5;
+    ctx.globalAlpha=0.4+Math.sin(pw.age*6+Math.PI)*0.2;
+    ctx.beginPath(); ctx.arc(0,0,pw.r*rr*2.3,0,pi2); ctx.stroke();
+    // キラキラ星4つ
+    ctx.globalAlpha=1; ctx.fillStyle='#fff9c4'; ctx.shadowColor='#ffd600'; ctx.shadowBlur=10;
+    for(let si=0;si<4;si++){
+      const sa=pw.age*2+si*Math.PI/2;
+      const sr=pw.r*2.0+Math.sin(pw.age*4+si)*4;
+      ctx.beginPath(); ctx.arc(Math.cos(sa)*sr,Math.sin(sa)*sr,2.5,0,pi2); ctx.fill();
+    }
+    ctx.shadowBlur=0; ctx.globalAlpha=1;
+  }
   ctx.restore();
 }
 
@@ -1849,11 +2095,13 @@ function drawPlayer() {
   // Speed trail
   if(P.speedT>0){ ctx.shadowColor='#ffd600'; ctx.shadowBlur=18; }
   // Body
-  const pc=playerColors[playerColorIdx];
+  const _all=getAllColors();
+  const pc=_all[Math.min(playerColorIdx,_all.length-1)];
   const g=ctx.createRadialGradient(-P.r*.3,-P.r*.32,2,0,0,P.r);
   g.addColorStop(0,pc.hi); g.addColorStop(.6,pc.mid); g.addColorStop(1,pc.lo);
   ctx.fillStyle=g;
   const a=P.angle;
+  const ec=eyeColors[playerEyeIdx];
   if(playerShape===1){
     // Triangle
     ctx.beginPath();
@@ -1865,8 +2113,8 @@ function drawPlayer() {
     ctx.fillStyle='rgba(255,255,255,0.28)';
     ctx.beginPath(); ctx.ellipse(Math.cos(a)*P.r*.38,Math.sin(a)*P.r*.38,P.r*.2,P.r*.11,a-0.5,0,pi2); ctx.fill();
     const ex=Math.cos(a)*P.r*.55, ey=Math.sin(a)*P.r*.55;
-    ctx.fillStyle='#fff';    ctx.beginPath(); ctx.arc(ex,ey,4.5,0,pi2); ctx.fill();
-    ctx.fillStyle='#102040'; ctx.beginPath(); ctx.arc(ex+Math.cos(a)*1.5,ey+Math.sin(a)*1.5,2.5,0,pi2); ctx.fill();
+    ctx.fillStyle=ec.s;      ctx.beginPath(); ctx.arc(ex,ey,4.5,0,pi2); ctx.fill();
+    ctx.fillStyle=ec.p;      ctx.beginPath(); ctx.arc(ex+Math.cos(a)*1.5,ey+Math.sin(a)*1.5,2.5,0,pi2); ctx.fill();
   } else if(playerShape===2){
     // Square (oriented toward movement direction)
     const s=P.r*0.86;
@@ -1877,8 +2125,8 @@ function drawPlayer() {
     ctx.fillStyle='rgba(255,255,255,0.28)';
     ctx.beginPath(); ctx.rect(-s*.55,-s*.62,s*.65,s*.42); ctx.fill();
     for(const eyo of [-s*.25,s*.25]){
-      ctx.fillStyle='#fff';    ctx.beginPath(); ctx.arc(s*.8,eyo,4.5,0,pi2); ctx.fill();
-      ctx.fillStyle='#102040'; ctx.beginPath(); ctx.arc(s*.8+1.5,eyo,2.5,0,pi2); ctx.fill();
+      ctx.fillStyle=ec.s;      ctx.beginPath(); ctx.arc(s*.8,eyo,4.5,0,pi2); ctx.fill();
+      ctx.fillStyle=ec.p;      ctx.beginPath(); ctx.arc(s*.8+1.5,eyo,2.5,0,pi2); ctx.fill();
     }
     ctx.restore();
   } else if(playerShape===3){
@@ -1893,8 +2141,8 @@ function drawPlayer() {
     ctx.fillStyle='rgba(255,255,255,0.28)';
     ctx.beginPath(); ctx.ellipse(Math.cos(a)*P.r*.35,Math.sin(a)*P.r*.35,P.r*.22,P.r*.12,a-0.5,0,pi2); ctx.fill();
     const epx=Math.cos(a)*P.r*.58, epy=Math.sin(a)*P.r*.58;
-    ctx.fillStyle='#fff';    ctx.beginPath(); ctx.arc(epx,epy,4.5,0,pi2); ctx.fill();
-    ctx.fillStyle='#102040'; ctx.beginPath(); ctx.arc(epx+Math.cos(a)*1.5,epy+Math.sin(a)*1.5,2.5,0,pi2); ctx.fill();
+    ctx.fillStyle=ec.s;      ctx.beginPath(); ctx.arc(epx,epy,4.5,0,pi2); ctx.fill();
+    ctx.fillStyle=ec.p;      ctx.beginPath(); ctx.arc(epx+Math.cos(a)*1.5,epy+Math.sin(a)*1.5,2.5,0,pi2); ctx.fill();
   } else if(playerShape===4){
     // Hexagon (flat top/bottom, rotated to face movement direction)
     ctx.beginPath();
@@ -1912,8 +2160,8 @@ function drawPlayer() {
       [Math.cos(a)*P.r*.42-Math.cos(perp)*hd*.52, Math.sin(a)*P.r*.42-Math.sin(perp)*hd*.52],
     ];
     for(const [hx,hy] of heyes){
-      ctx.fillStyle='#fff';    ctx.beginPath(); ctx.arc(hx,hy,4.5,0,pi2); ctx.fill();
-      ctx.fillStyle='#102040'; ctx.beginPath(); ctx.arc(hx+Math.cos(a)*1.5,hy+Math.sin(a)*1.5,2.5,0,pi2); ctx.fill();
+      ctx.fillStyle=ec.s;      ctx.beginPath(); ctx.arc(hx,hy,4.5,0,pi2); ctx.fill();
+      ctx.fillStyle=ec.p;      ctx.beginPath(); ctx.arc(hx+Math.cos(a)*1.5,hy+Math.sin(a)*1.5,2.5,0,pi2); ctx.fill();
     }
   } else if(playerShape===5){
     // Cross (十字架) with pulsing red aura
@@ -1944,8 +2192,8 @@ function drawPlayer() {
     ctx.fillStyle='rgba(255,255,255,0.28)';
     ctx.beginPath(); ctx.rect(-w*.5,-r*.52,w,r*.3); ctx.fill();
     for(const eyo of [-w*.42,w*.42]){
-      ctx.fillStyle='#fff';    ctx.beginPath(); ctx.arc(r*.62,eyo,4,0,pi2); ctx.fill();
-      ctx.fillStyle='#200010'; ctx.beginPath(); ctx.arc(r*.62+1.5,eyo,2.2,0,pi2); ctx.fill();
+      ctx.fillStyle=ec.s;      ctx.beginPath(); ctx.arc(r*.62,eyo,4,0,pi2); ctx.fill();
+      ctx.fillStyle=ec.p;      ctx.beginPath(); ctx.arc(r*.62+1.5,eyo,2.2,0,pi2); ctx.fill();
     }
     ctx.restore();
   } else {
@@ -1960,8 +2208,8 @@ function drawPlayer() {
       [Math.cos(a)*P.r*.28-Math.cos(perp)*ed*.55, Math.sin(a)*P.r*.28-Math.sin(perp)*ed*.55],
     ];
     for(const [ex,ey] of eyes){
-      ctx.fillStyle='#fff';    ctx.beginPath(); ctx.arc(ex,ey,5,0,pi2); ctx.fill();
-      ctx.fillStyle='#102040'; ctx.beginPath(); ctx.arc(ex+Math.cos(a)*1.5,ey+Math.sin(a)*1.5,3,0,pi2); ctx.fill();
+      ctx.fillStyle=ec.s;      ctx.beginPath(); ctx.arc(ex,ey,5,0,pi2); ctx.fill();
+      ctx.fillStyle=ec.p;      ctx.beginPath(); ctx.arc(ex+Math.cos(a)*1.5,ey+Math.sin(a)*1.5,3,0,pi2); ctx.fill();
     }
   }
   ctx.restore();
