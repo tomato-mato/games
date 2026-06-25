@@ -119,13 +119,25 @@ canvas { display:block; }
   border-radius:8px; color:rgba(255,255,255,.65); font-size:.9rem; font-weight:700;
   cursor:pointer; font-family:'Segoe UI','Yu Gothic UI',sans-serif; touch-action:manipulation;
 }
-#gachaBtn {
-  position:absolute; top:108px; right:52px; z-index:200;
+#gachaColorBtn {
+  position:absolute; top:108px; right:96px; z-index:200;
   background:linear-gradient(135deg,rgba(184,134,11,.5),rgba(255,215,0,.35));
   border:1.5px solid rgba(255,200,50,.5); border-radius:10px;
   color:#ffe082; font-size:.78rem; font-weight:700; padding:6px 10px;
   cursor:pointer; font-family:'Segoe UI','Yu Gothic UI',sans-serif;
   touch-action:manipulation;
+}
+#gachaShapeBtn {
+  position:absolute; top:108px; right:52px; z-index:200;
+  background:linear-gradient(135deg,rgba(0,100,180,.5),rgba(0,200,255,.35));
+  border:1.5px solid rgba(0,200,255,.5); border-radius:10px;
+  color:#80d8ff; font-size:.78rem; font-weight:700; padding:6px 10px;
+  cursor:pointer; font-family:'Segoe UI','Yu Gothic UI',sans-serif;
+  touch-action:manipulation;
+}
+.g-pull-btn-shape {
+  background:linear-gradient(135deg,#005f8a,#00bcd4,#005f8a) !important;
+  color:#e0f7fa !important;
 }
 #rulesPanel {
   display:none; position:fixed; inset:0; z-index:300;
@@ -198,11 +210,12 @@ canvas { display:block; }
   <button id="pbtn">⏸</button>
   <button id="ruleBtn">ルール</button>
   <button id="settingBtn" onclick="openSettings()">⚙ 設定</button>
-  <button id="gachaBtn" onclick="openGacha()">🎰 ガチャ</button>
+  <button id="gachaColorBtn" onclick="openGacha('color')">🎨 色</button>
+  <button id="gachaShapeBtn" onclick="openGacha('shape')">🔷 形</button>
 </div>
 <div id="gachaPanel" onclick="if(event.target===this)closeGacha()">
   <div id="gachaBox">
-    <h3>🎰 カラーガチャ</h3>
+    <h3 id="gachaTitle"></h3>
     <div class="g-ticket">🎟 チケット: <span id="gachaTicketCount">0</span> 枚</div>
     <div class="g-result-wrap">
       <div class="g-orb" id="gachaOrb"></div>
@@ -210,9 +223,9 @@ canvas { display:block; }
       <div class="g-result-name" id="gachaResultName"></div>
       <div id="gachaResultSub"></div>
     </div>
-    <button class="g-pull-btn" id="gachaPullBtn" onclick="doGachaPull()">✨ 1回引く（🎟 ×1）</button>
-    <div class="g-rate">★ 60%　★★ 30%　★★★ 10%</div>
-    <div class="g-coll-title">🎨 コレクション</div>
+    <button class="g-pull-btn" id="gachaPullBtn"></button>
+    <div class="g-rate" id="gachaRate"></div>
+    <div class="g-coll-title" id="gachaCollTitle"></div>
     <div class="g-coll" id="gachaColl"></div>
     <button class="g-close-btn" onclick="closeGacha()">閉じる</button>
   </div>
@@ -417,7 +430,7 @@ let playerColorIdx=+(localStorage.getItem('cc-color')||0);
     picker.appendChild(b);
   });
 })();
-const gachaPool=[
+const gachaColorPool=[
   {hi:'#fff59d',mid:'#f9a825',lo:'#e65100',name:'サンセット',r:1},
   {hi:'#f8bbd0',mid:'#e91e63',lo:'#880e4f',name:'ローズ',r:1},
   {hi:'#b3e5fc',mid:'#039be5',lo:'#01579b',name:'スカイ',r:1},
@@ -434,13 +447,20 @@ const gachaPool=[
   {hi:'#fffde7',mid:'#ffee58',lo:'#f57f17',name:'サンシャイン',r:3},
   {hi:'#fce4ec',mid:'#f06292',lo:'#ad1457',name:'さくら',r:3},
 ];
-const gachaW=gachaPool.map(c=>c.r===1?6:c.r===2?3:1);
-const gachaTot=gachaW.reduce((a,b)=>a+b,0);
-function gachaRoll(){let r=Math.random()*gachaTot;for(let i=0;i<gachaW.length;i++){r-=gachaW[i];if(r<=0)return i;}return gachaW.length-1;}
+const gachaShapePool=[
+  {shapeIdx:6,icon:'★',name:'スター',r:2},
+  {shapeIdx:7,icon:'♥',name:'ハート',r:2},
+  {shapeIdx:8,icon:'◆',name:'ダイヤ',r:3},
+];
+function makeW(pool){return pool.map(c=>c.r===1?6:c.r===2?3:1);}
+const gachaColorW=makeW(gachaColorPool),gachaColorTot=gachaColorW.reduce((a,b)=>a+b,0);
+const gachaShapeW=makeW(gachaShapePool),gachaShapeTot=gachaShapeW.reduce((a,b)=>a+b,0);
+function rollFrom(W,tot){let r=Math.random()*tot;for(let i=0;i<W.length;i++){r-=W[i];if(r<=0)return i;}return W.length-1;}
 let gachaTickets=+(localStorage.getItem('cc-tickets')||3);
-let gachaOwned=JSON.parse(localStorage.getItem('cc-gacha-owned')||'[]');
-function saveGacha(){localStorage.setItem('cc-tickets',gachaTickets);localStorage.setItem('cc-gacha-owned',JSON.stringify(gachaOwned));}
-function getAllColors(){return[...playerColors,...gachaOwned.map(i=>gachaPool[i])];}
+let gachaColorOwned=JSON.parse(localStorage.getItem('cc-gacha-color-owned')||'[]');
+let gachaShapeOwned=JSON.parse(localStorage.getItem('cc-gacha-shape-owned')||'[]');
+function saveGacha(){localStorage.setItem('cc-tickets',gachaTickets);localStorage.setItem('cc-gacha-color-owned',JSON.stringify(gachaColorOwned));localStorage.setItem('cc-gacha-shape-owned',JSON.stringify(gachaShapeOwned));}
+function getAllColors(){return[...playerColors,...gachaColorOwned.map(i=>gachaColorPool[i])];}
 function rebuildColorPicker(){
   const picker=document.getElementById('colorPicker');
   picker.innerHTML='';
@@ -455,21 +475,29 @@ function rebuildColorPicker(){
 }
 rebuildColorPicker();
 let gachaAnimating=false;
+let gachaMode='color';
 function buildGachaColl(){
   const el=document.getElementById('gachaColl');
   if(!el) return;
   el.innerHTML='';
-  gachaPool.forEach((c,i)=>{
-    const owned=gachaOwned.includes(i);
+  const pool=gachaMode==='color'?gachaColorPool:gachaShapePool;
+  const owned=gachaMode==='color'?gachaColorOwned:gachaShapeOwned;
+  pool.forEach((c,i)=>{
+    const isOwned=owned.includes(i);
     const stars='★'.repeat(c.r)+'☆'.repeat(3-c.r);
     const wrap=document.createElement('div'); wrap.className='g-coll-item';
     const dot=document.createElement('div');
-    dot.className='g-coll-dot'+(owned?' owned':'');
-    dot.style.background=owned?c.mid:'#1a1a2e';
-    dot.innerHTML=owned?'':`<span style="font-size:1rem">❓</span>`;
+    dot.className='g-coll-dot'+(isOwned?' owned':'');
+    if(gachaMode==='shape'){
+      dot.style.cssText='background:rgba(255,255,255,.05);font-size:1.3rem;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;margin:0 auto 3px;border:2px solid '+(isOwned?'rgba(0,200,255,.5)':'rgba(255,255,255,.1)');
+      dot.textContent=isOwned?c.icon:'❓';
+    } else {
+      dot.style.background=isOwned?c.mid:'#1a1a2e';
+      dot.innerHTML=isOwned?'':`<span style="font-size:1rem">❓</span>`;
+    }
     const lbl=document.createElement('div');
-    lbl.style.cssText='color:'+(owned?'rgba(255,255,255,.7)':'rgba(255,255,255,.2)');
-    lbl.innerHTML=`<div style="color:#ffd600;font-size:.55rem">${stars}</div>${owned?c.name:'???'}`;
+    lbl.style.cssText='color:'+(isOwned?'rgba(255,255,255,.7)':'rgba(255,255,255,.2)');
+    lbl.innerHTML=`<div style="color:${gachaMode==='shape'?'#80d8ff':'#ffd600'};font-size:.55rem">${stars}</div>${isOwned?c.name:'???'}`;
     wrap.appendChild(dot); wrap.appendChild(lbl);
     el.appendChild(wrap);
   });
@@ -485,29 +513,42 @@ function doGachaPull(){
   gachaTickets--; saveGacha(); updateGachaTicketUI();
   gachaAnimating=true;
   const orb=document.getElementById('gachaOrb');
-  const stars=document.getElementById('gachaStars');
+  const starsEl=document.getElementById('gachaStars');
   const rname=document.getElementById('gachaResultName');
   const rsub=document.getElementById('gachaResultSub');
-  stars.textContent=''; rname.textContent=''; rsub.textContent='';
-  const rolled=gachaRoll();
-  const color=gachaPool[rolled];
-  const isNew=!gachaOwned.includes(rolled);
+  starsEl.textContent=''; rname.textContent=''; rsub.textContent='';
+  orb.style.fontSize=''; orb.textContent='';
+  const isShape=gachaMode==='shape';
+  const pool=isShape?gachaShapePool:gachaColorPool;
+  const W=isShape?gachaShapeW:gachaColorW;
+  const tot=isShape?gachaShapeTot:gachaColorTot;
+  const ownedArr=isShape?gachaShapeOwned:gachaColorOwned;
+  const rolled=rollFrom(W,tot);
+  const item=pool[rolled];
+  const isNew=!ownedArr.includes(rolled);
   let count=0,total=22+Math.floor(Math.random()*6);
   function spin(){
-    const tmp=gachaPool[Math.floor(Math.random()*gachaPool.length)];
-    orb.style.background=tmp.mid;
+    const tmp=pool[Math.floor(Math.random()*pool.length)];
+    if(tmp.mid){orb.style.background=tmp.mid;orb.style.fontSize='';orb.textContent='';}
+    else{orb.style.background='rgba(255,255,255,.06)';orb.style.fontSize='1.8rem';orb.textContent=tmp.icon;}
     count++;
     if(count<total){
       const d=count<total*.55?50:count<total*.8?105:210;
       setTimeout(spin,d);
     } else {
-      orb.style.background=color.mid;
-      stars.textContent='★'.repeat(color.r)+'☆'.repeat(3-color.r);
-      rname.textContent=color.name;
+      if(isShape){
+        orb.style.background='rgba(255,255,255,.06)';orb.style.fontSize='2.2rem';orb.textContent=item.icon;
+        starsEl.textContent='★'.repeat(item.r)+'☆'.repeat(3-item.r);
+      } else {
+        orb.style.background=item.mid;orb.style.fontSize='';orb.textContent='';
+        starsEl.textContent='★'.repeat(item.r)+'☆'.repeat(3-item.r);
+      }
+      rname.textContent=item.name;
       if(isNew){
-        rsub.innerHTML='<span class="g-result-new">✨ NEW!</span>';
-        gachaOwned.push(rolled); gachaOwned.sort((a,b)=>a-b);
-        saveGacha(); rebuildColorPicker();
+        rsub.innerHTML='<span class="g-result-new">✨ NEW！設定から変更できます</span>';
+        ownedArr.push(rolled);ownedArr.sort((a,b)=>a-b);
+        saveGacha();
+        if(isShape) initShapePicker(); else rebuildColorPicker();
       } else {
         rsub.innerHTML='<span class="g-result-dup">（すでに持っています）</span>';
       }
@@ -518,8 +559,22 @@ function doGachaPull(){
   spin();
 }
 let gachaOpen=false;
-function openGacha(){
+function openGacha(mode){
+  gachaMode=mode||'color';
   gachaOpen=true;
+  const isShape=gachaMode==='shape';
+  document.getElementById('gachaTitle').textContent=isShape?'🔷 形ガチャ':'🎨 色ガチャ';
+  const btn=document.getElementById('gachaPullBtn');
+  btn.textContent=isShape?'🔷 1回引く（🎟 ×1）':'🎨 1回引く（🎟 ×1）';
+  btn.onclick=doGachaPull;
+  btn.className='g-pull-btn'+(isShape?' g-pull-btn-shape':'');
+  document.getElementById('gachaRate').textContent=isShape?'★★ 67%　★★★ 33%':'★ 60%　★★ 30%　★★★ 10%';
+  document.getElementById('gachaCollTitle').textContent=isShape?'🔷 形コレクション':'🎨 色コレクション';
+  const orb=document.getElementById('gachaOrb');
+  orb.style.background=''; orb.style.fontSize=''; orb.textContent='';
+  document.getElementById('gachaStars').textContent='';
+  document.getElementById('gachaResultName').textContent='';
+  document.getElementById('gachaResultSub').textContent='';
   updateGachaTicketUI(); buildGachaColl();
   document.getElementById('gachaPanel').classList.add('show');
 }
@@ -578,6 +633,24 @@ function initShapePicker(){
       sp.style.cssText='font-size:.72rem;color:rgba(255,255,255,.28);padding:0 4px';
       sp.title=hint+'で解放';
       sp.textContent=label+'🔒';
+      picker.appendChild(sp);
+    }
+  });
+  gachaShapePool.forEach((c,i)=>{
+    const owned=gachaShapeOwned.includes(i);
+    if(owned){
+      const b=document.createElement('button');
+      b.textContent=c.icon;
+      const on=c.shapeIdx===playerShape;
+      b.style.cssText=`background:${on?'rgba(255,255,255,.2)':'rgba(255,255,255,.05)'};border:1.5px solid ${on?'rgba(100,200,255,.9)':'rgba(100,200,255,.25)'};border-radius:6px;color:${on?'#fff':'rgba(255,255,255,.4)'};font-size:1rem;font-weight:700;padding:4px 12px;cursor:pointer;transition:all .18s;touch-action:manipulation`;
+      b.title=c.name+'（ガチャ）';
+      b.onclick=()=>{ playerShape=c.shapeIdx; localStorage.setItem('cc-shape',c.shapeIdx); initShapePicker(); };
+      picker.appendChild(b);
+    } else {
+      const sp=document.createElement('span');
+      sp.style.cssText='font-size:.72rem;color:rgba(100,200,255,.28);padding:0 4px';
+      sp.title='形ガチャで解放';
+      sp.textContent=c.icon+'🎰';
       picker.appendChild(sp);
     }
   });
@@ -1571,6 +1644,45 @@ function drawPlayer(){
       ctx.fillStyle=ec.p;ctx.beginPath();ctx.arc(r*.62+1.5,eyo,2.2,0,pi2);ctx.fill();
     }
     ctx.restore();
+  } else if(playerShape===6){
+    ctx.beginPath();
+    for(let i=0;i<10;i++){const ang=a+i*Math.PI/5,sr=i%2===0?P.r:P.r*.42;i===0?ctx.moveTo(Math.cos(ang)*sr,Math.sin(ang)*sr):ctx.lineTo(Math.cos(ang)*sr,Math.sin(ang)*sr);}
+    ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.28)';
+    ctx.beginPath();ctx.ellipse(Math.cos(a)*P.r*.28,Math.sin(a)*P.r*.28,P.r*.2,P.r*.1,a-0.5,0,pi2);ctx.fill();
+    const sx=Math.cos(a)*P.r*.55,sy=Math.sin(a)*P.r*.55;
+    ctx.fillStyle=ec.s;ctx.beginPath();ctx.arc(sx,sy,4,0,pi2);ctx.fill();
+    ctx.fillStyle=ec.p;ctx.beginPath();ctx.arc(sx+Math.cos(a)*1.5,sy+Math.sin(a)*1.5,2.2,0,pi2);ctx.fill();
+  } else if(playerShape===7){
+    const hr=P.r;
+    ctx.save();ctx.rotate(a-Math.PI/2);
+    ctx.beginPath();
+    ctx.moveTo(0,-hr*.15);
+    ctx.bezierCurveTo( hr*.1,-hr*.70, hr*.86,-hr*.72, hr*.83,-hr*.1);
+    ctx.bezierCurveTo( hr*.78, hr*.28, hr*.32, hr*.63,      0, hr*.93);
+    ctx.bezierCurveTo(-hr*.32, hr*.63,-hr*.78, hr*.28,-hr*.83,-hr*.1);
+    ctx.bezierCurveTo(-hr*.86,-hr*.72,-hr*.1, -hr*.70,      0,-hr*.15);
+    ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.28)';
+    ctx.beginPath();ctx.ellipse(-hr*.3,-hr*.42,hr*.2,hr*.1,-0.3,0,pi2);ctx.fill();
+    ctx.fillStyle=ec.s;ctx.beginPath();ctx.arc(0,hr*.38,4,0,pi2);ctx.fill();
+    ctx.fillStyle=ec.p;ctx.beginPath();ctx.arc(0,hr*.42,2.2,0,pi2);ctx.fill();
+    ctx.restore();
+  } else if(playerShape===8){
+    const dr=P.r;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*dr,Math.sin(a)*dr);
+    ctx.lineTo(Math.cos(a+Math.PI/2)*dr*.58,Math.sin(a+Math.PI/2)*dr*.58);
+    ctx.lineTo(Math.cos(a+Math.PI)*dr*.75,Math.sin(a+Math.PI)*dr*.75);
+    ctx.lineTo(Math.cos(a-Math.PI/2)*dr*.58,Math.sin(a-Math.PI/2)*dr*.58);
+    ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.28)';
+    ctx.beginPath();ctx.ellipse(Math.cos(a)*dr*.38,Math.sin(a)*dr*.38,dr*.28,dr*.12,a-0.4,0,pi2);ctx.fill();
+    const perp=a+Math.PI/2,dped=dr*.25;
+    for(const[ddx,ddy] of [[Math.cos(a)*dr*.4+Math.cos(perp)*dped,Math.sin(a)*dr*.4+Math.sin(perp)*dped],[Math.cos(a)*dr*.4-Math.cos(perp)*dped,Math.sin(a)*dr*.4-Math.sin(perp)*dped]]){
+      ctx.fillStyle=ec.s;ctx.beginPath();ctx.arc(ddx,ddy,4,0,pi2);ctx.fill();
+      ctx.fillStyle=ec.p;ctx.beginPath();ctx.arc(ddx+Math.cos(a)*1.5,ddy+Math.sin(a)*1.5,2.2,0,pi2);ctx.fill();
+    }
   } else {
     ctx.beginPath();ctx.arc(0,0,P.r,0,pi2);ctx.fill();
     ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.36)';ctx.beginPath();ctx.ellipse(-P.r*.22,-P.r*.3,P.r*.38,P.r*.2,-0.4,0,pi2);ctx.fill();
