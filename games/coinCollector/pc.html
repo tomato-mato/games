@@ -105,6 +105,17 @@ canvas { display:block; }
   border-radius:8px; color:rgba(255,255,255,.65); font-size:.85rem; font-weight:700;
   cursor:pointer; font-family:'Segoe UI','Yu Gothic UI',sans-serif;
 }
+#gachaEffectBtn {
+  position:fixed; bottom:176px; right:16px; z-index:200;
+  background:linear-gradient(135deg,rgba(0,80,40,.5),rgba(0,220,120,.35));
+  border:1.5px solid rgba(0,220,120,.5); border-radius:10px;
+  color:#aaffcc; font-size:.82rem; font-weight:700; padding:7px 12px;
+  cursor:pointer; font-family:'Segoe UI','Yu Gothic UI',sans-serif; transition:all .18s;
+}
+.g-pull-btn-effect {
+  background:linear-gradient(135deg,#003d1a,#00aa55,#003d1a) !important;
+  color:#e8fff2 !important;
+}
 #gachaColorBtn {
   position:fixed; bottom:136px; right:16px; z-index:200;
   background:linear-gradient(135deg,rgba(184,134,11,.5),rgba(255,215,0,.35));
@@ -183,6 +194,7 @@ canvas { display:block; }
   </div>
 </div>
 <button id="ruleBtn">ルール</button>
+<button id="gachaEffectBtn" onclick="openGacha('effect')">✨ エフェクトガチャ</button>
 <button id="gachaColorBtn" onclick="openGacha('color')">🎨 色ガチャ</button>
 <button id="gachaShapeBtn" onclick="openGacha('shape')">🔷 形ガチャ</button>
 <button id="gachaEyeBtn" onclick="openGacha('eye')">👁 目ガチャ</button>
@@ -218,6 +230,10 @@ canvas { display:block; }
     <div class="ssec">
       <b>👁 目の色</b>
       <div id="eyePicker" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:6px"></div>
+    </div>
+    <div class="ssec">
+      <b>✨ エフェクト</b>
+      <div id="effectPicker" style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:6px"></div>
     </div>
     <button onclick="closeSettings()" style="margin-top:6px;width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);border-radius:8px;color:rgba(255,255,255,.7);font-size:.85rem;font-weight:700;padding:8px;cursor:pointer;font-family:'Segoe UI','Yu Gothic UI',sans-serif">閉じる</button>
   </div>
@@ -358,11 +374,13 @@ const gachaColorPool=[
   {hi:'#f3e5f5',mid:'#ce93d8',lo:'#4a148c',name:'ラベンダー',r:3},
   {hi:'#fffde7',mid:'#ffee58',lo:'#f57f17',name:'サンシャイン',r:3},
   {hi:'#fce4ec',mid:'#f06292',lo:'#ad1457',name:'さくら',r:3},
+  {hi:'#f0faff',mid:'#c8eeff',lo:'#4488cc',name:'ダイアモンド',r:3},
 ];
 const gachaShapePool=[
   {shapeIdx:6,icon:'★',name:'スター',r:2},
   {shapeIdx:7,icon:'♥',name:'ハート',r:2},
   {shapeIdx:8,icon:'◆',name:'ダイヤ',r:3},
+  {shapeIdx:9,icon:'🍫',name:'チョコ',r:3},
 ];
 const gachaEyePool=[
   {s:'#fff0f5',p:'#ff69b4',name:'ピンク',r:1},
@@ -386,7 +404,21 @@ let gachaTickets=+(localStorage.getItem('cc-tickets')||3);
 let gachaColorOwned=JSON.parse(localStorage.getItem('cc-gacha-color-owned')||'[]');
 let gachaShapeOwned=JSON.parse(localStorage.getItem('cc-gacha-shape-owned')||'[]');
 let gachaEyeOwned=JSON.parse(localStorage.getItem('cc-gacha-eye-owned')||'[]');
-function saveGacha(){localStorage.setItem('cc-tickets',gachaTickets);localStorage.setItem('cc-gacha-color-owned',JSON.stringify(gachaColorOwned));localStorage.setItem('cc-gacha-shape-owned',JSON.stringify(gachaShapeOwned));localStorage.setItem('cc-gacha-eye-owned',JSON.stringify(gachaEyeOwned));}
+const gachaEffectPool=[
+  {name:'炎',   icon:'🔥',color:'#ff6600',r:1},
+  {name:'氷',   icon:'❄️',color:'#88ccff',r:1},
+  {name:'オーラ',icon:'✨',color:'#aaffaa',r:1},
+  {name:'星',   icon:'⭐',color:'#ffdd00',r:2},
+  {name:'桜',   icon:'🌸',color:'#ffb6c1',r:2},
+  {name:'毒',   icon:'💀',color:'#9900cc',r:2},
+  {name:'電撃', icon:'⚡',color:'#ffff00',r:2},
+  {name:'レインボー',icon:'🌈',color:'#ff0000',r:3},
+  {name:'龍',   icon:'🐉',color:'#ffd700',r:3},
+];
+const gachaEffectW=makeW(gachaEffectPool), gachaEffectTot=gachaEffectW.reduce((a,b)=>a+b,0);
+let gachaEffectOwned=JSON.parse(localStorage.getItem('cc-gacha-effect-owned')||'[]');
+let playerEffect=+(localStorage.getItem('cc-effect')||-1);
+function saveGacha(){localStorage.setItem('cc-tickets',gachaTickets);localStorage.setItem('cc-gacha-color-owned',JSON.stringify(gachaColorOwned));localStorage.setItem('cc-gacha-shape-owned',JSON.stringify(gachaShapeOwned));localStorage.setItem('cc-gacha-eye-owned',JSON.stringify(gachaEyeOwned));localStorage.setItem('cc-gacha-effect-owned',JSON.stringify(gachaEffectOwned));}
 function getAllColors(){return[...playerColors,...gachaColorOwned.map(i=>gachaColorPool[i])];}
 function getAllEyeColors(){return[...eyeColors,...gachaEyeOwned.map(i=>gachaEyePool[i])];}
 function rebuildColorPicker(){
@@ -408,9 +440,9 @@ function buildGachaColl(){
   const el=document.getElementById('gachaColl');
   if(!el) return;
   el.innerHTML='';
-  const pool=gachaMode==='color'?gachaColorPool:gachaMode==='shape'?gachaShapePool:gachaEyePool;
-  const owned=gachaMode==='color'?gachaColorOwned:gachaMode==='shape'?gachaShapeOwned:gachaEyeOwned;
-  const starColor=gachaMode==='shape'?'#80d8ff':gachaMode==='eye'?'#ff80ab':'#ffd600';
+  const pool=gachaMode==='color'?gachaColorPool:gachaMode==='shape'?gachaShapePool:gachaMode==='eye'?gachaEyePool:gachaEffectPool;
+  const owned=gachaMode==='color'?gachaColorOwned:gachaMode==='shape'?gachaShapeOwned:gachaMode==='eye'?gachaEyeOwned:gachaEffectOwned;
+  const starColor=gachaMode==='shape'?'#80d8ff':gachaMode==='eye'?'#ff80ab':gachaMode==='effect'?'#aaffaa':'#ffd600';
   pool.forEach((c,i)=>{
     const isOwned=owned.includes(i);
     const stars='★'.repeat(c.r)+'☆'.repeat(3-c.r);
@@ -424,6 +456,9 @@ function buildGachaColl(){
       dot.style.cssText='width:36px;height:36px;border-radius:50%;margin:0 auto 3px;display:flex;align-items:center;justify-content:center;border:2px solid '+(isOwned?'rgba(255,128,171,.5)':'rgba(255,255,255,.1)')+';background:'+(isOwned?c.s:'#1a1a2e');
       if(isOwned){const pu=document.createElement('span');pu.style.cssText=`width:38%;height:38%;border-radius:50%;background:${c.p}`;dot.appendChild(pu);}
       else dot.innerHTML='<span style="font-size:.9rem;color:rgba(255,255,255,.3)">❓</span>';
+    } else if(gachaMode==='effect'){
+      dot.style.cssText='background:'+(isOwned?c.color+'33':'#1a1a2e')+';font-size:1.3rem;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;margin:0 auto 3px;border:2px solid '+(isOwned?c.color+'88':'rgba(255,255,255,.1)');
+      dot.textContent=isOwned?c.icon:'❓';
     } else {
       dot.style.background=isOwned?c.mid:'#1a1a2e';
       dot.innerHTML=isOwned?'':`<span style="font-size:1rem">❓</span>`;
@@ -451,11 +486,11 @@ function doGachaPull(){
   const rsub=document.getElementById('gachaResultSub');
   starsEl.textContent=''; rname.textContent=''; rsub.textContent='';
   orb.style.fontSize=''; orb.textContent='';
-  const isShape=gachaMode==='shape', isEye=gachaMode==='eye';
-  const pool=isShape?gachaShapePool:isEye?gachaEyePool:gachaColorPool;
-  const W=isShape?gachaShapeW:isEye?gachaEyeW:gachaColorW;
-  const tot=isShape?gachaShapeTot:isEye?gachaEyeTot:gachaColorTot;
-  const ownedArr=isShape?gachaShapeOwned:isEye?gachaEyeOwned:gachaColorOwned;
+  const isShape=gachaMode==='shape', isEye=gachaMode==='eye', isEffect=gachaMode==='effect';
+  const pool=isShape?gachaShapePool:isEye?gachaEyePool:isEffect?gachaEffectPool:gachaColorPool;
+  const W=isShape?gachaShapeW:isEye?gachaEyeW:isEffect?gachaEffectW:gachaColorW;
+  const tot=isShape?gachaShapeTot:isEye?gachaEyeTot:isEffect?gachaEffectTot:gachaColorTot;
+  const ownedArr=isShape?gachaShapeOwned:isEye?gachaEyeOwned:isEffect?gachaEffectOwned:gachaColorOwned;
   const rolled=rollFrom(W,tot);
   const item=pool[rolled];
   const isNew=!ownedArr.includes(rolled);
@@ -463,8 +498,8 @@ function doGachaPull(){
   function spin(){
     const tmp=pool[Math.floor(Math.random()*pool.length)];
     if(tmp.mid){ orb.style.background=tmp.mid; orb.style.fontSize=''; orb.textContent=''; orb.innerHTML=''; }
-    else if(tmp.icon){ orb.style.background='rgba(255,255,255,.06)'; orb.style.fontSize='1.8rem'; orb.textContent=tmp.icon; }
-    else { orb.style.background=tmp.s; orb.style.fontSize=''; orb.textContent=''; orb.innerHTML=''; }
+    else if(tmp.s){ orb.style.background=tmp.s; orb.style.fontSize=''; orb.textContent=''; orb.innerHTML=''; }
+    else { orb.style.background=tmp.color?tmp.color+'33':'rgba(255,255,255,.06)'; orb.style.fontSize='1.8rem'; orb.textContent=tmp.icon||''; }
     count++;
     if(count<total){
       const d=count<total*.55?50:count<total*.8?105:210;
@@ -477,6 +512,8 @@ function doGachaPull(){
         orb.style.background=item.s; orb.style.fontSize=''; orb.textContent='';
         orb.style.position='relative';
         orb.innerHTML=`<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span style="width:36%;height:36%;border-radius:50%;background:${item.p}"></span></span>`;
+      } else if(isEffect){
+        orb.style.background=item.color+'33'; orb.style.fontSize='2.2rem'; orb.textContent=item.icon;
       } else {
         orb.style.background=item.mid; orb.style.fontSize=''; orb.textContent='';
       }
@@ -486,7 +523,7 @@ function doGachaPull(){
         rsub.innerHTML='<span class="g-result-new">✨ NEW！設定から変更できます</span>';
         ownedArr.push(rolled); ownedArr.sort((a,b)=>a-b);
         saveGacha();
-        if(isShape) initShapePicker(); else if(isEye) initEyePicker(); else rebuildColorPicker();
+        if(isShape) initShapePicker(); else if(isEye) initEyePicker(); else if(isEffect) initEffectPicker(); else rebuildColorPicker();
       } else {
         rsub.innerHTML='<span class="g-result-dup">（すでに持っています）</span>';
       }
@@ -501,14 +538,14 @@ function openGacha(mode){
   gachaMode=mode||'color';
   gachaOpen=true;
   const isShape=gachaMode==='shape';
-  const isEye=gachaMode==='eye';
-  document.getElementById('gachaTitle').textContent=isShape?'🔷 形ガチャ':isEye?'👁 目ガチャ':'🎨 色ガチャ';
+  const isEye=gachaMode==='eye', isEffect=gachaMode==='effect';
+  document.getElementById('gachaTitle').textContent=isShape?'🔷 形ガチャ':isEye?'👁 目ガチャ':isEffect?'✨ エフェクトガチャ':'🎨 色ガチャ';
   const btn=document.getElementById('gachaPullBtn');
-  btn.textContent=isShape?'🔷 1回引く（🎟 ×1）':isEye?'👁 1回引く（🎟 ×1）':'🎨 1回引く（🎟 ×1）';
+  btn.textContent=isShape?'🔷 1回引く（🎟 ×1）':isEye?'👁 1回引く（🎟 ×1）':isEffect?'✨ 1回引く（🎟 ×1）':'🎨 1回引く（🎟 ×1）';
   btn.onclick=doGachaPull;
-  btn.className='g-pull-btn'+(isShape?' g-pull-btn-shape':isEye?' g-pull-btn-eye':'');
-  document.getElementById('gachaRate').textContent=isShape?'★★ 67%　★★★ 33%':isEye?'★ 57%　★★ 29%　★★★ 14%':'★ 60%　★★ 30%　★★★ 10%';
-  document.getElementById('gachaCollTitle').textContent=isShape?'🔷 形コレクション':isEye?'👁 目コレクション':'🎨 色コレクション';
+  btn.className='g-pull-btn'+(isShape?' g-pull-btn-shape':isEye?' g-pull-btn-eye':isEffect?' g-pull-btn-effect':'');
+  document.getElementById('gachaRate').textContent=isShape?'★★ 67%　★★★ 33%':isEye?'★ 57%　★★ 29%　★★★ 14%':isEffect?'★ 43%　★★ 43%　★★★ 14%':'★ 60%　★★ 30%　★★★ 10%';
+  document.getElementById('gachaCollTitle').textContent=isShape?'🔷 形コレクション':isEye?'👁 目コレクション':isEffect?'✨ エフェクトコレクション':'🎨 色コレクション';
   const orb=document.getElementById('gachaOrb');
   orb.style.background=''; orb.style.fontSize=''; orb.textContent='';
   document.getElementById('gachaStars').textContent='';
@@ -611,6 +648,36 @@ function initShapePicker(){
   });
 }
 initShapePicker();
+function initEffectPicker(){
+  const picker=document.getElementById('effectPicker');
+  if(!picker) return;
+  picker.innerHTML='';
+  // なし
+  const none=document.createElement('button');
+  const onNone=playerEffect===-1;
+  none.textContent='✕';none.title='なし';
+  none.style.cssText=`background:${onNone?'rgba(255,255,255,.2)':'rgba(255,255,255,.05)'};border:1.5px solid ${onNone?'rgba(255,255,255,.8)':'rgba(255,255,255,.2)'};border-radius:6px;color:${onNone?'#fff':'rgba(255,255,255,.4)'};font-size:.95rem;font-weight:700;padding:4px 10px;cursor:pointer;transition:all .18s`;
+  none.onclick=()=>{playerEffect=-1;localStorage.setItem('cc-effect',-1);initEffectPicker();};
+  picker.appendChild(none);
+  gachaEffectPool.forEach((e,i)=>{
+    const owned=gachaEffectOwned.includes(i);
+    if(owned){
+      const b=document.createElement('button');
+      b.textContent=e.icon;b.title=e.name;
+      const on=playerEffect===i;
+      b.style.cssText=`background:${on?e.color+'44':'rgba(255,255,255,.05)'};border:1.5px solid ${on?e.color:'rgba(255,255,255,.15)'};border-radius:6px;font-size:1rem;padding:4px 10px;cursor:pointer;transition:all .18s`;
+      b.onclick=()=>{playerEffect=i;localStorage.setItem('cc-effect',i);initEffectPicker();};
+      picker.appendChild(b);
+    } else {
+      const sp=document.createElement('span');
+      sp.style.cssText='font-size:.72rem;color:rgba(100,255,180,.28);padding:0 4px';
+      sp.title=e.name+'（エフェクトガチャで解放）';
+      sp.textContent=e.icon+'🎰';
+      picker.appendChild(sp);
+    }
+  });
+}
+initEffectPicker();
 
 // ── Player init ───────────────────────────────
 function mkPlayer() {
@@ -2162,6 +2229,152 @@ function drawPowerup(pw) {
   ctx.restore();
 }
 
+// ── Draw: player effect ──────────────────────
+function drawPlayerEffect(){
+  if(playerEffect<0||!gachaEffectOwned.includes(playerEffect)) return;
+  const x=P.x,y=P.y,r=P.r,pi2=Math.PI*2;
+  ctx.save();
+  switch(playerEffect){
+    case 0:{ // 炎
+      for(let i=0;i<8;i++){
+        const a=i*pi2/8+t*3;
+        const d=r+7+Math.sin(t*6+i)*4;
+        const sz=4+Math.sin(t*8+i*1.7)*2;
+        ctx.globalAlpha=0.7+Math.sin(t*5+i*0.9)*0.25;
+        ctx.fillStyle=i%2?'#ff4400':'#ff8800';
+        ctx.beginPath();ctx.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,sz,0,pi2);ctx.fill();
+        ctx.globalAlpha=0.9;ctx.fillStyle='#ffee00';
+        ctx.beginPath();ctx.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,sz*0.4,0,pi2);ctx.fill();
+      }
+      ctx.globalAlpha=0.1+Math.sin(t*4)*0.04;ctx.fillStyle='#ff6600';
+      ctx.beginPath();ctx.arc(x,y,r+12,0,pi2);ctx.fill();
+      break;
+    }
+    case 1:{ // 氷
+      for(let i=0;i<6;i++){
+        const a=i*pi2/6+t*0.8;
+        const len=r+12+Math.sin(t*3+i)*5;
+        ctx.globalAlpha=0.6+Math.sin(t*4+i)*0.25;
+        ctx.strokeStyle='#aaddff';ctx.lineWidth=3;
+        ctx.beginPath();ctx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r);ctx.lineTo(x+Math.cos(a)*len,y+Math.sin(a)*len);ctx.stroke();
+        ctx.lineWidth=1.5;
+        const bx=x+Math.cos(a)*(r+7),by=y+Math.sin(a)*(r+7);
+        ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+Math.cos(a+Math.PI/4)*7,by+Math.sin(a+Math.PI/4)*7);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+Math.cos(a-Math.PI/4)*7,by+Math.sin(a-Math.PI/4)*7);ctx.stroke();
+      }
+      ctx.globalAlpha=0.08;ctx.fillStyle='#aaddff';
+      ctx.beginPath();ctx.arc(x,y,r+14,0,pi2);ctx.fill();
+      break;
+    }
+    case 2:{ // オーラ
+      const hue=(t*50)%360;
+      for(let ring=0;ring<3;ring++){
+        const rr=r+10+ring*8+Math.sin(t*3+ring*1.2)*5;
+        ctx.globalAlpha=0.22-ring*0.05+Math.sin(t*4+ring)*0.08;
+        ctx.strokeStyle=`hsl(${(hue+ring*50)%360},100%,70%)`;
+        ctx.lineWidth=3-ring*0.6;
+        ctx.beginPath();ctx.arc(x,y,rr,0,pi2);ctx.stroke();
+      }
+      break;
+    }
+    case 3:{ // 星
+      for(let i=0;i<5;i++){
+        const a=i*pi2/5+t*2+i*0.4;
+        const d=r+14+Math.sin(t*2.5+i*1.3)*6;
+        const sz=5+Math.sin(t*3+i)*2;
+        ctx.save();ctx.translate(x+Math.cos(a)*d,y+Math.sin(a)*d);ctx.rotate(t*4+i);
+        ctx.globalAlpha=0.85+Math.sin(t*4+i)*0.12;
+        ctx.fillStyle='#ffee44';ctx.shadowColor='#ffee44';ctx.shadowBlur=10;
+        ctx.beginPath();
+        for(let j=0;j<10;j++){const aa=j*Math.PI/5-Math.PI/2;const rr=j%2?sz*0.42:sz;j===0?ctx.moveTo(Math.cos(aa)*rr,Math.sin(aa)*rr):ctx.lineTo(Math.cos(aa)*rr,Math.sin(aa)*rr);}
+        ctx.closePath();ctx.fill();ctx.shadowBlur=0;ctx.restore();
+      }
+      break;
+    }
+    case 4:{ // 桜
+      for(let i=0;i<8;i++){
+        const a=i*pi2/8+Math.sin(t*1.5+i)*0.4;
+        const d=r+10+Math.sin(t*2+i*1.4)*8;
+        ctx.save();ctx.translate(x+Math.cos(a)*d,y+Math.sin(a)*d);ctx.rotate(t*2+i*1.2);
+        ctx.globalAlpha=0.75+Math.sin(t*3+i)*0.2;
+        ctx.fillStyle='#ffb6c1';
+        for(let p=0;p<5;p++){const pa=p*pi2/5;ctx.beginPath();ctx.ellipse(Math.cos(pa)*4,Math.sin(pa)*4,3.5,2,pa,0,pi2);ctx.fill();}
+        ctx.restore();
+      }
+      break;
+    }
+    case 5:{ // 毒
+      for(let i=0;i<6;i++){
+        const a=i*pi2/6+t*1.5;
+        const d=r+7+Math.sin(t*3+i*1.3)*6;
+        const sz=4+Math.sin(t*4+i*0.9)*2;
+        ctx.globalAlpha=0.75+Math.sin(t*5+i)*0.2;
+        ctx.fillStyle=i%2?'#9900cc':'#66ff44';
+        ctx.beginPath();ctx.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,sz,0,pi2);ctx.fill();
+        ctx.globalAlpha=0.35;ctx.fillStyle='#fff';
+        ctx.beginPath();ctx.arc(x+Math.cos(a)*d-sz*0.3,y+Math.sin(a)*d-sz*0.3,sz*0.35,0,pi2);ctx.fill();
+      }
+      ctx.globalAlpha=0.07;ctx.fillStyle='#9900cc';
+      ctx.beginPath();ctx.arc(x,y,r+14,0,pi2);ctx.fill();
+      break;
+    }
+    case 6:{ // 電撃
+      ctx.globalAlpha=0.15+Math.sin(t*18)*0.1;ctx.fillStyle='#ffff88';
+      ctx.beginPath();ctx.arc(x,y,r+5,0,pi2);ctx.fill();
+      if(Math.floor(t*12)%4===0){
+        for(let i=0;i<4;i++){
+          const a=i*pi2/4+t*6;
+          let cx2=x+Math.cos(a)*r,cy2=y+Math.sin(a)*r;
+          ctx.globalAlpha=0.9;ctx.strokeStyle='#ffffaa';ctx.lineWidth=2;
+          ctx.shadowColor='#ffff00';ctx.shadowBlur=8;
+          ctx.beginPath();ctx.moveTo(cx2,cy2);
+          for(let s=0;s<5;s++){
+            cx2+=Math.cos(a)*5+Math.sin(a)*(Math.random()-0.5)*8;
+            cy2+=Math.sin(a)*5-Math.cos(a)*(Math.random()-0.5)*8;
+            ctx.lineTo(cx2,cy2);
+          }
+          ctx.stroke();ctx.shadowBlur=0;
+        }
+      }
+      break;
+    }
+    case 7:{ // レインボー
+      const cols=['#ff0000','#ff7700','#ffee00','#00cc00','#0088ff','#6600cc','#ff00cc'];
+      for(let c=0;c<cols.length;c++){
+        const rr=r+8+c*5+Math.sin(t*2)*3;
+        const sa=t*1.5+c*0.07;
+        ctx.globalAlpha=0.32+Math.sin(t*2+c*0.4)*0.1;
+        ctx.strokeStyle=cols[c];ctx.lineWidth=4.5;
+        ctx.beginPath();ctx.arc(x,y,rr,sa,sa+Math.PI*1.3);ctx.stroke();
+      }
+      break;
+    }
+    case 8:{ // 龍
+      const turns=2.5,pts=40;
+      ctx.strokeStyle='#ffd700';ctx.lineWidth=3;
+      ctx.shadowColor='#ffd700';ctx.shadowBlur=10;
+      ctx.globalAlpha=0.85;
+      ctx.beginPath();
+      for(let i=0;i<=pts;i++){
+        const fr=i/pts;
+        const ang=fr*pi2*turns+t*3;
+        const rad=(r+6)+(r+18)*fr;
+        i===0?ctx.moveTo(x+Math.cos(ang)*rad,y+Math.sin(ang)*rad):ctx.lineTo(x+Math.cos(ang)*rad,y+Math.sin(ang)*rad);
+      }
+      ctx.stroke();ctx.shadowBlur=0;
+      for(let i=0;i<10;i++){
+        const fr=(i+0.5)/10;
+        const ang=fr*pi2*turns+t*3;
+        const rad=(r+6)+(r+18)*fr;
+        ctx.globalAlpha=0.7;ctx.fillStyle='#ff8800';
+        ctx.beginPath();ctx.arc(x+Math.cos(ang)*rad,y+Math.sin(ang)*rad,3.5,0,pi2);ctx.fill();
+      }
+      break;
+    }
+  }
+  ctx.globalAlpha=1;ctx.restore();
+}
+
 // ── Draw: player ──────────────────────────────
 function drawPlayer() {
   const blink=P.invT>0 && Math.sin(t*20)>0;
@@ -2370,6 +2583,28 @@ function drawPlayer() {
       ctx.fillStyle=ec.s; ctx.beginPath(); ctx.arc(ddx,ddy,4,0,pi2); ctx.fill();
       ctx.fillStyle=ec.p; ctx.beginPath(); ctx.arc(ddx+Math.cos(a)*1.5,ddy+Math.sin(a)*1.5,2.2,0,pi2); ctx.fill();
     }
+  } else if(playerShape===9){
+    // Choco bar 🍫 (rotated rectangle with grid segments, front=right)
+    const cw=P.r*1.2, ch=P.r*0.7, cr2=5;
+    ctx.save();
+    ctx.rotate(a);
+    ctx.beginPath();
+    ctx.moveTo(-cw+cr2,-ch);ctx.arcTo(cw,-ch,cw,-ch+cr2,cr2);ctx.arcTo(cw,ch,cw-cr2,ch,cr2);ctx.arcTo(-cw,ch,-cw,ch-cr2,cr2);ctx.arcTo(-cw,-ch,-cw+cr2,-ch,cr2);
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur=0;
+    // highlight
+    ctx.fillStyle='rgba(255,255,255,0.22)';
+    ctx.beginPath(); ctx.ellipse(-cw*.18,-ch*.4,cw*.52,ch*.28,-0.3,0,pi2); ctx.fill();
+    // segment grid lines
+    ctx.strokeStyle='rgba(0,0,0,0.28)'; ctx.lineWidth=2;
+    for(let i=1;i<3;i++){const lx=-cw+cw*2*i/3;ctx.beginPath();ctx.moveTo(lx,-ch+cr2);ctx.lineTo(lx,ch-cr2);ctx.stroke();}
+    ctx.beginPath();ctx.moveTo(-cw+cr2,0);ctx.lineTo(cw-cr2,0);ctx.stroke();
+    // eyes on front face
+    for(const eyo of [-ch*.38,ch*.38]){
+      ctx.fillStyle=ec.s; ctx.beginPath(); ctx.arc(cw*.75,eyo,4,0,pi2); ctx.fill();
+      ctx.fillStyle=ec.p; ctx.beginPath(); ctx.arc(cw*.75+1.5,eyo,2.2,0,pi2); ctx.fill();
+    }
+    ctx.restore();
   } else {
     // Circle
     ctx.beginPath(); ctx.arc(0,0,P.r,0,pi2); ctx.fill();
@@ -2446,6 +2681,7 @@ function loop(ts) {
     }
   }
   drawParticles();
+  drawPlayerEffect();
   drawPlayer();
   drawPopups();
   ctx.restore();
