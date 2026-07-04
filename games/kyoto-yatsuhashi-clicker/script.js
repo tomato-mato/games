@@ -7,6 +7,18 @@
 
   const MAX_ITEMS_ON_MAP = 6;
 
+  // viewportのuser-scalable=noだけでは効かない端末があるため、ダブルタップでの拡大を明示的に止める
+  let lastTouchEndAt = 0;
+  document.addEventListener(
+    "touchend",
+    (evt) => {
+      const now = Date.now();
+      if (now - lastTouchEndAt <= 300) evt.preventDefault();
+      lastTouchEndAt = now;
+    },
+    { passive: false }
+  );
+
   function buildMapBackgroundSVG(theme) {
     return `<svg class="map-bg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       <rect x="0" y="0" width="100" height="100" fill="${theme.base}"/>
@@ -203,7 +215,7 @@
 
   const MAPS = [
     {
-      id: "ekimae", name: "京都駅エリア", icon: "🚉", unlockCost: null, mascot: "tanuki",
+      id: "ekimae", name: "京都駅エリア", icon: "🚉", unlockCost: null, mascot: "tanuki", picFolder: "kyotostation",
       theme: { base: "#f6ecd4", mountain1: "#6ea562", mountain2: "#8fc17a", tree: "#3f6b3a", river: "#6fb3d9", riverLight: "#c8ecf9", road: "#c9a26b" },
       landmarks: [
         { icon: "🚉", name: "京都駅", left: 12, top: 82, desc: "京都の玄関口。近未来的な駅ビルが自慢。" },
@@ -217,7 +229,7 @@
       ],
     },
     {
-      id: "arashiyama", name: "嵐山エリア", icon: "🎋", unlockCost: 300, mascot: "saru",
+      id: "arashiyama", name: "嵐山エリア", icon: "🎋", unlockCost: 300, mascot: "saru", picFolder: "arashiyama",
       theme: { base: "#faf0dc", mountain1: "#c9823f", mountain2: "#e2a862", tree: "#8a4526", river: "#6fb3d9", riverLight: "#dff2fb", road: "#c9a26b" },
       landmarks: [
         { icon: "🌉", name: "渡月橋", left: 30, top: 70, desc: "桂川に架かる嵐山のシンボル。満月の夜が特に美しい。" },
@@ -227,7 +239,7 @@
       ],
     },
     {
-      id: "gion", name: "祇園エリア", icon: "👘", unlockCost: 800, mascot: "maiko",
+      id: "gion", name: "祇園エリア", icon: "👘", unlockCost: 800, mascot: "maiko", picFolder: "gion",
       theme: { base: "#fdf1f2", mountain1: "#df94ab", mountain2: "#f0c0cf", tree: "#a34e69", river: "#6fb3d9", riverLight: "#e8f6fb", road: "#c9a26b" },
       landmarks: [
         { icon: "⛩️", name: "八坂神社", left: 60, top: 30, desc: "祇園のシンボル。祭礼「祇園祭」でも有名な神社。" },
@@ -237,7 +249,7 @@
       ],
     },
     {
-      id: "fushimi", name: "伏見・宇治エリア", icon: "⛩️", unlockCost: 2000, mascot: "kitsune",
+      id: "fushimi", name: "伏見・宇治エリア", icon: "⛩️", unlockCost: 2000, mascot: "kitsune", picFolder: "hushimi",
       theme: { base: "#fdefe2", mountain1: "#de6a41", mountain2: "#ef9670", tree: "#8f3f24", river: "#6fb3d9", riverLight: "#dff2fb", road: "#c9a26b" },
       landmarks: [
         { icon: "⛩️", name: "伏見稲荷", left: 30, top: 35, desc: "何千もの朱色の鳥居が連なる千本鳥居が圧巻。" },
@@ -247,7 +259,7 @@
       ],
     },
     {
-      id: "kameoka", name: "亀岡エリア", icon: "🎈", unlockCost: 3500, mascot: "kame",
+      id: "kameoka", name: "亀岡エリア", icon: "🎈", unlockCost: 3500, mascot: "kame", picFolder: "kameoka",
       theme: { base: "#f2f6e2", mountain1: "#5a9a4a", mountain2: "#7fbf6a", tree: "#2f5a24", river: "#6fb3d9", riverLight: "#d5f0f7", road: "#c9a26b" },
       landmarks: [
         { icon: "🚣", name: "保津川下り", left: 32, top: 62, desc: "亀岡から嵐山まで急流を下るスリル満点の舟下り。" },
@@ -257,7 +269,7 @@
       ],
     },
     {
-      id: "maizuru", name: "舞鶴エリア", icon: "⚓", unlockCost: 6000, mascot: "iruka",
+      id: "maizuru", name: "舞鶴エリア", icon: "⚓", unlockCost: 6000, mascot: "iruka", picFolder: "maizuru",
       theme: { base: "#eef2f5", mountain1: "#5a6b7a", mountain2: "#7c8b98", tree: "#3a4a54", river: "#3f6f95", riverLight: "#a9cfe0", road: "#9aa3a8" },
       landmarks: [
         { icon: "🧱", name: "赤れんが倉庫", left: 30, top: 55, desc: "明治時代の海軍施設。レトロな赤レンガが並ぶ人気スポット。" },
@@ -267,7 +279,7 @@
       ],
     },
     {
-      id: "amanohashidate", name: "天橋立エリア", icon: "🌲", unlockCost: 9000, mascot: "kamome",
+      id: "amanohashidate", name: "天橋立エリア", icon: "🌲", unlockCost: 9000, mascot: "kamome", picFolder: "amanohashidate",
       theme: { base: "#eaf4f7", mountain1: "#3f7a5a", mountain2: "#5fa37a", tree: "#245038", river: "#5fa8cf", riverLight: "#c9e8f2", road: "#c9a26b" },
       landmarks: [
         { icon: "🌲", name: "天橋立", left: 45, top: 50, desc: "日本三景のひとつ。天に架かる橋のような砂州が名物。" },
@@ -278,88 +290,28 @@
     },
   ];
 
-  function yatsuhashiSVG(uid) {
-    return `<svg viewBox="0 0 40 40">
-      <defs>
-        <linearGradient id="yg${uid}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#fdf4de"/><stop offset="1" stop-color="#e9b978"/>
-        </linearGradient>
-        <clipPath id="yc${uid}"><path d="M20 4 L36 34 Q37 36.5 34 36.5 L6 36.5 Q3 36.5 4 34 Z"/></clipPath>
-      </defs>
-      <path d="M20 4 L36 34 Q37 36.5 34 36.5 L6 36.5 Q3 36.5 4 34 Z" fill="url(#yg${uid})" stroke="#c98a4b" stroke-width="1"/>
-      <g clip-path="url(#yc${uid})" stroke="#b5713a" stroke-width="1.3" opacity="0.55">
-        <line x1="-4" y1="14" x2="30" y2="46"/><line x1="2" y1="8" x2="36" y2="40"/>
-        <line x1="10" y1="4" x2="44" y2="36"/><line x1="18" y1="2" x2="50" y2="32"/>
-      </g>
-      <ellipse cx="14" cy="14" rx="4.5" ry="2.4" fill="#fff" opacity="0.55"/>
-    </svg>`;
-  }
-
-  function dangoSVG(uid) {
-    return `<svg viewBox="0 0 40 40">
-      <defs>
-        <radialGradient id="dp${uid}" cx="35%" cy="30%" r="70%"><stop offset="0" stop-color="#ffd6e3"/><stop offset="1" stop-color="#f3a0bb"/></radialGradient>
-        <radialGradient id="dw${uid}" cx="35%" cy="30%" r="70%"><stop offset="0" stop-color="#fffdf5"/><stop offset="1" stop-color="#f1e6c8"/></radialGradient>
-        <radialGradient id="dg${uid}" cx="35%" cy="30%" r="70%"><stop offset="0" stop-color="#c4e29a"/><stop offset="1" stop-color="#8fbf5e"/></radialGradient>
-      </defs>
-      <rect x="18.7" y="4" width="2.6" height="34" rx="1.3" fill="#c9975f"/>
-      <circle cx="20" cy="12" r="8" fill="url(#dg${uid})" stroke="#75a34a" stroke-width="0.8"/>
-      <circle cx="20" cy="21" r="8" fill="url(#dw${uid})" stroke="#d8c48f" stroke-width="0.8"/>
-      <circle cx="20" cy="30" r="8" fill="url(#dp${uid})" stroke="#e28aa8" stroke-width="0.8"/>
-      <ellipse cx="17" cy="9" rx="2" ry="1.1" fill="#fff" opacity="0.6"/>
-      <ellipse cx="17" cy="18" rx="2" ry="1.1" fill="#fff" opacity="0.6"/>
-      <ellipse cx="17" cy="27" rx="2" ry="1.1" fill="#fff" opacity="0.6"/>
-    </svg>`;
-  }
-
-  function fanSVG(uid) {
-    return `<svg viewBox="0 0 40 40">
-      <defs>
-        <linearGradient id="fg${uid}" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stop-color="#a8283a"/><stop offset="0.5" stop-color="#e2536a"/><stop offset="1" stop-color="#f7d774"/>
-        </linearGradient>
-      </defs>
-      <path d="M20 38 L4 14 A18 18 0 0 1 36 14 Z" fill="url(#fg${uid})" stroke="#8c1f2e" stroke-width="1"/>
-      <g stroke="#fff8ea" stroke-width="0.8" opacity="0.55">
-        <line x1="20" y1="38" x2="8" y2="16"/><line x1="20" y1="38" x2="14" y2="9"/>
-        <line x1="20" y1="38" x2="20" y2="6"/><line x1="20" y1="38" x2="26" y2="9"/>
-        <line x1="20" y1="38" x2="32" y2="16"/>
-      </g>
-      <circle cx="20" cy="38" r="2.4" fill="#f7d774" stroke="#8c1f2e" stroke-width="0.8"/>
-    </svg>`;
-  }
-
-  function lanternSVG(uid) {
-    return `<svg viewBox="0 0 40 40" overflow="visible">
-      <defs>
-        <radialGradient id="lg${uid}" cx="50%" cy="45%" r="60%">
-          <stop offset="0" stop-color="#ff8f6b"/><stop offset="0.6" stop-color="#e2432f"/><stop offset="1" stop-color="#b8241d"/>
-        </radialGradient>
-      </defs>
-      <line x1="20" y1="1" x2="20" y2="6" stroke="#7a4a26" stroke-width="1"/>
-      <rect x="15" y="5" width="10" height="3" rx="1.2" fill="#e8a72a"/>
-      <path d="M12 8 C8 14, 8 28, 12 34 C15 37, 25 37, 28 34 C32 28, 32 14, 28 8 Z" fill="url(#lg${uid})" stroke="#8c1f2e" stroke-width="1"/>
-      <g stroke="#8c1f2e" stroke-width="0.6" opacity="0.5">
-        <line x1="9.5" y1="14" x2="30.5" y2="14"/><line x1="8.5" y1="21" x2="31.5" y2="21"/><line x1="9.5" y1="28" x2="30.5" y2="28"/>
-      </g>
-      <rect x="15" y="34" width="10" height="3" rx="1.2" fill="#e8a72a"/>
-      <line x1="20" y1="37" x2="20" y2="40" stroke="#7a4a26" stroke-width="1"/>
-      <text x="20" y="24" font-size="8" text-anchor="middle" fill="#fff8ea" font-family="serif">祝</text>
-      <g class="sparkle">
-        <path d="M4 6 l1 2.4 2.4 1 -2.4 1 -1 2.4 -1 -2.4 -2.4 -1 2.4 -1 Z" fill="#fff3c4"/>
-        <path d="M35 27 l0.8 1.8 1.8 0.8 -1.8 0.8 -0.8 1.8 -0.8 -1.8 -1.8 -0.8 1.8 -0.8 Z" fill="#fff3c4"/>
-      </g>
-    </svg>`;
-  }
-
-  const ITEM_TYPES = [
-    { name: "yatsuhashi", base: 1, weight: 60, svg: yatsuhashiSVG },
-    { name: "dango", base: 2, weight: 25, svg: dangoSVG },
-    { name: "fan", base: 4, weight: 10, svg: fanSVG },
-    { name: "lantern", base: 8, weight: 5, svg: lanternSVG, rare: true },
-  ];
-  const TOTAL_WEIGHT = ITEM_TYPES.reduce((sum, t) => sum + t.weight, 0);
   let itemUidCounter = 0;
+
+  // マップごとの写真ファイル名一覧(picFolder配下)。出現するアイテムはここからランダムに選ばれる。
+  const MAP_ITEM_PHOTOS = {
+    ekimae: ["yatuhashi.png"],
+    gion: ["yatuhashi.png", "kimono.png"],
+    arashiyama: ["mattya.png", "monkey.png"],
+    fushimi: ["torii.png"],
+    kameoka: ["hozugawa.png"],
+    maizuru: ["nami.png"],
+    amanohashidate: ["amanohashidate.png"],
+  };
+
+  const ITEM_BASE_VALUE = 2;
+
+  function pickMapPhoto(mapDef) {
+    if (!mapDef || !mapDef.picFolder) return null;
+    const files = MAP_ITEM_PHOTOS[mapDef.id];
+    if (!files || files.length === 0) return null;
+    const file = files[Math.floor(Math.random() * files.length)];
+    return `picture/${mapDef.picFolder}/${file}`;
+  }
 
   function namayatsuSVG(uid) {
     return `<svg viewBox="0 0 40 40">
@@ -619,7 +571,9 @@
     </svg>`;
   }
 
-  const GACHA_COST = 50;
+  const GACHA_COST = 200;
+  const GACHA_MULTI_COUNT = 10;
+  const GACHA_MULTI_COST = 2000;
   const GACHA_ITEMS = [
     { id: "namayatsu", name: "生八つ橋", svg: namayatsuSVG, rarity: "common", weight: 10, dupBonus: 3 },
     { id: "otabe", name: "おたべ", svg: otabeSVG, rarity: "common", weight: 10, dupBonus: 3 },
@@ -647,6 +601,25 @@
     ultrarare: "ウルトラレア",
     legendary: "レジェンダリー",
   };
+
+  const QUIZ_DATA = [
+    { kanji: "祇園", answer: "ぎおん", choices: ["ぎおん", "しえん", "ぎえん", "きおん"] },
+    { kanji: "嵐山", answer: "あらしやま", choices: ["あらしやま", "らんざん", "あらしさん", "あらんやま"] },
+    { kanji: "太秦", answer: "うずまさ", choices: ["うずまさ", "たいしん", "ふとはた", "たしん"] },
+    { kanji: "先斗町", answer: "ぽんとちょう", choices: ["ぽんとちょう", "せんとまち", "さきとちょう", "せんとちょう"] },
+    { kanji: "烏丸", answer: "からすま", choices: ["からすま", "からすまる", "うまる", "とりまる"] },
+    { kanji: "河原町", answer: "かわらまち", choices: ["かわらまち", "かはらちょう", "かわはらまち", "がわらまち"] },
+    { kanji: "伏見", answer: "ふしみ", choices: ["ふしみ", "ふくみ", "ふせみ", "ぶしみ"] },
+    { kanji: "化野", answer: "あだしの", choices: ["あだしの", "けの", "かの", "ばけの"] },
+    { kanji: "帷子ノ辻", answer: "かたびらのつじ", choices: ["かたびらのつじ", "いちょうのつじ", "とばりのつじ", "かたこのつじ"] },
+    { kanji: "出町柳", answer: "でまちやなぎ", choices: ["でまちやなぎ", "しゅっちょうやなぎ", "でまちりゅう", "いずまちやなぎ"] },
+    { kanji: "東寺", answer: "とうじ", choices: ["とうじ", "ひがしでら", "とうてら", "あずまでら"] },
+    { kanji: "北野天満宮", answer: "きたのてんまんぐう", choices: ["きたのてんまんぐう", "ほくやてんまんぐう", "きたのてんまんぐ", "ほくのてんまんぐう"] },
+    { kanji: "銀閣寺", answer: "ぎんかくじ", choices: ["ぎんかくじ", "ぎんかくてら", "ぎんこうじ", "ぎんがくじ"] },
+    { kanji: "金閣寺", answer: "きんかくじ", choices: ["きんかくじ", "きんかくてら", "こんかくじ", "きんがくじ"] },
+    { kanji: "二条城", answer: "にじょうじょう", choices: ["にじょうじょう", "ふたじょうじょう", "にじょうしろ", "にでらじょう"] },
+    { kanji: "天橋立", answer: "あまのはしだて", choices: ["あまのはしだて", "てんきょうりつ", "あまばしだて", "てんばしだて"] },
+  ];
 
   const mapStackEl = document.getElementById("map-stack");
   const mapSwitcherEl = document.getElementById("map-switcher");
@@ -677,6 +650,35 @@
   const gachaResultName = document.getElementById("gacha-result-name");
   const gachaResultSub = document.getElementById("gacha-result-sub");
   const gachaResultClose = document.getElementById("gacha-result-close");
+
+  const gachaMultiBtn = document.getElementById("gacha-multi-btn");
+  const gachaMultiCostEl = document.getElementById("gacha-multi-cost");
+  const gachaMultiResultModal = document.getElementById("gacha-multi-result");
+  const multiChestPhaseEl = document.getElementById("multi-chest-phase");
+  const multiItemPhaseEl = document.getElementById("multi-item-phase");
+  const multiChestEl = document.getElementById("multi-chest");
+  const multiSkipBtn = document.getElementById("multi-skip-btn");
+  const multiItemGridEl = document.getElementById("multi-item-grid");
+  const multiSummaryEl = document.getElementById("multi-summary");
+  const multiResultClose = document.getElementById("multi-result-close");
+
+  const minigameMenuEl = document.getElementById("minigame-menu");
+  const minigameListEl = document.getElementById("minigame-list");
+
+  const quizStartEl = document.getElementById("quiz-start");
+  const quizStartTotalEl = document.getElementById("quiz-start-total");
+  const quizStartBannerEl = document.getElementById("quiz-start-banner");
+  const quizAreaEl = document.getElementById("quiz-area");
+  const quizIndexEl = document.getElementById("quiz-index");
+  const quizTotalEl = document.getElementById("quiz-total");
+  const quizTimerWrapEl = document.getElementById("quiz-timer-wrap");
+  const quizTimerEl = document.getElementById("quiz-timer");
+  const quizKanjiEl = document.getElementById("quiz-kanji");
+  const quizChoicesEl = document.getElementById("quiz-choices");
+  const quizResultEl = document.getElementById("quiz-result");
+  const quizResultTextEl = document.getElementById("quiz-result-text");
+  const quizResultBestEl = document.getElementById("quiz-result-best");
+  const quizRetryBtn = document.getElementById("quiz-retry-btn");
 
   const upgrades = {
     click: {
@@ -714,6 +716,7 @@
     unlockedMaps: ["ekimae"],
     currentMap: "ekimae",
     gachaCollection: {},
+    quizHighScore: 0,
     lastSaved: Date.now(),
   };
 
@@ -784,6 +787,8 @@
 
     gachaCostEl.textContent = GACHA_COST;
     gachaPullBtn.classList.toggle("disabled", state.points < GACHA_COST);
+    gachaMultiCostEl.textContent = GACHA_MULTI_COST;
+    gachaMultiBtn.classList.toggle("disabled", state.points < GACHA_MULTI_COST);
 
     renderMapSwitcher();
   }
@@ -996,14 +1001,76 @@
     gachaResultModal.classList.add("hidden");
   });
 
-  function pickItemType() {
-    let r = Math.random() * TOTAL_WEIGHT;
-    for (const type of ITEM_TYPES) {
-      if (r < type.weight) return type;
-      r -= type.weight;
+  let pendingMultiResults = null;
+
+  function pullGachaMulti() {
+    if (state.points < GACHA_MULTI_COST) return;
+    state.points -= GACHA_MULTI_COST;
+
+    const results = [];
+    for (let i = 0; i < GACHA_MULTI_COUNT; i++) {
+      const item = pickGachaItem();
+      const owned = state.gachaCollection[item.id] || 0;
+      state.gachaCollection[item.id] = owned + 1;
+      const isNew = owned === 0;
+      if (!isNew) state.points += item.dupBonus;
+      results.push({ item, isNew });
     }
-    return ITEM_TYPES[0];
+    pendingMultiResults = results;
+
+    multiChestEl.classList.remove("open");
+    multiChestPhaseEl.classList.remove("hidden");
+    multiItemPhaseEl.classList.add("hidden");
+    gachaMultiResultModal.classList.remove("hidden");
+
+    renderGachaCollection();
+    updateUI();
+    save();
   }
+
+  function openMultiChest() {
+    if (!pendingMultiResults || multiChestEl.classList.contains("open")) return;
+    multiChestEl.classList.add("open");
+    playChestOpenSound();
+    setTimeout(revealMultiResults, 550);
+  }
+
+  function revealMultiResults() {
+    if (!pendingMultiResults) return;
+    const results = pendingMultiResults;
+    pendingMultiResults = null;
+
+    multiItemGridEl.innerHTML = "";
+    results.forEach(({ item, isNew }, idx) => {
+      const card = document.createElement("div");
+      card.className = `gacha-multi-card rarity-${item.rarity}`;
+      card.style.animationDelay = `${idx * 0.05}s`;
+      card.innerHTML = `${item.svg(itemUidCounter++)}${
+        isNew ? '<span class="gacha-multi-new">NEW</span>' : `<span class="gacha-multi-bonus">+${item.dupBonus}</span>`
+      }`;
+      multiItemGridEl.appendChild(card);
+    });
+
+    const newCount = results.filter((r) => r.isNew).length;
+    const bonusTotal = results.filter((r) => !r.isNew).reduce((sum, r) => sum + r.item.dupBonus, 0);
+    multiSummaryEl.textContent = `新規 ${newCount}種類${bonusTotal > 0 ? ` / 重複ボーナス +${bonusTotal}pt` : ""}`;
+
+    multiChestPhaseEl.classList.add("hidden");
+    multiItemPhaseEl.classList.remove("hidden");
+  }
+
+  gachaMultiBtn.addEventListener("click", pullGachaMulti);
+  multiChestEl.addEventListener("pointerdown", (evt) => {
+    evt.preventDefault();
+    openMultiChest();
+  });
+  multiSkipBtn.addEventListener("click", () => {
+    if (multiChestEl.classList.contains("open")) return;
+    revealMultiResults();
+  });
+  multiResultClose.addEventListener("click", () => {
+    gachaMultiResultModal.classList.add("hidden");
+  });
 
   let audioCtx = null;
 
@@ -1033,16 +1100,11 @@
     osc.stop(t0 + duration + 0.03);
   }
 
-  function playCollectSound(type) {
+  function playCollectSound() {
     try {
       const ctx = getAudioCtx();
       if (!ctx) return;
-      const freq = 640 + type.base * 40;
-      playTone(ctx, freq, 0, 0.13, "triangle", 0.22);
-      if (type.rare) {
-        playTone(ctx, freq * 1.26, 0.09, 0.13, "triangle", 0.2);
-        playTone(ctx, freq * 1.5, 0.18, 0.22, "triangle", 0.24);
-      }
+      playTone(ctx, 640 + ITEM_BASE_VALUE * 40, 0, 0.13, "triangle", 0.22);
     } catch (e) {
       /* 音声が使えない環境は無視 */
     }
@@ -1082,14 +1144,14 @@
     setTimeout(() => el.remove(), 850);
   }
 
-  function collectItem(itemEl, type, x, y) {
+  function collectItem(itemEl, x, y) {
     if (itemEl.dataset.collected) return;
     itemEl.dataset.collected = "1";
 
-    const gained = type.base * state.clickLevel;
+    const gained = ITEM_BASE_VALUE * state.clickLevel;
     state.points += gained;
     spawnFloatText(x, y, gained);
-    playCollectSound(type);
+    playCollectSound();
 
     itemEl.classList.add("popped");
     setTimeout(() => itemEl.remove(), 220);
@@ -1102,20 +1164,22 @@
     const currentCount = target.querySelectorAll(".item").length;
     if (currentCount >= MAX_ITEMS_ON_MAP) return;
 
-    const type = pickItemType();
+    const mapDef = MAPS.find((m) => m.id === state.currentMap);
+    const photoSrc = pickMapPhoto(mapDef);
+    if (!photoSrc) return;
+
     const x = 10 + Math.random() * 80;
     const y = 22 + Math.random() * 56;
 
     const el = document.createElement("div");
     el.className = "item";
-    if (type.rare) el.classList.add("rare");
-    el.innerHTML = type.svg(itemUidCounter++);
+    el.innerHTML = `<div class="item-photo"><img src="${photoSrc}" alt="" draggable="false"></div>`;
     el.style.left = `${x}%`;
     el.style.top = `${y}%`;
 
     const onCollect = (evt) => {
       evt.preventDefault();
-      collectItem(el, type, x, y);
+      collectItem(el, x, y);
     };
     el.addEventListener("pointerdown", onCollect, { passive: false });
 
@@ -1129,6 +1193,205 @@
       scheduleSpawn();
     }, interval);
   }
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function playQuizCorrectSound() {
+    try {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      playTone(ctx, 880, 0, 0.12, "triangle", 0.22);
+      playTone(ctx, 1175, 0.1, 0.16, "triangle", 0.24);
+    } catch (e) {
+      /* 音声が使えない環境は無視 */
+    }
+  }
+
+  function playQuizWrongSound() {
+    try {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      playTone(ctx, 220, 0, 0.22, "sawtooth", 0.18);
+    } catch (e) {
+      /* 音声が使えない環境は無視 */
+    }
+  }
+
+  const QUIZ_TIME_LIMIT = 15;
+
+  let quizOrder = [];
+  let quizPos = 0;
+  let quizScore = 0;
+  let quizAnswered = false;
+  let quizCurrentAnswer = null;
+  let quizTimerInterval = null;
+
+  function openKyotoQuiz() {
+    quizAreaEl.classList.add("hidden");
+    quizResultEl.classList.add("hidden");
+    quizStartEl.classList.remove("hidden");
+    quizStartTotalEl.textContent = QUIZ_DATA.length;
+
+    quizStartBannerEl.classList.remove("quiz-start-banner");
+    void quizStartBannerEl.offsetWidth;
+    quizStartBannerEl.classList.add("quiz-start-banner");
+
+    setTimeout(() => {
+      quizStartEl.classList.add("hidden");
+      startQuiz();
+    }, 1100);
+  }
+
+  function startQuiz() {
+    quizOrder = shuffle(QUIZ_DATA.map((_, i) => i));
+    quizPos = 0;
+    quizScore = 0;
+    quizAreaEl.classList.remove("hidden");
+    quizResultEl.classList.add("hidden");
+    quizTotalEl.textContent = quizOrder.length;
+    renderQuizQuestion();
+  }
+
+  function renderQuizQuestion() {
+    quizAnswered = false;
+    const q = QUIZ_DATA[quizOrder[quizPos]];
+    quizCurrentAnswer = q.answer;
+    quizIndexEl.textContent = quizPos + 1;
+    quizKanjiEl.textContent = q.kanji;
+    quizChoicesEl.innerHTML = "";
+    shuffle(q.choices).forEach((choice) => {
+      const btn = document.createElement("button");
+      btn.className = "quiz-choice-btn";
+      btn.textContent = choice;
+      btn.addEventListener("click", () => finalizeAnswer(btn, choice === q.answer, q.answer));
+      quizChoicesEl.appendChild(btn);
+    });
+    startQuizTimer();
+  }
+
+  function startQuizTimer() {
+    clearQuizTimer();
+    let remaining = QUIZ_TIME_LIMIT;
+    quizTimerEl.textContent = remaining;
+    quizTimerWrapEl.classList.remove("low");
+    quizTimerInterval = setInterval(() => {
+      remaining -= 1;
+      quizTimerEl.textContent = Math.max(remaining, 0);
+      if (remaining <= 5) quizTimerWrapEl.classList.add("low");
+      if (remaining <= 0) {
+        clearQuizTimer();
+        finalizeAnswer(null, false, quizCurrentAnswer);
+      }
+    }, 1000);
+  }
+
+  function clearQuizTimer() {
+    if (quizTimerInterval) {
+      clearInterval(quizTimerInterval);
+      quizTimerInterval = null;
+    }
+  }
+
+  function finalizeAnswer(selectedBtn, isCorrect, answer) {
+    if (quizAnswered) return;
+    quizAnswered = true;
+    clearQuizTimer();
+
+    if (isCorrect) {
+      quizScore += 1;
+      playQuizCorrectSound();
+    } else {
+      playQuizWrongSound();
+    }
+
+    Array.from(quizChoicesEl.children).forEach((b) => {
+      b.classList.add("disabled");
+      if (b.textContent === answer) b.classList.add("correct");
+      else if (b === selectedBtn) b.classList.add("wrong");
+    });
+
+    setTimeout(() => {
+      quizPos += 1;
+      if (quizPos >= quizOrder.length) {
+        finishQuiz();
+      } else {
+        renderQuizQuestion();
+      }
+    }, 1000);
+  }
+
+  function finishQuiz() {
+    quizAreaEl.classList.add("hidden");
+    quizResultEl.classList.remove("hidden");
+    const total = quizOrder.length;
+    quizResultTextEl.textContent = `${total}問中 ${quizScore}問正解！`;
+    if (quizScore > state.quizHighScore) {
+      state.quizHighScore = quizScore;
+      save();
+    }
+    quizResultBestEl.textContent = `自己ベスト: ${state.quizHighScore} / ${total}`;
+  }
+
+  quizRetryBtn.addEventListener("click", startQuiz);
+
+  const MINIGAME_LIST = [
+    {
+      id: "kyotoquiz",
+      icon: "🗾",
+      name: "京都地名クイズ",
+      desc: "漢字の読み方をあててみよう",
+      viewEl: document.getElementById("minigame-kyotoquiz"),
+      onOpen: openKyotoQuiz,
+      bestText: () =>
+        state.quizHighScore > 0 ? `自己ベスト ${state.quizHighScore} / ${QUIZ_DATA.length}` : "",
+    },
+  ];
+
+  function renderMinigameMenu() {
+    minigameListEl.innerHTML = "";
+    MINIGAME_LIST.forEach((game) => {
+      const best = game.bestText();
+      const card = document.createElement("button");
+      card.className = "minigame-card";
+      card.innerHTML = `
+        <div class="minigame-card-icon">${game.icon}</div>
+        <div class="minigame-card-body">
+          <div class="minigame-card-name">${game.name}</div>
+          <div class="minigame-card-desc">${game.desc}</div>
+          ${best ? `<div class="minigame-card-best">${best}</div>` : ""}
+        </div>
+      `;
+      card.addEventListener("click", () => openMinigame(game));
+      minigameListEl.appendChild(card);
+    });
+  }
+
+  function openMinigame(game) {
+    minigameMenuEl.classList.add("hidden");
+    game.viewEl.classList.remove("hidden");
+    game.viewEl.classList.remove("enter");
+    void game.viewEl.offsetWidth;
+    game.viewEl.classList.add("enter");
+    game.onOpen();
+  }
+
+  function closeMinigame() {
+    clearQuizTimer();
+    MINIGAME_LIST.forEach((game) => game.viewEl.classList.add("hidden"));
+    minigameMenuEl.classList.remove("hidden");
+    renderMinigameMenu();
+  }
+
+  document.querySelectorAll("[data-minigame-back]").forEach((btn) => {
+    btn.addEventListener("click", closeMinigame);
+  });
 
   function tickAuto() {
     if (state.autoLevel > 0) {
@@ -1152,6 +1415,7 @@
   renderAllMaps();
   updateUI();
   renderGachaCollection();
+  renderMinigameMenu();
   scheduleSpawn();
   setInterval(tickAuto, 1000);
   setInterval(save, 5000);

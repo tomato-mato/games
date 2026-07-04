@@ -61,7 +61,10 @@
       <h2 class="screen-title">🎰 ガチャ</h2>
       <div id="gacha-top">
         <button id="gacha-pull-btn">
-          🎰 ガチャを回す <span class="gacha-cost"><span id="gacha-cost">50</span> pt</span>
+          🎰 ガチャを回す <span class="gacha-cost"><span id="gacha-cost">200</span> pt</span>
+        </button>
+        <button id="gacha-multi-btn">
+          🎉 10連ガチャ <span class="gacha-cost"><span id="gacha-multi-cost">2000</span> pt</span>
         </button>
       </div>
       <div id="gacha-collection" class="gacha-grid"><!-- JSで生成 --></div>
@@ -69,10 +72,36 @@
   </section>
 
   <section id="screen-minigame" class="screen">
-    <div class="screen-inner minigame-placeholder">
-      <div class="placeholder-icon">🎮</div>
-      <h2 class="screen-title">ミニゲーム</h2>
-      <p>Coming Soon!<br>近日公開予定のお楽しみコンテンツです。</p>
+    <div class="screen-inner">
+      <div id="minigame-menu">
+        <h2 class="screen-title">🎮 ミニゲーム</h2>
+        <div id="minigame-list"><!-- JSで生成 --></div>
+      </div>
+
+      <div id="minigame-kyotoquiz" class="minigame-view hidden">
+        <button class="minigame-back-btn" data-minigame-back>← ミニゲーム一覧へ</button>
+
+        <div id="quiz-start">
+          <div class="quiz-start-title">🗾 京都地名クイズ</div>
+          <div class="quiz-start-desc">漢字の読み方をあてよう！<br>1問15秒、全<span id="quiz-start-total">1</span>問</div>
+          <div id="quiz-start-banner" class="quiz-start-banner">スタート！</div>
+        </div>
+
+        <div id="quiz-area" class="hidden">
+          <div id="quiz-progress">
+            <span>Q <span id="quiz-index">1</span> / <span id="quiz-total">1</span></span>
+            <span id="quiz-timer-wrap">⏱ <span id="quiz-timer">15</span></span>
+          </div>
+          <div id="quiz-kanji"></div>
+          <div id="quiz-choices"><!-- JSで生成 --></div>
+        </div>
+        <div id="quiz-result" class="hidden">
+          <div class="quiz-result-emoji">🎉</div>
+          <p id="quiz-result-text"></p>
+          <p id="quiz-result-best"></p>
+          <button id="quiz-retry-btn">もう一度挑戦する</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -140,6 +169,46 @@
       <h2 id="gacha-result-name"></h2>
       <p id="gacha-result-sub"></p>
       <button id="gacha-result-close">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="gacha-multi-result" class="modal hidden">
+  <div class="modal-box gacha-multi-box">
+    <div id="multi-chest-phase" class="chest-phase">
+      <div class="chest-scene">
+        <div id="multi-chest" class="chest">
+          <div class="chest-glow"></div>
+          <svg viewBox="0 0 60 60" class="chest-body-svg">
+            <defs>
+              <linearGradient id="cbBody2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#c9975f"/><stop offset="1" stop-color="#8a5a30"/>
+              </linearGradient>
+            </defs>
+            <rect x="8" y="26" width="44" height="26" rx="3" fill="url(#cbBody2)" stroke="#5a3a1a" stroke-width="1.5"/>
+            <rect x="8" y="34" width="44" height="5" fill="#e8a72a" stroke="#b9821e" stroke-width="0.8"/>
+            <rect x="26" y="30" width="8" height="10" rx="2" fill="#e8a72a" stroke="#b9821e" stroke-width="1"/>
+            <circle cx="30" cy="35" r="1.6" fill="#5a3a1a"/>
+          </svg>
+          <svg viewBox="0 0 60 60" class="chest-lid-svg">
+            <defs>
+              <linearGradient id="clLid2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#d9aa6f"/><stop offset="1" stop-color="#9a6a3a"/>
+              </linearGradient>
+            </defs>
+            <path d="M8 30 L8 18 Q8 8 30 8 Q52 8 52 18 L52 30 Z" fill="url(#clLid2)" stroke="#5a3a1a" stroke-width="1.5"/>
+            <path d="M8 22 Q30 30 52 22" fill="none" stroke="#e8a72a" stroke-width="2.5"/>
+          </svg>
+        </div>
+      </div>
+      <p class="chest-hint">タップして開ける！</p>
+      <button id="multi-skip-btn" class="multi-skip-btn">スキップ ▶</button>
+    </div>
+    <div id="multi-item-phase" class="item-phase hidden">
+      <h2 class="multi-result-title">10連ガチャ結果</h2>
+      <div id="multi-item-grid" class="gacha-multi-grid"><!-- JSで生成 --></div>
+      <p id="multi-summary"></p>
+      <button id="multi-result-close">OK</button>
     </div>
   </div>
 </div>
