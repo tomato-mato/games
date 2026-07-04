@@ -52,6 +52,14 @@
             <span class="upgrade-cost"><span id="spawn-cost">30</span> pt</span>
           </div>
         </button>
+        <button class="upgrade-btn" id="buy-ticket">
+          <div class="upgrade-name">🎫 ガチャチケット交換</div>
+          <div class="upgrade-desc">ポイントをガチャチケットに交換する</div>
+          <div class="upgrade-row">
+            <span class="upgrade-level">所持 <span id="ticket-count">0</span>枚</span>
+            <span class="upgrade-cost">2000 pt</span>
+          </div>
+        </button>
       </div>
     </div>
   </section>
@@ -59,12 +67,13 @@
   <section id="screen-gacha" class="screen">
     <div class="screen-inner">
       <h2 class="screen-title">🎰 ガチャ</h2>
+      <div id="gacha-ticket-display">🎫 所持チケット: <span id="gacha-ticket-count">0</span>枚</div>
       <div id="gacha-top">
         <button id="gacha-pull-btn">
-          🎰 ガチャを回す <span class="gacha-cost"><span id="gacha-cost">200</span> pt</span>
+          🎰 ガチャを回す <span class="gacha-cost"><span id="gacha-cost">1</span>枚</span>
         </button>
         <button id="gacha-multi-btn">
-          🎉 10連ガチャ <span class="gacha-cost"><span id="gacha-multi-cost">2000</span> pt</span>
+          🎉 10連ガチャ <span class="gacha-cost"><span id="gacha-multi-cost">10</span>枚</span>
         </button>
       </div>
       <div id="gacha-collection" class="gacha-grid"><!-- JSで生成 --></div>
@@ -77,19 +86,23 @@
         <h2 class="screen-title">🎮 ミニゲーム</h2>
         <div id="minigame-list"><!-- JSで生成 --></div>
       </div>
+    </div>
+  </section>
 
-      <div id="minigame-kyotoquiz" class="minigame-view hidden">
-        <button class="minigame-back-btn" data-minigame-back>← ミニゲーム一覧へ</button>
+  <div id="minigame-kyotoquiz" class="minigame-view quiz-fullscreen hidden">
+    <div class="quiz-fullscreen-inner">
+      <h2 class="screen-title quiz-fullscreen-title">🗾 京都地名クイズ</h2>
 
+      <div class="quiz-fullscreen-body">
         <div id="quiz-start">
           <div class="quiz-start-title">🗾 京都地名クイズ</div>
-          <div class="quiz-start-desc">漢字の読み方をあてよう！<br>1問15秒、全<span id="quiz-start-total">1</span>問</div>
+          <div class="quiz-start-desc">漢字の読み方をあてよう！<br>1問15秒、全<span id="quiz-start-total">10</span>問</div>
           <div id="quiz-start-banner" class="quiz-start-banner">スタート！</div>
         </div>
 
         <div id="quiz-area" class="hidden">
           <div id="quiz-progress">
-            <span>Q <span id="quiz-index">1</span> / <span id="quiz-total">1</span></span>
+            <span>Q <span id="quiz-index">1</span> / <span id="quiz-total">10</span></span>
             <span id="quiz-timer-wrap">⏱ <span id="quiz-timer">15</span></span>
           </div>
           <div id="quiz-kanji"></div>
@@ -102,8 +115,42 @@
           <button id="quiz-retry-btn">もう一度挑戦する</button>
         </div>
       </div>
+
+      <button class="minigame-back-btn minigame-back-btn-bottom" data-minigame-back>← ミニゲーム一覧へ</button>
     </div>
-  </section>
+  </div>
+
+  <div id="minigame-oddoneout" class="minigame-view quiz-fullscreen hidden">
+    <div class="quiz-fullscreen-inner">
+      <h2 class="screen-title quiz-fullscreen-title">🔍 仲間外れゲーム</h2>
+
+      <div class="quiz-fullscreen-body">
+        <div id="oddoneout-start">
+          <div class="quiz-start-title">🔍 仲間外れゲーム</div>
+          <div class="quiz-start-desc">京都に関わるものが3つ、関係ないものが1つ。<br>仲間外れを見つけよう！1問12秒、全<span id="oddoneout-start-total">8</span>問</div>
+          <div id="oddoneout-start-banner" class="quiz-start-banner">スタート！</div>
+        </div>
+
+        <div id="oddoneout-area" class="hidden">
+          <div id="oddoneout-progress">
+            <span>Q <span id="oddoneout-index">1</span> / <span id="oddoneout-total">8</span></span>
+            <span id="oddoneout-timer-wrap">⏱ <span id="oddoneout-timer">12</span></span>
+          </div>
+          <div id="oddoneout-grid"><!-- JSで生成 --></div>
+          <p id="oddoneout-explanation" class="oddoneout-explanation hidden"></p>
+        </div>
+
+        <div id="oddoneout-result" class="hidden">
+          <div class="quiz-result-emoji">🔍</div>
+          <p id="oddoneout-result-text"></p>
+          <p id="oddoneout-result-best"></p>
+          <button id="oddoneout-retry-btn">もう一度挑戦する</button>
+        </div>
+      </div>
+
+      <button class="minigame-back-btn minigame-back-btn-bottom" data-minigame-back>← ミニゲーム一覧へ</button>
+    </div>
+  </div>
 
   </main>
 
@@ -116,20 +163,22 @@
 
 </div>
 
-<div id="welcome-back" class="modal hidden">
-  <div class="modal-box">
-    <h2>おかえりなさい！</h2>
-    <p id="welcome-text"></p>
-    <button id="welcome-close">OK</button>
-  </div>
-</div>
-
 <div id="landmark-info" class="modal hidden">
   <div class="modal-box landmark-info-box">
     <div id="landmark-info-icon" class="landmark-info-icon"></div>
     <h2 id="landmark-info-name"></h2>
     <p id="landmark-info-desc"></p>
     <button id="landmark-info-close">OK</button>
+  </div>
+</div>
+
+<div id="gacha-item-info" class="modal hidden">
+  <div class="modal-box gacha-result-box" id="gacha-item-info-box">
+    <div id="gacha-item-info-icon" class="gacha-result-icon"></div>
+    <div id="gacha-item-info-rarity" class="gacha-result-rarity"></div>
+    <h2 id="gacha-item-info-name"></h2>
+    <p id="gacha-item-info-count"></p>
+    <button id="gacha-item-info-close">OK</button>
   </div>
 </div>
 
@@ -213,6 +262,8 @@
   </div>
 </div>
 
+<script src="quiz-data.js"></script>
+<script src="oddoneout-data.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

@@ -2,8 +2,6 @@
   "use strict";
 
   const STORAGE_KEY = "kyotoOmiyageClickerSave";
-  const OFFLINE_CAP_SECONDS = 8 * 3600;
-  const OFFLINE_EFFICIENCY = 0.5;
 
   const MAX_ITEMS_ON_MAP = 6;
 
@@ -19,7 +17,7 @@
     { passive: false }
   );
 
-  function buildMapBackgroundSVG(theme) {
+  function buildMapBackgroundSVG(theme, decorSvg) {
     return `<svg class="map-bg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       <rect x="0" y="0" width="100" height="100" fill="${theme.base}"/>
       <g fill="${theme.mountain1}">
@@ -68,11 +66,105 @@
         <line x1="15" y1="67" x2="93" y2="67"/><line x1="15" y1="79" x2="93" y2="79"/>
         <line x1="15" y1="90" x2="93" y2="90"/>
       </g>
+      ${decorSvg || ""}
       <g fill="#ffffff" opacity="0.55">
         <ellipse cx="14" cy="6" rx="6" ry="2.6"/><ellipse cx="20" cy="5" rx="5" ry="2.2"/>
         <ellipse cx="83" cy="8" rx="6" ry="2.6"/><ellipse cx="89" cy="7" rx="4.5" ry="2"/>
       </g>
     </svg>`;
+  }
+
+  // マップごとに「京都らしさ」を出す装飾(五重塔・竹林・鳥居のトンネルなど)
+  function mapDecorSVG(mapId) {
+    if (mapId === "ekimae") {
+      return `<g opacity="0.85">
+        <g transform="translate(86 62)">
+          <rect x="-1.2" y="-30" width="2.4" height="30" fill="#6b4321"/>
+          <path d="M-10 -30 L0 -34 L10 -30 L8 -26 L-8 -26 Z" fill="#8c1f2e" stroke="#5a1420" stroke-width="0.4"/>
+          <path d="M-9 -22 L0 -26 L9 -22 L7 -18 L-7 -18 Z" fill="#8c1f2e" stroke="#5a1420" stroke-width="0.4"/>
+          <path d="M-8 -14 L0 -18 L8 -14 L6 -10 L-6 -10 Z" fill="#8c1f2e" stroke="#5a1420" stroke-width="0.4"/>
+          <path d="M-7 -6 L0 -10 L7 -6 L5 -2 L-5 -2 Z" fill="#8c1f2e" stroke="#5a1420" stroke-width="0.4"/>
+          <path d="M-6 2 L0 -2 L6 2 L4 6 L-4 6 Z" fill="#8c1f2e" stroke="#5a1420" stroke-width="0.4"/>
+          <circle cx="0" cy="-36" r="1.2" fill="#e8a72a"/>
+        </g>
+        <g transform="translate(10 80)" fill="#a8283a">
+          <rect x="-8" y="-1" width="16" height="2" rx="1"/>
+          <rect x="-8" y="3" width="16" height="1.6" rx="0.8"/>
+          <rect x="-6.5" y="-1" width="1.6" height="14"/>
+          <rect x="5" y="-1" width="1.6" height="14"/>
+        </g>
+      </g>`;
+    }
+    if (mapId === "arashiyama") {
+      return `<g opacity="0.9">
+        <g stroke="#3f6b2a" stroke-width="1.4" stroke-linecap="round">
+          <line x1="4" y1="97" x2="3" y2="55"/><line x1="8" y1="98" x2="7" y2="50"/>
+          <line x1="12" y1="97" x2="12" y2="58"/><line x1="16" y1="98" x2="15" y2="52"/>
+        </g>
+        <g fill="#c9e8a0" opacity="0.6">
+          <circle cx="3" cy="70" r="0.9"/><circle cx="3" cy="60" r="0.9"/>
+          <circle cx="7" cy="66" r="0.9"/><circle cx="7" cy="56" r="0.9"/>
+          <circle cx="12" cy="72" r="0.9"/><circle cx="12" cy="62" r="0.9"/>
+          <circle cx="15" cy="68" r="0.9"/><circle cx="15" cy="58" r="0.9"/>
+        </g>
+        <g>
+          <rect x="40" y="66" width="26" height="2.2" rx="1" fill="#8a5a30"/>
+          <rect x="42" y="63" width="1.4" height="3" fill="#6b4321"/>
+          <rect x="49" y="63" width="1.4" height="3" fill="#6b4321"/>
+          <rect x="56" y="63" width="1.4" height="3" fill="#6b4321"/>
+          <rect x="63" y="63" width="1.4" height="3" fill="#6b4321"/>
+        </g>
+      </g>`;
+    }
+    if (mapId === "fushimi") {
+      return `<g opacity="0.92" fill="#c0392b">
+        <g transform="translate(55 85)">
+          <rect x="-9" y="-1" width="18" height="2"/><rect x="-9" y="3" width="18" height="1.6"/>
+          <rect x="-7.5" y="-1" width="1.8" height="14"/><rect x="5.7" y="-1" width="1.8" height="14"/>
+        </g>
+        <g transform="translate(60 72) scale(0.82)">
+          <rect x="-9" y="-1" width="18" height="2"/><rect x="-9" y="3" width="18" height="1.6"/>
+          <rect x="-7.5" y="-1" width="1.8" height="14"/><rect x="5.7" y="-1" width="1.8" height="14"/>
+        </g>
+        <g transform="translate(64 60) scale(0.66)">
+          <rect x="-9" y="-1" width="18" height="2"/><rect x="-9" y="3" width="18" height="1.6"/>
+          <rect x="-7.5" y="-1" width="1.8" height="14"/><rect x="5.7" y="-1" width="1.8" height="14"/>
+        </g>
+        <g transform="translate(67 50) scale(0.52)">
+          <rect x="-9" y="-1" width="18" height="2"/><rect x="-9" y="3" width="18" height="1.6"/>
+          <rect x="-7.5" y="-1" width="1.8" height="14"/><rect x="5.7" y="-1" width="1.8" height="14"/>
+        </g>
+      </g>`;
+    }
+    if (mapId === "maizuru") {
+      return `<g opacity="0.9">
+        <g fill="#8c1f2e">
+          <rect x="15" y="55" width="12" height="10"/>
+          <rect x="28" y="55" width="12" height="10"/>
+        </g>
+        <path d="M15 55 L21 49 L27 55 Z M28 55 L34 49 L40 55 Z" fill="#5a1420"/>
+        <g transform="translate(70 62)">
+          <path d="M-10 0 Q0 6 10 0 L8 3 Q0 8 -8 3 Z" fill="#3a4a54"/>
+          <line x1="0" y1="0" x2="0" y2="-10" stroke="#3a4a54" stroke-width="0.8"/>
+          <path d="M0 -10 L6 -3 L0 -3 Z" fill="#eef2f5"/>
+        </g>
+      </g>`;
+    }
+    if (mapId === "amanohashidate") {
+      return `<g opacity="0.92">
+        <path d="M20 55 Q45 48 78 58" fill="none" stroke="#245038" stroke-width="4.5" stroke-linecap="round"/>
+        <g fill="#245038">
+          <circle cx="26" cy="54" r="1.6"/><circle cx="34" cy="51" r="1.6"/><circle cx="42" cy="50" r="1.6"/>
+          <circle cx="50" cy="50" r="1.6"/><circle cx="58" cy="51" r="1.6"/><circle cx="66" cy="53" r="1.6"/>
+          <circle cx="73" cy="56" r="1.6"/>
+        </g>
+        <g transform="translate(20 55) scale(0.5)" fill="#a8283a">
+          <rect x="-9" y="-1" width="18" height="2"/><rect x="-9" y="3" width="18" height="1.6"/>
+          <rect x="-7.5" y="-1" width="1.8" height="10"/><rect x="5.7" y="-1" width="1.8" height="10"/>
+        </g>
+      </g>`;
+    }
+    return "";
   }
 
   function tanukiSVG(uid) {
@@ -571,9 +663,10 @@
     </svg>`;
   }
 
-  const GACHA_COST = 200;
+  const GACHA_TICKET_COST = 1;
   const GACHA_MULTI_COUNT = 10;
-  const GACHA_MULTI_COST = 2000;
+  const GACHA_MULTI_TICKET_COST = 10;
+  const TICKET_EXCHANGE_COST = 2000;
   const GACHA_ITEMS = [
     { id: "namayatsu", name: "生八つ橋", svg: namayatsuSVG, rarity: "common", weight: 10, dupBonus: 3 },
     { id: "otabe", name: "おたべ", svg: otabeSVG, rarity: "common", weight: 10, dupBonus: 3 },
@@ -602,43 +695,31 @@
     legendary: "レジェンダリー",
   };
 
-  const QUIZ_DATA = [
-    { kanji: "祇園", answer: "ぎおん", choices: ["ぎおん", "しえん", "ぎえん", "きおん"] },
-    { kanji: "嵐山", answer: "あらしやま", choices: ["あらしやま", "らんざん", "あらしさん", "あらんやま"] },
-    { kanji: "太秦", answer: "うずまさ", choices: ["うずまさ", "たいしん", "ふとはた", "たしん"] },
-    { kanji: "先斗町", answer: "ぽんとちょう", choices: ["ぽんとちょう", "せんとまち", "さきとちょう", "せんとちょう"] },
-    { kanji: "烏丸", answer: "からすま", choices: ["からすま", "からすまる", "うまる", "とりまる"] },
-    { kanji: "河原町", answer: "かわらまち", choices: ["かわらまち", "かはらちょう", "かわはらまち", "がわらまち"] },
-    { kanji: "伏見", answer: "ふしみ", choices: ["ふしみ", "ふくみ", "ふせみ", "ぶしみ"] },
-    { kanji: "化野", answer: "あだしの", choices: ["あだしの", "けの", "かの", "ばけの"] },
-    { kanji: "帷子ノ辻", answer: "かたびらのつじ", choices: ["かたびらのつじ", "いちょうのつじ", "とばりのつじ", "かたこのつじ"] },
-    { kanji: "出町柳", answer: "でまちやなぎ", choices: ["でまちやなぎ", "しゅっちょうやなぎ", "でまちりゅう", "いずまちやなぎ"] },
-    { kanji: "東寺", answer: "とうじ", choices: ["とうじ", "ひがしでら", "とうてら", "あずまでら"] },
-    { kanji: "北野天満宮", answer: "きたのてんまんぐう", choices: ["きたのてんまんぐう", "ほくやてんまんぐう", "きたのてんまんぐ", "ほくのてんまんぐう"] },
-    { kanji: "銀閣寺", answer: "ぎんかくじ", choices: ["ぎんかくじ", "ぎんかくてら", "ぎんこうじ", "ぎんがくじ"] },
-    { kanji: "金閣寺", answer: "きんかくじ", choices: ["きんかくじ", "きんかくてら", "こんかくじ", "きんがくじ"] },
-    { kanji: "二条城", answer: "にじょうじょう", choices: ["にじょうじょう", "ふたじょうじょう", "にじょうしろ", "にでらじょう"] },
-    { kanji: "天橋立", answer: "あまのはしだて", choices: ["あまのはしだて", "てんきょうりつ", "あまばしだて", "てんばしだて"] },
-  ];
+  const QUIZ_DATA = KYOTO_QUIZ_DATA;
 
   const mapStackEl = document.getElementById("map-stack");
   const mapSwitcherEl = document.getElementById("map-switcher");
   const scoreEl = document.getElementById("score");
   const ppsEl = document.getElementById("pps");
-  const welcomeModal = document.getElementById("welcome-back");
-  const welcomeText = document.getElementById("welcome-text");
-  const welcomeClose = document.getElementById("welcome-close");
-
   const landmarkInfoModal = document.getElementById("landmark-info");
   const landmarkInfoIcon = document.getElementById("landmark-info-icon");
   const landmarkInfoName = document.getElementById("landmark-info-name");
   const landmarkInfoDesc = document.getElementById("landmark-info-desc");
   const landmarkInfoClose = document.getElementById("landmark-info-close");
 
+  const gachaItemInfoModal = document.getElementById("gacha-item-info");
+  const gachaItemInfoIcon = document.getElementById("gacha-item-info-icon");
+  const gachaItemInfoRarity = document.getElementById("gacha-item-info-rarity");
+  const gachaItemInfoName = document.getElementById("gacha-item-info-name");
+  const gachaItemInfoCount = document.getElementById("gacha-item-info-count");
+  const gachaItemInfoClose = document.getElementById("gacha-item-info-close");
+  const gachaItemInfoBox = document.getElementById("gacha-item-info-box");
+
   const tabButtons = document.querySelectorAll(".tab-btn");
   const tabPanels = document.querySelectorAll(".screen");
   const gachaPullBtn = document.getElementById("gacha-pull-btn");
   const gachaCostEl = document.getElementById("gacha-cost");
+  const gachaTicketCountEl = document.getElementById("gacha-ticket-count");
   const gachaCollectionEl = document.getElementById("gacha-collection");
   const gachaResultModal = document.getElementById("gacha-result");
   const gachaResultBox = document.getElementById("gacha-result-box");
@@ -680,6 +761,21 @@
   const quizResultBestEl = document.getElementById("quiz-result-best");
   const quizRetryBtn = document.getElementById("quiz-retry-btn");
 
+  const oddStartEl = document.getElementById("oddoneout-start");
+  const oddStartTotalEl = document.getElementById("oddoneout-start-total");
+  const oddStartBannerEl = document.getElementById("oddoneout-start-banner");
+  const oddAreaEl = document.getElementById("oddoneout-area");
+  const oddIndexEl = document.getElementById("oddoneout-index");
+  const oddTotalEl = document.getElementById("oddoneout-total");
+  const oddTimerWrapEl = document.getElementById("oddoneout-timer-wrap");
+  const oddTimerEl = document.getElementById("oddoneout-timer");
+  const oddGridEl = document.getElementById("oddoneout-grid");
+  const oddExplanationEl = document.getElementById("oddoneout-explanation");
+  const oddResultEl = document.getElementById("oddoneout-result");
+  const oddResultTextEl = document.getElementById("oddoneout-result-text");
+  const oddResultBestEl = document.getElementById("oddoneout-result-best");
+  const oddRetryBtn = document.getElementById("oddoneout-retry-btn");
+
   const upgrades = {
     click: {
       btn: document.getElementById("buy-click"),
@@ -708,6 +804,9 @@
     },
   };
 
+  const buyTicketBtn = document.getElementById("buy-ticket");
+  const ticketCountEl = document.getElementById("ticket-count");
+
   let state = {
     points: 0,
     clickLevel: 1,
@@ -716,8 +815,9 @@
     unlockedMaps: ["ekimae"],
     currentMap: "ekimae",
     gachaCollection: {},
+    gachaTickets: 0,
     quizHighScore: 0,
-    lastSaved: Date.now(),
+    oddOneOutHighScore: 0,
   };
 
   function costFor(key) {
@@ -738,24 +838,7 @@
   }
 
   function save() {
-    state.lastSaved = Date.now();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
-
-  function applyOfflineEarnings() {
-    const elapsedSec = Math.min(
-      OFFLINE_CAP_SECONDS,
-      Math.max(0, (Date.now() - state.lastSaved) / 1000)
-    );
-    if (state.autoLevel > 0 && elapsedSec > 30) {
-      const gained = Math.floor(elapsedSec * state.autoLevel * OFFLINE_EFFICIENCY);
-      if (gained > 0) {
-        state.points += gained;
-        const mins = Math.floor(elapsedSec / 60);
-        welcomeText.textContent = `${mins}分間の自動収集で ${gained} pt 獲得しました！`;
-        welcomeModal.classList.remove("hidden");
-      }
-    }
   }
 
   function updateUI() {
@@ -785,10 +868,14 @@
       upgrades.spawn.costEl.textContent = "MAX";
     }
 
-    gachaCostEl.textContent = GACHA_COST;
-    gachaPullBtn.classList.toggle("disabled", state.points < GACHA_COST);
-    gachaMultiCostEl.textContent = GACHA_MULTI_COST;
-    gachaMultiBtn.classList.toggle("disabled", state.points < GACHA_MULTI_COST);
+    ticketCountEl.textContent = state.gachaTickets;
+    buyTicketBtn.classList.toggle("disabled", state.points < TICKET_EXCHANGE_COST);
+
+    gachaTicketCountEl.textContent = state.gachaTickets;
+    gachaCostEl.textContent = GACHA_TICKET_COST;
+    gachaPullBtn.classList.toggle("disabled", state.gachaTickets < GACHA_TICKET_COST);
+    gachaMultiCostEl.textContent = GACHA_MULTI_TICKET_COST;
+    gachaMultiBtn.classList.toggle("disabled", state.gachaTickets < GACHA_MULTI_TICKET_COST);
 
     renderMapSwitcher();
   }
@@ -834,7 +921,7 @@
         .map((lm) => `<div class="landmark" style="left:${lm.left}%; top:${lm.top}%;"><span class="pin">${lm.icon}</span><span class="label">${lm.name}</span></div>`)
         .join("");
       const mascotHtml = `<div class="mascot">${buildMascotSVG(mapDef.mascot, itemUidCounter++)}</div>`;
-      el.innerHTML = buildMapBackgroundSVG(mapDef.theme) + landmarksHtml + mascotHtml;
+      el.innerHTML = buildMapBackgroundSVG(mapDef.theme, mapDecorSVG(mapDef.id)) + landmarksHtml + mascotHtml;
       mapStackEl.appendChild(el);
 
       const mascotEl = el.querySelector(".mascot");
@@ -913,6 +1000,16 @@
   upgrades.auto.btn.addEventListener("click", () => buy("auto"));
   upgrades.spawn.btn.addEventListener("click", () => buy("spawn"));
 
+  function buyGachaTicket() {
+    if (state.points < TICKET_EXCHANGE_COST) return;
+    state.points -= TICKET_EXCHANGE_COST;
+    state.gachaTickets += 1;
+    updateUI();
+    save();
+  }
+
+  buyTicketBtn.addEventListener("click", buyGachaTicket);
+
   tabButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const screen = btn.dataset.screen;
@@ -939,15 +1036,28 @@
       card.innerHTML = count > 0
         ? `${item.svg(itemUidCounter++)}<span class="gacha-count">×${count}</span>`
         : `<span class="gacha-locked">❔</span>`;
+      if (count > 0) {
+        card.addEventListener("click", () => showGachaItemInfo(item, count));
+      }
       gachaCollectionEl.appendChild(card);
     }
+  }
+
+  function showGachaItemInfo(item, count) {
+    gachaItemInfoBox.className = `modal-box gacha-result-box rarity-${item.rarity}`;
+    gachaItemInfoIcon.innerHTML = item.svg(itemUidCounter++);
+    gachaItemInfoRarity.textContent = RARITY_LABEL[item.rarity];
+    gachaItemInfoName.textContent = item.name;
+    gachaItemInfoCount.textContent = `所持数 ×${count}`;
+    gachaItemInfoModal.classList.remove("hidden");
+    playGreetingSound();
   }
 
   let pendingGachaItem = null;
 
   function pullGacha() {
-    if (state.points < GACHA_COST) return;
-    state.points -= GACHA_COST;
+    if (state.gachaTickets < GACHA_TICKET_COST) return;
+    state.gachaTickets -= GACHA_TICKET_COST;
 
     const item = pickGachaItem();
     const owned = state.gachaCollection[item.id] || 0;
@@ -1004,8 +1114,8 @@
   let pendingMultiResults = null;
 
   function pullGachaMulti() {
-    if (state.points < GACHA_MULTI_COST) return;
-    state.points -= GACHA_MULTI_COST;
+    if (state.gachaTickets < GACHA_MULTI_TICKET_COST) return;
+    state.gachaTickets -= GACHA_MULTI_TICKET_COST;
 
     const results = [];
     for (let i = 0; i < GACHA_MULTI_COUNT; i++) {
@@ -1244,6 +1354,7 @@
   }
 
   const QUIZ_TIME_LIMIT = 15;
+  const QUIZ_ROUND_SIZE = 10;
 
   let quizOrder = [];
   let quizPos = 0;
@@ -1256,7 +1367,7 @@
     quizAreaEl.classList.add("hidden");
     quizResultEl.classList.add("hidden");
     quizStartEl.classList.remove("hidden");
-    quizStartTotalEl.textContent = QUIZ_DATA.length;
+    quizStartTotalEl.textContent = Math.min(QUIZ_ROUND_SIZE, QUIZ_DATA.length);
 
     quizStartBannerEl.classList.remove("quiz-start-banner");
     void quizStartBannerEl.offsetWidth;
@@ -1269,7 +1380,7 @@
   }
 
   function startQuiz() {
-    quizOrder = shuffle(QUIZ_DATA.map((_, i) => i));
+    quizOrder = shuffle(QUIZ_DATA.map((_, i) => i)).slice(0, QUIZ_ROUND_SIZE);
     quizPos = 0;
     quizScore = 0;
     quizAreaEl.classList.remove("hidden");
@@ -1360,6 +1471,136 @@
 
   quizRetryBtn.addEventListener("click", startQuiz);
 
+  const ODDONEOUT_TIME_LIMIT = 12;
+  const ODDONEOUT_ROUND_SIZE = 8;
+
+  let oddOrder = [];
+  let oddPos = 0;
+  let oddScore = 0;
+  let oddAnswered = false;
+  let oddCurrentItems = [];
+  let oddCurrentExplanation = "";
+  let oddTimerInterval = null;
+
+  function openOddOneOut() {
+    oddAreaEl.classList.add("hidden");
+    oddResultEl.classList.add("hidden");
+    oddStartEl.classList.remove("hidden");
+    oddStartTotalEl.textContent = Math.min(ODDONEOUT_ROUND_SIZE, KYOTO_ODDONEOUT_DATA.length);
+
+    oddStartBannerEl.classList.remove("quiz-start-banner");
+    void oddStartBannerEl.offsetWidth;
+    oddStartBannerEl.classList.add("quiz-start-banner");
+
+    setTimeout(() => {
+      oddStartEl.classList.add("hidden");
+      startOddOneOut();
+    }, 1100);
+  }
+
+  function startOddOneOut() {
+    oddOrder = shuffle(KYOTO_ODDONEOUT_DATA.map((_, i) => i)).slice(0, ODDONEOUT_ROUND_SIZE);
+    oddPos = 0;
+    oddScore = 0;
+    oddAreaEl.classList.remove("hidden");
+    oddResultEl.classList.add("hidden");
+    oddTotalEl.textContent = oddOrder.length;
+    renderOddOneOutRound();
+  }
+
+  function renderOddOneOutRound() {
+    oddAnswered = false;
+    oddExplanationEl.classList.add("hidden");
+    oddExplanationEl.textContent = "";
+
+    const round = KYOTO_ODDONEOUT_DATA[oddOrder[oddPos]];
+    oddCurrentExplanation = round.explanation;
+    oddIndexEl.textContent = oddPos + 1;
+
+    oddCurrentItems = shuffle(
+      round.items.map((item, i) => ({ ...item, isOdd: i === round.oddIndex }))
+    );
+
+    oddGridEl.innerHTML = "";
+    oddCurrentItems.forEach((item) => {
+      const btn = document.createElement("button");
+      btn.className = "oddoneout-card";
+      btn.innerHTML = `<span class="oddoneout-card-emoji">${item.emoji}</span><span class="oddoneout-card-label">${item.label}</span>`;
+      btn.addEventListener("click", () => finalizeOddAnswer(btn, item.isOdd));
+      oddGridEl.appendChild(btn);
+    });
+
+    startOddTimer();
+  }
+
+  function startOddTimer() {
+    clearOddTimer();
+    let remaining = ODDONEOUT_TIME_LIMIT;
+    oddTimerEl.textContent = remaining;
+    oddTimerWrapEl.classList.remove("low");
+    oddTimerInterval = setInterval(() => {
+      remaining -= 1;
+      oddTimerEl.textContent = Math.max(remaining, 0);
+      if (remaining <= 5) oddTimerWrapEl.classList.add("low");
+      if (remaining <= 0) {
+        clearOddTimer();
+        finalizeOddAnswer(null, false);
+      }
+    }, 1000);
+  }
+
+  function clearOddTimer() {
+    if (oddTimerInterval) {
+      clearInterval(oddTimerInterval);
+      oddTimerInterval = null;
+    }
+  }
+
+  function finalizeOddAnswer(selectedBtn, isCorrect) {
+    if (oddAnswered) return;
+    oddAnswered = true;
+    clearOddTimer();
+
+    if (isCorrect) {
+      oddScore += 1;
+      playQuizCorrectSound();
+    } else {
+      playQuizWrongSound();
+    }
+
+    Array.from(oddGridEl.children).forEach((b, i) => {
+      b.classList.add("disabled");
+      if (oddCurrentItems[i].isOdd) b.classList.add("correct");
+      else if (b === selectedBtn) b.classList.add("wrong");
+    });
+
+    oddExplanationEl.textContent = oddCurrentExplanation;
+    oddExplanationEl.classList.remove("hidden");
+
+    setTimeout(() => {
+      oddPos += 1;
+      if (oddPos >= oddOrder.length) {
+        finishOddOneOut();
+      } else {
+        renderOddOneOutRound();
+      }
+    }, 1400);
+  }
+
+  function finishOddOneOut() {
+    oddAreaEl.classList.add("hidden");
+    oddResultEl.classList.remove("hidden");
+    const total = oddOrder.length;
+    oddResultTextEl.textContent = `${total}問中 ${oddScore}問正解！`;
+    if (oddScore > state.oddOneOutHighScore) {
+      state.oddOneOutHighScore = oddScore;
+      save();
+    }
+    oddResultBestEl.textContent = `自己ベスト: ${state.oddOneOutHighScore} / ${total}`;
+  }
+
+  oddRetryBtn.addEventListener("click", startOddOneOut);
+
   const MINIGAME_LIST = [
     {
       id: "kyotoquiz",
@@ -1369,7 +1610,19 @@
       viewEl: document.getElementById("minigame-kyotoquiz"),
       onOpen: openKyotoQuiz,
       bestText: () =>
-        state.quizHighScore > 0 ? `自己ベスト ${state.quizHighScore} / ${QUIZ_DATA.length}` : "",
+        state.quizHighScore > 0 ? `自己ベスト ${state.quizHighScore} / ${Math.min(QUIZ_ROUND_SIZE, QUIZ_DATA.length)}` : "",
+    },
+    {
+      id: "oddoneout",
+      icon: "🔍",
+      name: "仲間外れゲーム",
+      desc: "京都に関係ないものを見つけよう",
+      viewEl: document.getElementById("minigame-oddoneout"),
+      onOpen: openOddOneOut,
+      bestText: () =>
+        state.oddOneOutHighScore > 0
+          ? `自己ベスト ${state.oddOneOutHighScore} / ${Math.min(ODDONEOUT_ROUND_SIZE, KYOTO_ODDONEOUT_DATA.length)}`
+          : "",
     },
   ];
 
@@ -1403,6 +1656,7 @@
 
   function closeMinigame() {
     clearQuizTimer();
+    clearOddTimer();
     MINIGAME_LIST.forEach((game) => game.viewEl.classList.add("hidden"));
     minigameMenuEl.classList.remove("hidden");
     renderMinigameMenu();
@@ -1419,18 +1673,15 @@
     }
   }
 
-  welcomeClose.addEventListener("click", () => {
-    welcomeModal.classList.add("hidden");
-    updateUI();
-    save();
-  });
-
   landmarkInfoClose.addEventListener("click", () => {
     landmarkInfoModal.classList.add("hidden");
   });
 
+  gachaItemInfoClose.addEventListener("click", () => {
+    gachaItemInfoModal.classList.add("hidden");
+  });
+
   load();
-  applyOfflineEarnings();
   renderAllMaps();
   updateUI();
   renderGachaCollection();
