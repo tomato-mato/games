@@ -1144,10 +1144,12 @@
     setTimeout(() => el.remove(), 850);
   }
 
-  function collectItem(itemEl, x, y) {
+  function collectItem(itemEl) {
     if (itemEl.dataset.collected) return;
     itemEl.dataset.collected = "1";
 
+    const x = parseFloat(itemEl.style.left);
+    const y = parseFloat(itemEl.style.top);
     const gained = ITEM_BASE_VALUE * state.clickLevel;
     state.points += gained;
     spawnFloatText(x, y, gained);
@@ -1177,14 +1179,31 @@
     el.style.left = `${x}%`;
     el.style.top = `${y}%`;
 
-    const onCollect = (evt) => {
-      evt.preventDefault();
-      collectItem(el, x, y);
-    };
-    el.addEventListener("pointerdown", onCollect, { passive: false });
-
     target.appendChild(el);
   }
+
+  // 指でなぞった軌跡上のアイテムをすべて回収する(タップだけでなくドラッグにも対応)
+  let isCollectDragging = false;
+
+  function collectItemAtPoint(clientX, clientY) {
+    const el = document.elementFromPoint(clientX, clientY);
+    const itemEl = el && el.closest(".item");
+    if (itemEl) collectItem(itemEl);
+  }
+
+  mapStackEl.addEventListener("pointerdown", (evt) => {
+    isCollectDragging = true;
+    collectItemAtPoint(evt.clientX, evt.clientY);
+  });
+  mapStackEl.addEventListener("pointermove", (evt) => {
+    if (!isCollectDragging) return;
+    collectItemAtPoint(evt.clientX, evt.clientY);
+  });
+  ["pointerup", "pointercancel"].forEach((type) => {
+    window.addEventListener(type, () => {
+      isCollectDragging = false;
+    });
+  });
 
   function scheduleSpawn() {
     const interval = Math.max(400, 1600 - (state.spawnLevel - 1) * 150);
