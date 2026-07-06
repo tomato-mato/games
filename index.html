@@ -158,6 +158,33 @@
       color: var(--text);
     }
 
+    .game-title.gold-glow {
+      color: #ffd700;
+      text-shadow:
+        0 0 4px #fff7cc,
+        0 0 8px #ffd700,
+        0 0 16px #ffb700,
+        0 0 24px #ffb700;
+      animation: gold-glow-pulse 1.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes gold-glow-pulse {
+      from {
+        text-shadow:
+          0 0 4px #fff7cc,
+          0 0 8px #ffd700,
+          0 0 16px #ffb700,
+          0 0 24px #ffb700;
+      }
+      to {
+        text-shadow:
+          0 0 6px #fff7cc,
+          0 0 12px #ffd700,
+          0 0 24px #ffb700,
+          0 0 36px #ffb700;
+      }
+    }
+
     .game-desc {
       color: var(--text-muted);
       font-size: 0.9rem;
@@ -230,7 +257,7 @@
         <span>🪙</span>
       </div>
       <div class="game-info">
-        <h2 class="game-title">コインコレクター（スマホ）</h2>
+        <h2 class="game-title gold-glow">コインコレクター（スマホ）</h2>
         <p class="game-desc">落ちてくるコインをたくさん集めるシンプル爽快ゲーム！</p>
         <span class="play-btn">PLAY <span class="arrow">▶</span></span>
       </div>
@@ -242,7 +269,7 @@
         <span>🪙</span>
       </div>
       <div class="game-info">
-        <h2 class="game-title">コインコレクター（PC）</h2>
+        <h2 class="game-title gold-glow">コインコレクター（PC）</h2>
         <p class="game-desc">落ちてくるコインをたくさん集めるシンプル爽快ゲーム！</p>
         <span class="play-btn">PLAY <span class="arrow">▶</span></span>
       </div>
