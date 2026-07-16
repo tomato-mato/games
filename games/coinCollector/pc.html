@@ -193,7 +193,7 @@ canvas { display:block; }
     </div>
   </div>
 </div>
-<button id="ruleBtn">ルール</button>
+<button id="ruleBtn">？</button>
 <button id="gachaEffectBtn" onclick="openGacha('effect')">✨ エフェクトガチャ</button>
 <button id="gachaColorBtn" onclick="openGacha('color')">🎨 色ガチャ</button>
 <button id="gachaShapeBtn" onclick="openGacha('shape')">🔷 形ガチャ</button>
@@ -240,7 +240,7 @@ canvas { display:block; }
 </div>
 <div id="rulesPanel">
   <div id="rulesBox">
-    <h3>📖 ゲームルール</h3>
+    <h3>📖 ？</h3>
     <div class="rsec"><b>操作</b><table>
       <tr><td>🕹</td><td>WASD / 矢印キー で移動</td></tr>
       <tr><td>⏸</td><td>P / Esc でポーズ</td></tr>
@@ -932,6 +932,172 @@ function playFreeze() {
     }
   } catch(e){}
 }
+function playKikiRaran() {
+  try {
+    if(!_ac) _ac=new(window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended') _ac.resume();
+    const now=_ac.currentTime;
+    // "キキ" — 2回の短い高音スイープ
+    for(let i=0;i<2;i++){
+      const t0=now+i*0.1;
+      const osc=_ac.createOscillator(),g=_ac.createGain();
+      osc.type='sine';
+      osc.frequency.setValueAtTime(1600+i*200,t0);
+      osc.frequency.exponentialRampToValueAtTime(2200+i*150,t0+0.06);
+      g.gain.setValueAtTime(0.18,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+0.07);
+      osc.connect(g); g.connect(_ac.destination); osc.start(t0); osc.stop(t0+0.08);
+    }
+    // "ラ" — 中音の短い下降
+    { const osc=_ac.createOscillator(),g=_ac.createGain();
+      osc.type='triangle';
+      osc.frequency.setValueAtTime(1100,now+0.22); osc.frequency.exponentialRampToValueAtTime(700,now+0.32);
+      g.gain.setValueAtTime(0.16,now+0.22); g.gain.exponentialRampToValueAtTime(0.001,now+0.34);
+      osc.connect(g); g.connect(_ac.destination); osc.start(now+0.22); osc.stop(now+0.35); }
+    // "ン" — 余韻ベル（倍音3本）
+    const tb=now+0.36;
+    for(const[freq,vol,dur] of [[1320,0.22,0.9],[2640,0.09,0.6],[3960,0.04,0.4]]){
+      const osc=_ac.createOscillator(),g=_ac.createGain();
+      osc.type='sine';
+      osc.frequency.setValueAtTime(freq,tb);
+      g.gain.setValueAtTime(vol,tb); g.gain.exponentialRampToValueAtTime(0.001,tb+dur);
+      osc.connect(g); g.connect(_ac.destination); osc.start(tb); osc.stop(tb+dur+0.01);
+    }
+  } catch(e){}
+}
+function playKaran() {
+  try {
+    if(!_ac) _ac=new(window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended') _ac.resume();
+    const now=_ac.currentTime;
+    // "カ" — 単発の打撃ノイズ
+    const bsz=Math.floor(_ac.sampleRate*0.04);
+    const buf=_ac.createBuffer(1,bsz,_ac.sampleRate);
+    const bd=buf.getChannelData(0);
+    for(let j=0;j<bsz;j++) bd[j]=(Math.random()*2-1)*Math.pow(1-j/bsz,2);
+    const ns=_ac.createBufferSource(); ns.buffer=buf;
+    const nf=_ac.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=1200; nf.Q.value=1.8;
+    const ng=_ac.createGain(); ng.gain.setValueAtTime(0.42,now);
+    ns.connect(nf); nf.connect(ng); ng.connect(_ac.destination); ns.start(now);
+    // "ラーーン" — 長く伸びるベル（倍音3本）
+    for(const[freq,vol,dur] of [[880,0.26,2.0],[1760,0.11,1.4],[2640,0.05,0.9]]){
+      const osc=_ac.createOscillator(),g=_ac.createGain();
+      osc.type='sine';
+      osc.frequency.setValueAtTime(freq,now+0.03);
+      g.gain.setValueAtTime(0.001,now+0.03);
+      g.gain.linearRampToValueAtTime(vol,now+0.07);
+      g.gain.exponentialRampToValueAtTime(0.001,now+0.07+dur);
+      osc.connect(g); g.connect(_ac.destination); osc.start(now+0.03); osc.stop(now+0.08+dur);
+    }
+  } catch(e){}
+}
+function playToratoratoran() {
+  try {
+    if(!_ac) _ac=new(window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended') _ac.resume();
+    const now=_ac.currentTime;
+    // "トラトラトラ" — 3回の重い打撃音（中低音・力強い）
+    for(let i=0;i<3;i++){
+      const t0=now+i*0.1;
+      // 重いノイズ（ト）
+      const bsz=Math.floor(_ac.sampleRate*0.045);
+      const buf=_ac.createBuffer(1,bsz,_ac.sampleRate);
+      const bd=buf.getChannelData(0);
+      for(let j=0;j<bsz;j++) bd[j]=(Math.random()*2-1)*Math.pow(1-j/bsz,1.2);
+      const ns=_ac.createBufferSource(); ns.buffer=buf;
+      const nf=_ac.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=300+i*40; nf.Q.value=1.5;
+      const ng=_ac.createGain(); ng.gain.setValueAtTime(0.55,t0);
+      ns.connect(nf); nf.connect(ng); ng.connect(_ac.destination); ns.start(t0);
+      // 中音下降トーン（ラ）
+      const osc=_ac.createOscillator(),g=_ac.createGain();
+      osc.type='sawtooth';
+      osc.frequency.setValueAtTime(320+i*30,t0+0.01); osc.frequency.exponentialRampToValueAtTime(200+i*20,t0+0.08);
+      g.gain.setValueAtTime(0.22,t0+0.01); g.gain.exponentialRampToValueAtTime(0.001,t0+0.09);
+      osc.connect(g); g.connect(_ac.destination); osc.start(t0+0.01); osc.stop(t0+0.1);
+    }
+    // "トラン" — 締めの中低音ベル
+    const tb=now+0.35;
+    for(const[freq,vol,dur] of [[440,0.28,0.9],[880,0.12,0.6],[1320,0.05,0.4]]){
+      const osc=_ac.createOscillator(),g=_ac.createGain();
+      osc.type='sine';
+      osc.frequency.setValueAtTime(freq,tb);
+      g.gain.setValueAtTime(vol,tb); g.gain.exponentialRampToValueAtTime(0.001,tb+dur);
+      osc.connect(g); g.connect(_ac.destination); osc.start(tb); osc.stop(tb+dur+0.01);
+    }
+  } catch(e){}
+}
+function playKirakirakiran() {
+  try {
+    if(!_ac) _ac=new(window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended') _ac.resume();
+    const now=_ac.currentTime;
+    // "キラキラキラ" — 3回のキラキラ音（高音・上昇スイープ）
+    for(let i=0;i<3;i++){
+      const t0=now+i*0.1;
+      // 高音ノイズ（キ）
+      const bsz=Math.floor(_ac.sampleRate*0.022);
+      const buf=_ac.createBuffer(1,bsz,_ac.sampleRate);
+      const bd=buf.getChannelData(0);
+      for(let j=0;j<bsz;j++) bd[j]=(Math.random()*2-1)*Math.pow(1-j/bsz,2.5);
+      const ns=_ac.createBufferSource(); ns.buffer=buf;
+      const nf=_ac.createBiquadFilter(); nf.type='highpass'; nf.frequency.value=3200+i*200;
+      const ng=_ac.createGain(); ng.gain.setValueAtTime(0.22,t0);
+      ns.connect(nf); nf.connect(ng); ng.connect(_ac.destination); ns.start(t0);
+      // 上昇サイン×2デチューン（ラ）
+      for(const det of [0,7]){
+        const osc=_ac.createOscillator(),g=_ac.createGain();
+        osc.type='sine';
+        osc.frequency.setValueAtTime(1800+i*150+det,t0+0.005);
+        osc.frequency.exponentialRampToValueAtTime(2300+i*120+det,t0+0.055);
+        g.gain.setValueAtTime(0.12,t0+0.005); g.gain.exponentialRampToValueAtTime(0.001,t0+0.065);
+        osc.connect(g); g.connect(_ac.destination); osc.start(t0+0.005); osc.stop(t0+0.07);
+      }
+    }
+    // "キラン" — 高音ベル（倍音3本）
+    const tb=now+0.34;
+    for(const[freq,vol,dur] of [[2000,0.20,0.78],[4000,0.09,0.52],[6000,0.04,0.36]]){
+      const osc=_ac.createOscillator(),g=_ac.createGain();
+      osc.type='sine';
+      osc.frequency.setValueAtTime(freq,tb);
+      g.gain.setValueAtTime(vol,tb); g.gain.exponentialRampToValueAtTime(0.001,tb+dur);
+      osc.connect(g); g.connect(_ac.destination); osc.start(tb); osc.stop(tb+dur+0.01);
+    }
+  } catch(e){}
+}
+function playKarakarakaran() {
+  try {
+    if(!_ac) _ac=new(window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended') _ac.resume();
+    const now=_ac.currentTime;
+    // "カラカラカラ" — 3回のカラっとした打撃音
+    for(let i=0;i<3;i++){
+      const t0=now+i*0.1;
+      // ノイズ成分（カ）
+      const bsz=Math.floor(_ac.sampleRate*0.035);
+      const buf=_ac.createBuffer(1,bsz,_ac.sampleRate);
+      const bd=buf.getChannelData(0);
+      for(let j=0;j<bsz;j++) bd[j]=(Math.random()*2-1)*Math.pow(1-j/bsz,1.8);
+      const ns=_ac.createBufferSource(); ns.buffer=buf;
+      const nf=_ac.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=1600+i*150; nf.Q.value=2.5;
+      const ng=_ac.createGain(); ng.gain.setValueAtTime(0.36,t0);
+      ns.connect(nf); nf.connect(ng); ng.connect(_ac.destination); ns.start(t0);
+      // トーン成分（ラ）
+      const osc=_ac.createOscillator(),g=_ac.createGain();
+      osc.type='triangle';
+      osc.frequency.setValueAtTime(700+i*60,t0+0.01); osc.frequency.exponentialRampToValueAtTime(480+i*40,t0+0.065);
+      g.gain.setValueAtTime(0.14,t0+0.01); g.gain.exponentialRampToValueAtTime(0.001,t0+0.07);
+      osc.connect(g); g.connect(_ac.destination); osc.start(t0+0.01); osc.stop(t0+0.08);
+    }
+    // "カラン" — 最後のベル音（倍音3本）
+    const tb=now+0.35;
+    for(const[freq,vol,dur] of [[1100,0.24,0.85],[2200,0.11,0.55],[3300,0.05,0.38]]){
+      const osc=_ac.createOscillator(),g=_ac.createGain();
+      osc.type='sine';
+      osc.frequency.setValueAtTime(freq,tb);
+      g.gain.setValueAtTime(vol,tb); g.gain.exponentialRampToValueAtTime(0.001,tb+dur);
+      osc.connect(g); g.connect(_ac.destination); osc.start(tb); osc.stop(tb+dur+0.01);
+    }
+  } catch(e){}
+}
 function playGariii() {
   try {
     if(!_ac) _ac=new(window.AudioContext||window.webkitAudioContext)();
@@ -1552,11 +1718,13 @@ function update(dt) {
     if(dist(P.x,P.y,e.x,e.y)<P.r+e.r-4){
       if(e.boss){ onHeavyDamage(); continue; }
       if(e.heal){
+        playKaran();
         if(lives<3){ lives++; burst(e.x,e.y,'#00e676',22); popup(e.x,e.y,'💚 回復！','#69f0ae'); }
         else{ score+=200; burst(e.x,e.y,'#69f0ae',18); popup(e.x,e.y,'+200 満タン！','#69f0ae'); }
         shakeT=0.1; enemies.splice(enemies.indexOf(e),1); continue;
       }
       if(e.heal2){
+        playKaran();
         const gained=Math.min(2, 3-lives);
         lives=Math.min(3, lives+2);
         burst(e.x,e.y,'#ffd600',26); burst(e.x,e.y,'#fffde7',14);
@@ -1565,6 +1733,7 @@ function update(dt) {
         shakeT=0.12; enemies.splice(enemies.indexOf(e),1); continue;
       }
       if(e.fullHeal){
+        playKaran();
         const added=3-lives; lives=3;
         burst(e.x,e.y,'#ff80ab',30); burst(e.x,e.y,'#ffffff',16);
         popup(e.x,e.y,'💖 全回復！','#ff80ab');
@@ -1581,14 +1750,15 @@ function update(dt) {
     if(dist(P.x,P.y,pw.x,pw.y)<P.r+pw.r){
       switch(pw.type){
         case'magnet': P.magT=6; playMagnet(); burst(pw.x,pw.y,'#2979ff',16); popup(pw.x,pw.y,'🧲 マグネット！','#82b1ff'); break;
-        case'shield': P.shieldT=6; burst(pw.x,pw.y,'#00e676',16); popup(pw.x,pw.y,'🛡 シールド！', '#69f0ae'); break;
+        case'shield': P.shieldT=6; playKirakirakiran(); burst(pw.x,pw.y,'#00e676',16); popup(pw.x,pw.y,'🛡 シールド！', '#69f0ae'); break;
         case'speed':  P.speedT=5;  burst(pw.x,pw.y,'#ffd600',16); popup(pw.x,pw.y,'⚡ スピード！', '#ffff00'); break;
         case'heart':
+          playKikiRaran();
           if(lives<3){ lives++; burst(pw.x,pw.y,'#ff4081',20); popup(pw.x,pw.y,'💖 回復！','#ff80ab'); }
           else { score+=100; popup(pw.x,pw.y,'+100 満タン！','#ff80ab'); }
           break;
         case'armor':
-          P.armorCount=5; burst(pw.x,pw.y,'#4fc3f7',20);
+          playToratoratoran(); P.armorCount=5; burst(pw.x,pw.y,'#4fc3f7',20);
           popup(pw.x,pw.y,'🔷 盾装備！×5','#4fc3f7'); break;
         case'bomb': {
           playBomb();
@@ -1663,6 +1833,7 @@ function update(dt) {
             const[rx,ry]=safePos(60);
             powerups.push({x:rx,y:ry,r:15,type,age:0});
           }
+          playKarakarakaran();
           burst(pw.x,pw.y,'#ffd600',35); burst(pw.x,pw.y,'#ff00e5',22); burst(pw.x,pw.y,'#00e5ff',18);
           shakeT=0.35;
           popup(pw.x,pw.y-22,`❓ ${cnt}個出現！`,'#ffd600');
@@ -1683,6 +1854,7 @@ function update(dt) {
           break;
         }
         case'fullheal': {
+          playKikiRaran();
           const added=3-lives;
           lives=3;
           burst(pw.x,pw.y,'#00e676',40); burst(pw.x,pw.y,'#b9f6ca',24); burst(pw.x,pw.y,'#ffffff',16);
