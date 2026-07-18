@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ゴキブリから逃げろ</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: "Yu Gothic", "Meiryo", sans-serif;
+    touch-action: none;
+    user-select: none;
+  }
+  #gameContainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas {
+    background: #000;
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  #hud {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    color: #eee;
+    font-size: 15px;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    pointer-events: none;
+    z-index: 5;
+  }
+  #hideHint {
+    position: absolute;
+    bottom: 100px;
+    left: 0; right: 0;
+    text-align: center;
+    color: #ffe27a;
+    font-size: 15px;
+    font-weight: bold;
+    text-shadow: 0 2px 6px #000;
+    z-index: 5;
+    pointer-events: none;
+    display: none;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4,3,2,0.92);
+    color: #eee;
+    text-align: center;
+    z-index: 10;
+    padding: 20px;
+  }
+  #overlay h1 {
+    font-size: 30px;
+    margin-bottom: 12px;
+    letter-spacing: 3px;
+    color: #ff5b5b;
+    text-shadow: 0 0 14px rgba(255,60,60,0.6);
+  }
+  #overlay p {
+    font-size: 14px;
+    line-height: 1.8;
+    opacity: 0.85;
+    margin-bottom: 22px;
+    max-width: 340px;
+  }
+  #overlay .score-line {
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+  button#startBtn {
+    background: linear-gradient(135deg, #7a2e2e, #b3452b);
+    color: #fff;
+    border: 1px solid #ff8a5b;
+    padding: 14px 40px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(179,69,43,0.5);
+    letter-spacing: 1px;
+  }
+  button#startBtn:active { transform: scale(0.96); }
+  #difficultyRow {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .diffBtn {
+    background: rgba(255,255,255,0.06);
+    color: #ccc;
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 9px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 20px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .diffBtn.selected {
+    background: rgba(255,138,91,0.25);
+    border-color: #ff8a5b;
+    color: #fff;
+  }
+  #joystickZone {
+    position: absolute;
+    left: 0; bottom: 0;
+    width: 45%; height: 50%;
+    z-index: 4;
+  }
+  #stick-base {
+    position: absolute;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.10);
+    border: 2px solid rgba(255,255,255,0.22);
+    display: none;
+    z-index: 6;
+  }
+  #stick-knob {
+    position: absolute;
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    left: 27px; top: 27px;
+    z-index: 7;
+  }
+  #hideBtn {
+    position: absolute;
+    right: 26px;
+    bottom: 40px;
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    background: rgba(255,226,122,0.18);
+    border: 2px solid rgba(255,226,122,0.5);
+    color: #ffe27a;
+    font-size: 13px;
+    font-weight: bold;
+    z-index: 6;
+  }
+  #flash {
+    position: absolute;
+    inset: 0;
+    background: #ff2222;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 8;
+  }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <span id="keyCount">🔑 0 / 3</span>
+    <span id="timeVal">⏱ 0.0秒</span>
+  </div>
+
+  <div id="hideHint">スペース / Eキー で隠れる・出る</div>
+
+  <div id="joystickZone"></div>
+  <div id="stick-base"><div id="stick-knob"></div></div>
+  <button id="hideBtn">隠れる</button>
+  <div id="flash"></div>
+
+  <div id="overlay">
+    <h1>ゴキブリから逃げろ</h1>
+    <p>ここは古い屋敷。館内に散らばった<b>鍵を3つ</b>集めて、玄関から脱出しよう。<br>
+       暗闇の中、巨大な<b>ゴキブリ</b>が徘徊している。見つかると猛スピードで追いかけてくる。<br>
+       クローゼットに入って<b>隠れる</b>こともできる。<br><br>
+       矢印/WASDで移動、スマホは左下ドラッグ＋隠れるボタン。</p>
+    <div id="difficultyRow">
+      <button class="diffBtn" data-diff="easy">簡単</button>
+      <button class="diffBtn selected" data-diff="normal">普通</button>
+      <button class="diffBtn" data-diff="hard">難しい</button>
+    </div>
+    <button id="startBtn">スタート</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+  const timeVal = document.getElementById('timeVal');
+  const keyCountEl = document.getElementById('keyCount');
+  const hideHint = document.getElementById('hideHint');
+  const flashEl = document.getElementById('flash');
+
+  const VW = 800, VH = 600;
+  canvas.width = VW;
+  canvas.height = VH;
+
+  function fitCanvas(){
+    const scale = Math.min(window.innerWidth / VW, window.innerHeight / VH);
+    canvas.style.width = (VW * scale) + 'px';
+    canvas.style.height = (VH * scale) + 'px';
+  }
+  window.addEventListener('resize', fitCanvas);
+  fitCanvas();
+
+  // ---------- Audio (simple WebAudio, no external files) ----------
+  let actx = null;
+  function audio(){ if (!actx) { try { actx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} } return actx; }
+  function beep(freq, dur, type, vol, delay){
+    const a = audio(); if (!a) return;
+    const t0 = a.currentTime + (delay||0);
+    const osc = a.createOscillator();
+    const gain = a.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(vol||0.15, t0+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    osc.connect(gain); gain.connect(a.destination);
+    osc.start(t0); osc.stop(t0+dur+0.05);
+  }
+  function sfxKey(){ beep(880,0.12,'triangle',0.18); beep(1320,0.14,'triangle',0.14,0.07); }
+  function sfxDoor(){ beep(220,0.4,'sine',0.15); }
+  function sfxCatch(){
+    const a = audio(); if (!a) return;
+    const bufSize = a.sampleRate * 0.5;
+    const buf = a.createBuffer(1, bufSize, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i=0;i<bufSize;i++) d[i] = (Math.random()*2-1) * (1 - i/bufSize);
+    const src = a.createBufferSource();
+    src.buffer = buf;
+    const gain = a.createGain();
+    gain.gain.setValueAtTime(0.35, a.currentTime);
+    src.connect(gain); gain.connect(a.destination);
+    src.start();
+    beep(90,0.5,'sawtooth',0.25);
+  }
+  function sfxHide(on){ beep(on?520:340, 0.15, 'square', 0.08); }
+  function sfxAlert(){ beep(180,0.18,'sawtooth',0.16); beep(140,0.22,'sawtooth',0.14,0.12); }
+
+  // ---------- World / Map ----------
+  const WORLD_W = 1450, WORLD_H = 1080;
+
+  const floors = [
+    {x:50,   y:400, w:250,  h:220, name:'hall'},
+    {x:200,  y:470, w:1000, h:60,  name:'hbar'},
+    {x:1100, y:350, w:280,  h:320, name:'living'},
+    {x:600,  y:100, w:140,  h:800, name:'vbar'},
+    {x:400,  y:50,  w:270,  h:250, name:'kitchen'},
+    {x:690,  y:50,  w:270,  h:250, name:'bedroom'},
+    {x:400,  y:800, w:270,  h:200, name:'bathroom'},
+    {x:690,  y:800, w:270,  h:200, name:'study'},
+  ];
+
+  function isWalkable(x, y){
+    for (const f of floors) {
+      if (x >= f.x && x <= f.x + f.w && y >= f.y && y <= f.y + f.h) return true;
+    }
+    return false;
+  }
+
+  const doorZone = {x:50, y:485, w:22, h:50};
+
+  const keysData = [
+    {x:535, y:175, taken:false, room:'キッチン'},
+    {x:535, y:900, taken:false, room:'浴室'},
+    {x:1240,y:510, taken:false, room:'リビング'},
+  ];
+
+  const closets = [
+    {x:905, y:75,  w:45, h:55},
+    {x:905, y:905, w:45, h:55},
+  ];
+
+  const waypoints = [
+    {x:175,y:510}, {x:670,y:510}, {x:1240,y:510},
+    {x:535,y:175}, {x:825,y:175},
+    {x:535,y:900}, {x:825,y:900},
+    {x:670,y:300}, {x:670,y:700},
+  ];
+
+  function dist(ax,ay,bx,by){ return Math.hypot(ax-bx, ay-by); }
+
+  // ---------- Entities ----------
+  const player = { x:175, y:510, r:13, speed:205, hidden:false, facing:0, moving:false, walkPhase:0 };
+
+  const roach = {
+    x:1220, y:420, r:15,
+    state:'patrol', // patrol | chase | search
+    target:{x:670,y:510},
+    lastKnown:{x:0,y:0},
+    searchTimer:0,
+    stuckTimer:0,
+    lastX:1220, lastY:420,
+    legPhase:0,
+  };
+
+  const DIFFICULTY = {
+    easy:   { patrol:42, search:72,  chase:122, detect:210, lose:380, light:210 },
+    normal: { patrol:55, search:90,  chase:150, detect:250, lose:420, light:185 },
+    hard:   { patrol:72, search:112, chase:182, detect:290, lose:460, light:150 },
+  };
+  let difficulty = 'normal';
+  let diffSettings = DIFFICULTY[difficulty];
+
+  let keysCollected = 0;
+  let elapsed = 0;
+  let running = false;
+  let lastTime = 0;
+  let gameState = 'title'; // title | playing | win | lose
+
+  const camera = {x:0, y:0};
+
+  // ---------- Input ----------
+  const keys = {};
+  window.addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    keys[k] = true;
+    if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+    if ((k === ' ' || k === 'e') && running) toggleHide();
+  });
+  window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+  let joyActive = false, joyDX = 0, joyDY = 0, joyStartX = 0, joyStartY = 0;
+  const joystickZone = document.getElementById('joystickZone');
+  const stickBase = document.getElementById('stick-base');
+  const stickKnob = document.getElementById('stick-knob');
+
+  function joyStart(x,y){
+    joyActive = true; joyStartX = x; joyStartY = y;
+    stickBase.style.left = (x-50)+'px'; stickBase.style.top = (y-50)+'px';
+    stickBase.style.display = 'block';
+    stickKnob.style.left = '27px'; stickKnob.style.top = '27px';
+  }
+  function joyMove(x,y){
+    if (!joyActive) return;
+    let dx = x-joyStartX, dy = y-joyStartY;
+    const maxD = 50;
+    const d = Math.hypot(dx,dy);
+    if (d > maxD) { dx = dx/d*maxD; dy = dy/d*maxD; }
+    stickKnob.style.left = (27+dx)+'px'; stickKnob.style.top = (27+dy)+'px';
+    joyDX = dx/maxD; joyDY = dy/maxD;
+  }
+  function joyEnd(){ joyActive=false; joyDX=0; joyDY=0; stickBase.style.display='none'; }
+
+  joystickZone.addEventListener('touchstart', e => { const t=e.changedTouches[0]; joyStart(t.clientX,t.clientY); e.preventDefault(); }, {passive:false});
+  joystickZone.addEventListener('touchmove', e => { const t=e.changedTouches[0]; joyMove(t.clientX,t.clientY); e.preventDefault(); }, {passive:false});
+  joystickZone.addEventListener('touchend', e => { joyEnd(); e.preventDefault(); }, {passive:false});
+  joystickZone.addEventListener('touchcancel', e => { joyEnd(); e.preventDefault(); }, {passive:false});
+
+  document.getElementById('hideBtn').addEventListener('click', () => { if (running) toggleHide(); });
+
+  document.querySelectorAll('.diffBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      difficulty = btn.dataset.diff;
+      diffSettings = DIFFICULTY[difficulty];
+      document.querySelectorAll('.diffBtn').forEach(b => b.classList.toggle('selected', b === btn));
+    });
+  });
+
+  function inClosetZone(){
+    return closets.find(c => player.x > c.x && player.x < c.x+c.w && player.y > c.y && player.y < c.y+c.h);
+  }
+  function toggleHide(){
+    if (player.hidden) { player.hidden = false; sfxHide(false); }
+    else if (inClosetZone()) { player.hidden = true; sfxHide(true); }
+  }
+
+  // ---------- Game flow ----------
+  function resetGame(){
+    player.x = 175; player.y = 510; player.hidden = false;
+    roach.x = 1220; roach.y = 420; roach.state = 'patrol'; roach.target = {x:670,y:510};
+    roach.stuckTimer = 0; roach.lastX = roach.x; roach.lastY = roach.y;
+    keysData.forEach(k => k.taken = false);
+    keysCollected = 0;
+    elapsed = 0;
+    keyCountEl.textContent = '🔑 0 / 3';
+  }
+
+  function startGame(){
+    audio();
+    resetGame();
+    running = true;
+    gameState = 'playing';
+    overlay.style.display = 'none';
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+  }
+
+  function loseGame(){
+    running = false;
+    gameState = 'lose';
+    sfxCatch();
+    runJumpscare(() => {
+      flashEl.style.transition = 'none';
+      flashEl.style.opacity = '0.9';
+      setTimeout(() => {
+        flashEl.style.transition = 'opacity 0.8s';
+        flashEl.style.opacity = '0';
+      }, 60);
+      document.querySelector('#overlay h1').textContent = 'ゴキブリに捕まった…';
+      document.querySelector('#overlay p').innerHTML =
+        '<span class="score-line">生存時間 ' + elapsed.toFixed(1) + ' 秒 / 鍵 ' + keysCollected + ' 個</span>';
+      startBtn.textContent = 'もう一度挑戦';
+      setTimeout(() => { overlay.style.display = 'flex'; }, 300);
+    });
+  }
+
+  function winGame(){
+    running = false;
+    gameState = 'win';
+    sfxDoor();
+    document.querySelector('#overlay h1').textContent = '脱出成功！';
+    document.querySelector('#overlay h1').style.color = '#7dffb0';
+    document.querySelector('#overlay p').innerHTML =
+      '<span class="score-line">クリアタイム ' + elapsed.toFixed(1) + ' 秒</span>屋敷から無事に逃げ切った。';
+    startBtn.textContent = 'もう一度遊ぶ';
+    overlay.style.display = 'flex';
+  }
+
+  // ---------- Update ----------
+  function moveEntity(ent, dx, dy, speed, dt){
+    if (dx === 0 && dy === 0) return;
+    const len = Math.hypot(dx,dy);
+    dx /= len; dy /= len;
+    const nx = ent.x + dx*speed*dt;
+    const ny = ent.y + dy*speed*dt;
+    if (isWalkable(nx, ent.y)) ent.x = nx;
+    if (isWalkable(ent.x, ny)) ent.y = ny;
+  }
+
+  function pickWaypoint(exclude){
+    let w;
+    do { w = waypoints[Math.floor(Math.random()*waypoints.length)]; }
+    while (waypoints.length > 1 && exclude && w.x === exclude.x && w.y === exclude.y);
+    return w;
+  }
+
+  function updatePlayer(dt){
+    if (player.hidden) return;
+    let dx = 0, dy = 0;
+    if (keys['arrowleft'] || keys['a']) dx -= 1;
+    if (keys['arrowright'] || keys['d']) dx += 1;
+    if (keys['arrowup'] || keys['w']) dy -= 1;
+    if (keys['arrowdown'] || keys['s']) dy += 1;
+    if (joyActive) { dx += joyDX; dy += joyDY; }
+    if (dx !== 0 || dy !== 0) {
+      player.facing = Math.atan2(dy, dx);
+      moveEntity(player, dx, dy, player.speed, dt);
+      player.moving = true;
+      player.walkPhase += dt * 11;
+    } else {
+      player.moving = false;
+    }
+  }
+
+  function updateRoach(dt){
+    const d = dist(player.x, player.y, roach.x, roach.y);
+    roach.legPhase += dt * 14;
+
+    if (!player.hidden && d < diffSettings.detect) {
+      if (roach.state !== 'chase') sfxAlert();
+      roach.state = 'chase';
+      roach.lastKnown.x = player.x; roach.lastKnown.y = player.y;
+    } else if (roach.state === 'chase' && (player.hidden || d > diffSettings.lose)) {
+      roach.state = 'search';
+      roach.searchTimer = 3;
+    }
+
+    let speed;
+    if (roach.state === 'chase') {
+      speed = diffSettings.chase;
+      roach.target = {x:player.x, y:player.y};
+    } else if (roach.state === 'search') {
+      speed = diffSettings.search;
+      roach.target = roach.lastKnown;
+      roach.searchTimer -= dt;
+      if (dist(roach.x,roach.y,roach.target.x,roach.target.y) < 24 || roach.searchTimer <= 0) {
+        roach.state = 'patrol';
+        roach.target = pickWaypoint();
+      }
+    } else {
+      speed = diffSettings.patrol;
+      if (dist(roach.x,roach.y,roach.target.x,roach.target.y) < 24) {
+        roach.target = pickWaypoint(roach.target);
+      }
+    }
+
+    const dx = roach.target.x - roach.x, dy = roach.target.y - roach.y;
+    moveEntity(roach, dx, dy, speed, dt);
+
+    if (dist(roach.x,roach.y,roach.lastX,roach.lastY) < 2) {
+      roach.stuckTimer += dt;
+      if (roach.stuckTimer > 1.0) {
+        roach.target = pickWaypoint(roach.target);
+        roach.state = 'patrol';
+        roach.stuckTimer = 0;
+      }
+    } else {
+      roach.stuckTimer = 0;
+    }
+    roach.lastX = roach.x; roach.lastY = roach.y;
+
+    if (!player.hidden && dist(player.x,player.y,roach.x,roach.y) < player.r + roach.r) {
+      loseGame();
+    }
+  }
+
+  function updateItems(){
+    for (const k of keysData) {
+      if (!k.taken && dist(player.x,player.y,k.x,k.y) < player.r + 14) {
+        k.taken = true;
+        keysCollected++;
+        keyCountEl.textContent = '🔑 ' + keysCollected + ' / 3';
+        sfxKey();
+      }
+    }
+    const closet = inClosetZone();
+    hideHint.style.display = (closet || player.hidden) ? 'block' : 'none';
+
+    if (keysCollected >= 3 &&
+        player.x > doorZone.x && player.x < doorZone.x+doorZone.w+40 &&
+        player.y > doorZone.y && player.y < doorZone.y+doorZone.h) {
+      winGame();
+    }
+  }
+
+  function update(dt){
+    elapsed += dt;
+    timeVal.textContent = '⏱ ' + elapsed.toFixed(1) + '秒';
+    updatePlayer(dt);
+    updateRoach(dt);
+    updateItems();
+
+    camera.x = Math.max(0, Math.min(WORLD_W - VW, player.x - VW/2));
+    camera.y = Math.max(0, Math.min(WORLD_H - VH, player.y - VH/2));
+  }
+
+  // ---------- Draw ----------
+  function worldToScreen(x,y){ return {x: x - camera.x, y: y - camera.y}; }
+
+  function drawRoachShape(legWig, glowBlur, eyeColor){
+    ctx.strokeStyle = '#241a10';
+    ctx.lineWidth = 2;
+    for (let i=-1;i<=1;i++){
+      ctx.beginPath(); ctx.moveTo(i*8, -3); ctx.lineTo(i*8-6, -14+legWig*i); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(i*8, 3);  ctx.lineTo(i*8-6, 14-legWig*i);  ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 20, 11, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#4a2f18';
+    ctx.shadowColor = 'rgba(255,40,40,0.85)';
+    ctx.shadowBlur = glowBlur;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.ellipse(-6, 0, 8, 7, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#2e1c0d';
+    ctx.fill();
+    ctx.strokeStyle = '#1b1109';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-2,-2); ctx.lineTo(2,-2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-2,2); ctx.lineTo(2,2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(14, -3); ctx.quadraticCurveTo(24, -10, 30, -14 + legWig);
+    ctx.moveTo(14, 3);  ctx.quadraticCurveTo(24, 10, 30, 14 - legWig);
+    ctx.strokeStyle = '#3a2513'; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.fillStyle = eyeColor;
+    ctx.shadowColor = eyeColor;
+    ctx.shadowBlur = glowBlur * 0.8;
+    ctx.beginPath(); ctx.arc(13,-3,1.6,0,Math.PI*2); ctx.arc(13,3,1.6,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  function drawRoach(){
+    if (player.hidden) return;
+    const s = worldToScreen(roach.x, roach.y);
+    if (s.x < -50 || s.x > VW+50 || s.y < -50 || s.y > VH+50) return;
+    const ang = Math.atan2(roach.target.y - roach.y, roach.target.x - roach.x);
+    const chasing = roach.state === 'chase';
+    ctx.save();
+    // already inside drawWorld's camera-translated context, so use raw world coords here
+    ctx.translate(roach.x, roach.y);
+    ctx.rotate(ang);
+    drawRoachShape(Math.sin(roach.legPhase) * 5, chasing ? 22 : 8, chasing ? '#ff3030' : '#a03030');
+    ctx.restore();
+  }
+
+  // Glowing eyes stay visible through the darkness so the roach is never a total surprise.
+  function drawRoachGlowThroughDark(){
+    if (player.hidden) return;
+    const d = dist(player.x, player.y, roach.x, roach.y);
+    const GLOW_RANGE = 340;
+    if (d > GLOW_RANGE) return;
+    const s = worldToScreen(roach.x, roach.y);
+    const near = 1 - Math.min(d / GLOW_RANGE, 1);
+    const pulse = 0.6 + 0.4 * Math.sin(performance.now() * 0.008);
+    const alpha = Math.min(0.9, near * 0.9) * pulse;
+    const r = 10 + near * 18;
+    const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r);
+    const glowColor = roach.state === 'chase' ? '255,40,40' : '255,120,40';
+    grad.addColorStop(0, 'rgba(' + glowColor + ',' + alpha + ')');
+    grad.addColorStop(1, 'rgba(' + glowColor + ',0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI*2); ctx.fill();
+  }
+
+  function runJumpscare(onDone){
+    const t0 = performance.now();
+    const dur = 700;
+    function frame(now){
+      const t = Math.min((now - t0) / dur, 1);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, VW, VH);
+
+      const shake = (1 - t) * 10;
+      const sx = (Math.random() - 0.5) * shake;
+      const sy = (Math.random() - 0.5) * shake;
+      const scale = 4.5 + t * 3.5;
+
+      ctx.save();
+      ctx.translate(VW/2 + sx, VH/2 + sy);
+      ctx.scale(scale, scale);
+      ctx.rotate(Math.PI);
+      drawRoachShape(Math.sin(now * 0.03) * 6, 30, '#ff3030');
+      ctx.restore();
+
+      const grad = ctx.createRadialGradient(VW/2, VH/2, 40, VW/2, VH/2, VW*0.75);
+      grad.addColorStop(0, 'rgba(140,0,0,0)');
+      grad.addColorStop(1, 'rgba(140,0,0,' + (0.55 * t) + ')');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, VW, VH);
+
+      if (t < 1) requestAnimationFrame(frame);
+      else onDone();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function drawPlayer(){
+    if (player.hidden) {
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+      ctx.fillStyle = '#4fd1ff'; ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    const bob = player.moving ? Math.abs(Math.sin(player.walkPhase)) * 2.5 : 0;
+    const legSwing = player.moving ? Math.sin(player.walkPhase) * 7 : 0;
+    const R = player.r;       // collision radius, unchanged
+    const B = R * 1.55;       // visual body size (bigger & bolder so it reads as a character)
+
+    ctx.save();
+    // already inside drawWorld's camera-translated context, so use raw world coords here
+    ctx.translate(player.x, player.y);
+
+    // ground shadow (stays put, doesn't bob)
+    ctx.beginPath();
+    ctx.ellipse(0, B*0.6, B*0.85, B*0.35, 0, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fill();
+
+    ctx.translate(0, -bob);
+    ctx.rotate(player.facing);
+
+    // legs: swing fore/aft on alternating sides for a walk-cycle feel
+    ctx.fillStyle = '#2e2a22';
+    ctx.beginPath(); ctx.ellipse(-B*0.15 + legSwing, -B*0.55, 5, 3.6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-B*0.15 - legSwing, B*0.55, 5, 3.6, 0, 0, Math.PI*2); ctx.fill();
+
+    // arms: swing opposite to legs
+    ctx.strokeStyle = '#c1552a';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-B*0.1, -B*0.75); ctx.lineTo(-B*0.1 - legSwing, -B*1.2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-B*0.1, B*0.75);  ctx.lineTo(-B*0.1 + legSwing, B*1.2);  ctx.stroke();
+
+    // body / jacket
+    ctx.beginPath();
+    ctx.ellipse(0, 0, B, B*0.88, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#d9622b';
+    ctx.shadowColor = 'rgba(255,180,120,0.6)';
+    ctx.shadowBlur = 14;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // head (offset toward facing direction)
+    ctx.beginPath();
+    ctx.arc(B*0.3, 0, B*0.6, 0, Math.PI*2);
+    ctx.fillStyle = '#f0c9a0';
+    ctx.fill();
+
+    // hair patch on the back of the head
+    ctx.beginPath();
+    ctx.arc(B*0.12, 0, B*0.62, Math.PI*0.35, Math.PI*1.65);
+    ctx.fillStyle = '#4a3626';
+    ctx.fill();
+
+    // eyes (show facing direction clearly)
+    ctx.fillStyle = '#2a2016';
+    ctx.beginPath();
+    ctx.arc(B*0.55, -B*0.18, 2.2, 0, Math.PI*2);
+    ctx.arc(B*0.55, B*0.18, 2.2, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawWorld(){
+    ctx.fillStyle = '#0c0906';
+    ctx.fillRect(0,0,VW,VH);
+
+    ctx.save();
+    ctx.translate(-camera.x, -camera.y);
+
+    for (const f of floors) {
+      ctx.fillStyle = '#2a2015';
+      ctx.fillRect(f.x, f.y, f.w, f.h);
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(f.x, f.y, f.w, f.h);
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.lineWidth = 1;
+      for (let gx = f.x; gx <= f.x+f.w; gx += 40) {
+        ctx.beginPath(); ctx.moveTo(gx, f.y); ctx.lineTo(gx, f.y+f.h); ctx.stroke();
+      }
+    }
+
+    for (const c of closets) {
+      ctx.fillStyle = 'rgba(90,60,30,0.55)';
+      ctx.fillRect(c.x, c.y, c.w, c.h);
+      ctx.strokeStyle = 'rgba(255,220,140,0.5)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(c.x, c.y, c.w, c.h);
+    }
+
+    ctx.fillStyle = 'rgba(120,80,30,0.9)';
+    ctx.fillRect(doorZone.x-4, doorZone.y, 8, doorZone.h);
+
+    for (const k of keysData) {
+      if (k.taken) continue;
+      const bob = Math.sin(elapsed*3 + k.x) * 4;
+      const grad = ctx.createRadialGradient(k.x,k.y+bob,0,k.x,k.y+bob,45);
+      grad.addColorStop(0, 'rgba(255,220,120,0.35)');
+      grad.addColorStop(1, 'rgba(255,220,120,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(k.x,k.y+bob,45,0,Math.PI*2); ctx.fill();
+
+      ctx.save();
+      ctx.translate(k.x, k.y+bob);
+      ctx.fillStyle = '#ffd35b';
+      ctx.beginPath(); ctx.arc(-6,0,6,0,Math.PI*2); ctx.fill();
+      ctx.fillRect(-2,-2,14,4);
+      ctx.fillRect(8,-2,3,6);
+      ctx.restore();
+    }
+
+    drawPlayer();
+    drawRoach();
+
+    ctx.restore();
+  }
+
+  function drawDarkness(){
+    const s = worldToScreen(player.x, player.y);
+    const radius = player.hidden ? 60 : diffSettings.light;
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    const grad = ctx.createRadialGradient(s.x, s.y, radius*0.25, s.x, s.y, radius);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.7, 'rgba(0,0,0,0.55)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.97)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,VW,VH);
+    ctx.restore();
+  }
+
+  function drawCompass(){
+    let target = null, label = '';
+    if (keysCollected >= 3) { target = {x: doorZone.x+10, y: doorZone.y+doorZone.h/2}; label = '出口'; }
+    else {
+      let best = null, bd = Infinity;
+      for (const k of keysData) {
+        if (k.taken) continue;
+        const d = dist(player.x,player.y,k.x,k.y);
+        if (d < bd) { bd = d; best = k; }
+      }
+      if (best) { target = best; label = '鍵: ' + best.room; }
+    }
+    if (!target) return;
+    const ang = Math.atan2(target.y - player.y, target.x - player.x);
+    const cx = VW/2, cy = 34, r = 16;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath(); ctx.arc(0,0,r+6,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0,0,r+6,0,Math.PI*2); ctx.stroke();
+    ctx.rotate(ang);
+    ctx.fillStyle = '#ffd35b';
+    ctx.beginPath();
+    ctx.moveTo(r, 0); ctx.lineTo(-6, -8); ctx.lineTo(-6, 8);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, cx, cy + r + 18);
+    ctx.textAlign = 'left';
+  }
+
+  function draw(){
+    drawWorld();
+    drawDarkness();
+    drawRoachGlowThroughDark();
+    drawCompass();
+  }
+
+  function loop(now){
+    if (!running) return;
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+    update(dt);
+    draw();
+    if (running) requestAnimationFrame(loop);
+  }
+
+  startBtn.addEventListener('click', startGame);
+})();
+</script>
+</body>
+</html>
