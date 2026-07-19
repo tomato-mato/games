@@ -101,6 +101,8 @@
   button#startBtn:active { transform: scale(0.96); }
   #difficultyRow {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 10px;
     margin-bottom: 20px;
   }
@@ -119,6 +121,19 @@
     background: rgba(255,138,91,0.25);
     border-color: #ff8a5b;
     color: #fff;
+  }
+  #diffInfo {
+    font-size: 12px;
+    color: #bbb;
+    margin-bottom: 18px;
+    line-height: 1.6;
+  }
+  #diffInfo b { color: #ffd35b; }
+  #totalCoins {
+    font-size: 15px;
+    font-weight: bold;
+    color: #ffd35b;
+    margin-bottom: 14px;
   }
   #joystickZone {
     position: absolute;
@@ -172,6 +187,7 @@
 
   <div id="hud">
     <span id="keyCount">🔑 0 / 3</span>
+    <span id="coinCount">🪙 0</span>
     <span id="timeVal">⏱ 0.0秒</span>
   </div>
 
@@ -186,13 +202,18 @@
     <h1>ゴキブリから逃げろ</h1>
     <p>ここは古い屋敷。館内に散らばった<b>鍵を3つ</b>集めて、玄関から脱出しよう。<br>
        暗闇の中、巨大な<b>ゴキブリ</b>が徘徊している。見つかると猛スピードで追いかけてくる。<br>
-       クローゼットに入って<b>隠れる</b>こともできる。<br><br>
-       矢印/WASDで移動、スマホは左下ドラッグ＋隠れるボタン。</p>
+       クローゼットに入って<b>隠れる</b>こともできる。<br>
+       道中に落ちている<b>コイン🪙</b>も集めよう。集めたコインはずっと保存される。<br><br>
+       <b>操作:</b> 矢印キー / WASD で移動、スペース / E キーで隠れる・出る。<br>
+       スマホは画面左下をドラッグで移動、右下の「隠れる」ボタンで隠れる。</p>
+    <div id="totalCoins">🪙 所持コイン: 0</div>
     <div id="difficultyRow">
       <button class="diffBtn" data-diff="easy">簡単</button>
       <button class="diffBtn selected" data-diff="normal">普通</button>
       <button class="diffBtn" data-diff="hard">難しい</button>
+      <button class="diffBtn" data-diff="veryhard">とても難しい</button>
     </div>
+    <div id="diffInfo"></div>
     <button id="startBtn">スタート</button>
   </div>
 </div>
@@ -205,6 +226,8 @@
   const startBtn = document.getElementById('startBtn');
   const timeVal = document.getElementById('timeVal');
   const keyCountEl = document.getElementById('keyCount');
+  const coinCountEl = document.getElementById('coinCount');
+  const totalCoinsEl = document.getElementById('totalCoins');
   const hideHint = document.getElementById('hideHint');
   const flashEl = document.getElementById('flash');
 
@@ -237,6 +260,7 @@
     osc.start(t0); osc.stop(t0+dur+0.05);
   }
   function sfxKey(){ beep(880,0.12,'triangle',0.18); beep(1320,0.14,'triangle',0.14,0.07); }
+  function sfxCoin(){ beep(1046,0.08,'square',0.14); beep(1568,0.1,'square',0.12,0.05); }
   function sfxDoor(){ beep(220,0.4,'sine',0.15); }
   function sfxCatch(){
     const a = audio(); if (!a) return;
@@ -289,6 +313,15 @@
     {x:905, y:905, w:45, h:55},
   ];
 
+  const coinsData = [
+    {x:300, y:500, taken:false},
+    {x:950, y:500, taken:false},
+    {x:670, y:380, taken:false},
+    {x:670, y:640, taken:false},
+    {x:820, y:150, taken:false},
+    {x:820, y:930, taken:false},
+  ];
+
   const waypoints = [
     {x:175,y:510}, {x:670,y:510}, {x:1240,y:510},
     {x:535,y:175}, {x:825,y:175},
@@ -316,11 +349,35 @@
     easy:   { patrol:42, search:72,  chase:122, detect:210, lose:380, light:210 },
     normal: { patrol:55, search:90,  chase:150, detect:250, lose:420, light:185 },
     hard:   { patrol:72, search:112, chase:182, detect:290, lose:460, light:150 },
+    veryhard: { patrol:90, search:140, chase:202, detect:330, lose:500, light:120 },
   };
   let difficulty = 'normal';
   let diffSettings = DIFFICULTY[difficulty];
 
+  const BEST_KEY_PREFIX = 'gokiburiEscapeBest_';
+  function getBestTime(diff){
+    const v = localStorage.getItem(BEST_KEY_PREFIX + diff);
+    return v ? parseFloat(v) : null;
+  }
+  function saveBestTime(diff, time){
+    const cur = getBestTime(diff);
+    if (cur === null || time < cur) {
+      localStorage.setItem(BEST_KEY_PREFIX + diff, time.toFixed(2));
+      return true;
+    }
+    return false;
+  }
+
+  const TOTAL_COINS_KEY = 'gokiburiTotalCoins';
+  function getTotalCoins(){ return parseInt(localStorage.getItem(TOTAL_COINS_KEY) || '0', 10); }
+  function addTotalCoins(n){
+    const t = getTotalCoins() + n;
+    localStorage.setItem(TOTAL_COINS_KEY, String(t));
+    return t;
+  }
+
   let keysCollected = 0;
+  let coinsCollected = 0;
   let elapsed = 0;
   let running = false;
   let lastTime = 0;
@@ -367,13 +424,30 @@
 
   document.getElementById('hideBtn').addEventListener('click', () => { if (running) toggleHide(); });
 
+  const diffInfoEl = document.getElementById('diffInfo');
+  function renderDiffInfo(){
+    const d = diffSettings;
+    const best = getBestTime(difficulty);
+    diffInfoEl.innerHTML =
+      'ゴキブリの速さ（プレイヤーは' + player.speed + '）: ' +
+      '徘徊<b>' + d.patrol + '</b> / 捜索<b>' + d.search + '</b> / 追跡<b>' + d.chase + '</b>　' +
+      '発見距離<b>' + d.detect + '</b><br>' +
+      'ベストタイム: ' + (best !== null ? '<b>' + best.toFixed(1) + ' 秒</b>' : '記録なし');
+  }
   document.querySelectorAll('.diffBtn').forEach(btn => {
     btn.addEventListener('click', () => {
       difficulty = btn.dataset.diff;
       diffSettings = DIFFICULTY[difficulty];
       document.querySelectorAll('.diffBtn').forEach(b => b.classList.toggle('selected', b === btn));
+      renderDiffInfo();
     });
   });
+  renderDiffInfo();
+
+  function renderTotalCoins(){
+    totalCoinsEl.textContent = '🪙 所持コイン: ' + getTotalCoins();
+  }
+  renderTotalCoins();
 
   function inClosetZone(){
     return closets.find(c => player.x > c.x && player.x < c.x+c.w && player.y > c.y && player.y < c.y+c.h);
@@ -389,9 +463,12 @@
     roach.x = 1220; roach.y = 420; roach.state = 'patrol'; roach.target = {x:670,y:510};
     roach.stuckTimer = 0; roach.lastX = roach.x; roach.lastY = roach.y;
     keysData.forEach(k => k.taken = false);
+    coinsData.forEach(c => c.taken = false);
     keysCollected = 0;
+    coinsCollected = 0;
     elapsed = 0;
     keyCountEl.textContent = '🔑 0 / 3';
+    coinCountEl.textContent = '🪙 0';
   }
 
   function startGame(){
@@ -416,9 +493,11 @@
         flashEl.style.opacity = '0';
       }, 60);
       document.querySelector('#overlay h1').textContent = 'ゴキブリに捕まった…';
+      document.querySelector('#overlay h1').style.color = '#ff5b5b';
       document.querySelector('#overlay p').innerHTML =
-        '<span class="score-line">生存時間 ' + elapsed.toFixed(1) + ' 秒 / 鍵 ' + keysCollected + ' 個</span>';
+        '<span class="score-line">生存時間 ' + elapsed.toFixed(1) + ' 秒 / 鍵 ' + keysCollected + ' 個 / 🪙 ' + coinsCollected + ' 枚</span>';
       startBtn.textContent = 'もう一度挑戦';
+      renderDiffInfo();
       setTimeout(() => { overlay.style.display = 'flex'; }, 300);
     });
   }
@@ -427,11 +506,19 @@
     running = false;
     gameState = 'win';
     sfxDoor();
+    const isRecord = saveBestTime(difficulty, elapsed);
+    const best = getBestTime(difficulty);
     document.querySelector('#overlay h1').textContent = '脱出成功！';
     document.querySelector('#overlay h1').style.color = '#7dffb0';
     document.querySelector('#overlay p').innerHTML =
-      '<span class="score-line">クリアタイム ' + elapsed.toFixed(1) + ' 秒</span>屋敷から無事に逃げ切った。';
+      '<span class="score-line">クリアタイム ' + elapsed.toFixed(1) + ' 秒 / 🪙 ' + coinsCollected + ' 枚</span>' +
+      (isRecord
+        ? '<span style="color:#ffd35b;font-weight:bold;">新記録！</span><br>'
+        : 'ベストタイム: ' + best.toFixed(1) + ' 秒<br>') +
+      '屋敷から無事に逃げ切った。';
     startBtn.textContent = 'もう一度遊ぶ';
+    renderDiffInfo();
+    renderTotalCoins();
     overlay.style.display = 'flex';
   }
 
@@ -530,6 +617,16 @@
         keysCollected++;
         keyCountEl.textContent = '🔑 ' + keysCollected + ' / 3';
         sfxKey();
+      }
+    }
+    for (const c of coinsData) {
+      if (!c.taken && dist(player.x,player.y,c.x,c.y) < player.r + 11) {
+        c.taken = true;
+        coinsCollected++;
+        coinCountEl.textContent = '🪙 ' + coinsCollected;
+        addTotalCoins(1);
+        renderTotalCoins();
+        sfxCoin();
       }
     }
     const closet = inClosetZone();
@@ -771,6 +868,28 @@
       ctx.beginPath(); ctx.arc(-6,0,6,0,Math.PI*2); ctx.fill();
       ctx.fillRect(-2,-2,14,4);
       ctx.fillRect(8,-2,3,6);
+      ctx.restore();
+    }
+
+    for (const c of coinsData) {
+      if (c.taken) continue;
+      const bob = Math.sin(elapsed*3.5 + c.x*1.3) * 3;
+      const spin = Math.abs(Math.cos(elapsed*2.2 + c.x));
+      const grad = ctx.createRadialGradient(c.x,c.y+bob,0,c.x,c.y+bob,30);
+      grad.addColorStop(0, 'rgba(255,210,80,0.3)');
+      grad.addColorStop(1, 'rgba(255,210,80,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(c.x,c.y+bob,30,0,Math.PI*2); ctx.fill();
+
+      ctx.save();
+      ctx.translate(c.x, c.y+bob);
+      ctx.scale(Math.max(spin,0.18), 1);
+      ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2);
+      ctx.fillStyle = '#ffcf3f';
+      ctx.fill();
+      ctx.strokeStyle = '#c98f1a';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
       ctx.restore();
     }
 
