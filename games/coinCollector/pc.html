@@ -189,7 +189,10 @@ canvas { display:block; }
       <span style="color:#00e5ff">B</span> 1,000 &nbsp;/&nbsp;
       <span style="color:#ffd600">A</span> 10,000 &nbsp;/&nbsp;
       <span style="color:#ff6d00">S</span> 100,000 &nbsp;/&nbsp;
-      <span style="color:#ff00e5">SS</span> 1,000,000
+      <span style="color:#ff00e5">SS</span> 1,000,000 &nbsp;/&nbsp;
+      <span style="color:#fff;text-shadow:0 0 6px #ffd700">SSS</span> 10,000,000 &nbsp;/&nbsp;
+      <span style="color:#ffd700;text-shadow:0 0 8px #fff">GOD</span> 100,000,000 &nbsp;/&nbsp;
+      <span style="color:#ffd700;text-shadow:0 0 8px #ff00e5">GOD+</span> 1,000,000,000,000
     </div>
   </div>
 </div>
@@ -292,7 +295,10 @@ canvas { display:block; }
         <span style="color:#00e5ff">B</span> 1,000 ／
         <span style="color:#ffd600">A</span> 10,000 ／
         <span style="color:#ff6d00">S</span> 100,000 ／
-        <span style="color:#ff00e5">SS</span> 1,000,000
+        <span style="color:#ff00e5">SS</span> 1,000,000 ／
+        <span style="color:#fff;text-shadow:0 0 5px #ffd700">SSS</span> 10,000,000 ／
+        <span style="color:#ffd700;text-shadow:0 0 6px #fff">GOD</span> 100,000,000 ／
+        <span style="color:#ffd700;text-shadow:0 0 6px #ff00e5">GOD+</span> 1,000,000,000,000
       </p>
     </div>
     <div class="rsec"><b>ハードモード</b><table>
@@ -320,8 +326,8 @@ const ctx = cv.getContext('2d');
 
 // ── Helpers ───────────────────────────────────
 const rnd   = (a,b) => Math.random()*(b-a)+a;
-const getRank   = s => s>=1000000?['SS','#ff00e5','#ff80f0']:s>=100000?['S','#ff6d00','#ff9100']:s>=10000?['A','#ffd600','#fff176']:s>=1000?['B','#00e5ff','#80d8ff']:s>=100?['F','#aaaaaa','#eeeeee']:['','#ffffff','#ffffff'];
-const RANK_ORDER = ['','F','B','A','S','SS'];
+const getRank   = s => s>=1000000000000?['GOD+','#ffd700','#ff00e5']:s>=100000000?['GOD','#ffd700','#ffffff']:s>=10000000?['SSS','#ffffff','#ffd700']:s>=1000000?['SS','#ff00e5','#ff80f0']:s>=100000?['S','#ff6d00','#ff9100']:s>=10000?['A','#ffd600','#fff176']:s>=1000?['B','#00e5ff','#80d8ff']:s>=100?['F','#aaaaaa','#eeeeee']:['','#ffffff','#ffffff'];
+const RANK_ORDER = ['','F','B','A','S','SS','SSS','GOD','GOD+'];
 const rankGT    = (a,b) => RANK_ORDER.indexOf(a) > RANK_ORDER.indexOf(b);
 const dist  = (ax,ay,bx,by) => Math.hypot(ax-bx,ay-by);
 const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
@@ -385,6 +391,7 @@ const gachaShapePool=[
   {shapeIdx:10,icon:'🍀',name:'クローバー',r:3},
   {shapeIdx:11,icon:'🐟',name:'金魚',r:3},
   {shapeIdx:12,icon:'🍎',name:'りんご',r:3},
+  {shapeIdx:13,icon:'🍉',name:'スイカ',r:3},
 ];
 const gachaEyePool=[
   {s:'#fff0f5',p:'#ff69b4',name:'ピンク',r:1},
@@ -418,6 +425,8 @@ const gachaEffectPool=[
   {name:'電撃', icon:'⚡',color:'#ffff00',r:2},
   {name:'レインボー',icon:'🌈',color:'#ff0000',r:3},
   {name:'龍',   icon:'🐉',color:'#ffd700',r:3},
+  {name:'貧しい',icon:'🪙',color:'#887755',r:1},
+  {name:'神',    icon:'👼',color:'#ffd700',r:3},
 ];
 const gachaEffectW=makeW(gachaEffectPool), gachaEffectTot=gachaEffectW.reduce((a,b)=>a+b,0);
 let gachaEffectOwned=JSON.parse(localStorage.getItem('cc-gacha-effect-owned')||'[]');
@@ -1931,7 +1940,7 @@ function drawHUD() {
     ctx.restore();
   }
   // Next rank hint
-  const NR=[[100,'F','#aaaaaa'],[1000,'B','#00e5ff'],[10000,'A','#ffd600'],[100000,'S','#ff6d00'],[1000000,'SS','#ff00e5']].find(([th])=>score<th);
+  const NR=[[100,'F','#aaaaaa'],[1000,'B','#00e5ff'],[10000,'A','#ffd600'],[100000,'S','#ff6d00'],[1000000,'SS','#ff00e5'],[10000000,'SSS','#ffffff'],[100000000,'GOD','#ffd700'],[1000000000000,'GOD+','#ffd700']].find(([th])=>score<th);
   if(NR){
     const[nth,nnm,nnc]=NR;
     ctx.save(); ctx.fillStyle=nnc; ctx.font='10px "Segoe UI"';
@@ -1945,7 +1954,7 @@ function drawHUD() {
   ctx.fillText('BEST '+best.toLocaleString(),135,34);
   if(bestRank){
     const bx=135+ctx.measureText('BEST '+best.toLocaleString()).width+5;
-    const [,brc,brg]=getRank({'F':100,'B':1000,'A':10000,'S':100000,'SS':1000000}[bestRank]||0);
+    const [,brc,brg]=getRank({'F':100,'B':1000,'A':10000,'S':100000,'SS':1000000,'SSS':10000000,'GOD':100000000,'GOD+':1000000000000}[bestRank]||0);
     ctx.save(); ctx.shadowColor=brg; ctx.shadowBlur=10; ctx.fillStyle=brc;
     ctx.fillText('['+bestRank+']',bx,34); ctx.restore();
   }
@@ -2695,6 +2704,71 @@ function drawPlayerEffect(){
       }
       break;
     }
+    case 10:{ // 神
+      // 後光 (ハロー)
+      ctx.globalAlpha=0.88+Math.sin(t*2.5)*0.1;
+      ctx.strokeStyle='#fff9aa';ctx.lineWidth=4;
+      ctx.shadowColor='#ffd700';ctx.shadowBlur=22;
+      ctx.beginPath();ctx.ellipse(x,y-r-14,r*.64,r*.21,0,0,pi2);ctx.stroke();
+      ctx.shadowBlur=0;
+      // 神聖な光線 12本
+      for(let i=0;i<12;i++){
+        const a=i*pi2/12+t*0.35;
+        const outer=r+14+Math.sin(t*2.5+i)*6+(i%3===0?8:0);
+        ctx.globalAlpha=(i%3===0?0.55:0.28)+Math.sin(t*2+i)*0.12;
+        ctx.strokeStyle=i%3===0?'#ffd700':'#fffbe0';
+        ctx.lineWidth=i%3===0?2.5:1.2;
+        ctx.shadowColor='#ffd700';ctx.shadowBlur=i%3===0?10:4;
+        ctx.beginPath();
+        ctx.moveTo(x+Math.cos(a)*(r+3),y+Math.sin(a)*(r+3));
+        ctx.lineTo(x+Math.cos(a)*outer,y+Math.sin(a)*outer);
+        ctx.stroke();ctx.shadowBlur=0;
+      }
+      // 神聖オーラリング × 3
+      for(let ring=0;ring<3;ring++){
+        const rr=r+7+ring*8+Math.sin(t*1.8+ring*1.3)*3;
+        ctx.globalAlpha=0.22-ring*0.05+Math.sin(t*2+ring)*0.07;
+        ctx.strokeStyle=['#ffffff','#fff7aa','#ffd700'][ring];
+        ctx.lineWidth=[4,2.5,1.5][ring];
+        ctx.shadowColor='#ffd700';ctx.shadowBlur=[16,8,4][ring];
+        ctx.beginPath();ctx.arc(x,y,rr,0,pi2);ctx.stroke();ctx.shadowBlur=0;
+      }
+      // 輝く粒子 8個
+      for(let i=0;i<8;i++){
+        const a=i*pi2/8+t*0.75+i*0.3;
+        const d=r+18+Math.sin(t*1.5+i*1.4)*5;
+        const sz=1.8+Math.sin(t*2.5+i)*0.8;
+        ctx.globalAlpha=0.82+Math.sin(t*3+i)*0.15;
+        ctx.fillStyle=i%2?'#ffffff':'#ffd700';
+        ctx.shadowColor='#ffffff';ctx.shadowBlur=10;
+        ctx.beginPath();ctx.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,sz,0,pi2);ctx.fill();
+        ctx.shadowBlur=0;
+      }
+      break;
+    }
+    case 9:{ // 貧しい
+      // くすんだ茶色の玉が不規則にゆっくり周回
+      for(let i=0;i<4;i++){
+        const a=i*pi2/4+t*(0.55+i*0.09);
+        const d=r+7+Math.sin(t*1.1+i*2.2)*4;
+        const sz=2.2+Math.sin(t*1.8+i)*0.7;
+        ctx.globalAlpha=0.42+Math.sin(t*1.5+i*1.4)*0.18;
+        ctx.fillStyle=i%2?'#9a8866':'#776655';
+        ctx.beginPath();ctx.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,sz,0,pi2);ctx.fill();
+      }
+      // 薄いくすみオーラ（光なし）
+      ctx.globalAlpha=0.05+Math.sin(t*2)*0.02;ctx.fillStyle='#887755';
+      ctx.beginPath();ctx.arc(x,y,r+9,0,pi2);ctx.fill();
+      // ¥マークがじわじわ上に流れてフェードアウト
+      ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+      for(let i=0;i<3;i++){
+        const phase=((t*0.45+i/3)%1);
+        ctx.globalAlpha=(1-phase)*0.55;
+        ctx.fillStyle='#aa9966';
+        ctx.fillText('¥',x+(i-1)*11,y+r+8-phase*28);
+      }
+      break;
+    }
   }
   ctx.globalAlpha=1;ctx.restore();
 }
@@ -3008,6 +3082,40 @@ function drawPlayer() {
     // Eye (front = +x side)
     ctx.fillStyle=ec.s; ctx.beginPath(); ctx.arc(r*.54,r*.12,4.5,0,pi2); ctx.fill();
     ctx.fillStyle=ec.p; ctx.beginPath(); ctx.arc(r*.56,r*.11,2.5,0,pi2); ctx.fill();
+    ctx.restore();
+  } else if(playerShape===13){
+    // Watermelon 🍉 (round, green rind ring + stripes + seeds)
+    const r=P.r;
+    ctx.save();
+    ctx.rotate(a);
+    // Flesh (player gradient)
+    ctx.beginPath(); ctx.arc(0,0,r*.78,0,pi2); ctx.fill();
+    // Dark green rind ring
+    ctx.strokeStyle='#1e6b12'; ctx.lineWidth=r*.24;
+    ctx.beginPath(); ctx.arc(0,0,r*.89,0,pi2); ctx.stroke();
+    ctx.shadowBlur=0;
+    // Light green stripes on rind
+    ctx.strokeStyle='#52c42a'; ctx.lineWidth=r*.07;
+    for(let i=0;i<5;i++){
+      const sa=i*pi2/5;
+      ctx.beginPath(); ctx.arc(0,0,r*.89,sa,sa+0.48); ctx.stroke();
+    }
+    // Seeds
+    ctx.fillStyle='rgba(10,10,10,0.82)';
+    for(let i=0;i<4;i++){
+      const sa=i*pi2/4+0.35, d=r*.36;
+      ctx.save();
+      ctx.translate(Math.cos(sa)*d,Math.sin(sa)*d);
+      ctx.rotate(sa);
+      ctx.beginPath(); ctx.ellipse(0,0,r*.1,r*.052,0,0,pi2); ctx.fill();
+      ctx.restore();
+    }
+    // Highlight
+    ctx.fillStyle='rgba(255,255,255,0.3)';
+    ctx.beginPath(); ctx.ellipse(-r*.18,-r*.22,r*.29,r*.16,-0.42,0,pi2); ctx.fill();
+    // Eye (front = +x direction)
+    ctx.fillStyle=ec.s; ctx.beginPath(); ctx.arc(r*.55,0,4.5,0,pi2); ctx.fill();
+    ctx.fillStyle=ec.p; ctx.beginPath(); ctx.arc(r*.57,0,2.5,0,pi2); ctx.fill();
     ctx.restore();
   } else {
     // Circle
