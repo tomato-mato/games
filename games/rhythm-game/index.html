@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>リズムゲーム</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --panel: #ffffff;
+    --ink: #2b2b2b;
+    --sub: #6b6b6b;
+    --accent: #3f7d5c;
+    --accent-dark: #2c5a41;
+    --border: #d8d2c2;
+    --lane-bg: #33302a;
+    --lane-line: #4a463d;
+    --judge: #d8a53f;
+    --perfect: #3f7d5c;
+    --good: #d8a53f;
+    --miss: #c0392b;
+    --lane0: #e15b64;
+    --lane1: #f2b134;
+    --lane2: #4fb0c6;
+    --lane3: #7a68c9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px 60px;
+  }
+  .nav { font-size: 0.85rem; margin-bottom: 6px; display: flex; gap: 16px; }
+  .nav a { color: var(--accent-dark); }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .subtitle { color: var(--sub); font-size: 0.9rem; margin-bottom: 20px; }
+
+  .layout {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 1000px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .side { width: 220px; display: flex; flex-direction: column; gap: 12px; }
+  .side label { font-size: 0.85rem; color: var(--sub); display: block; margin-bottom: 4px; }
+  .radio-row { display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem; }
+  .radio-row label { display: flex; align-items: center; gap: 6px; color: var(--ink); }
+  select, button {
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    width: 100%;
+  }
+  button.primary { background: var(--accent); color: #fff; border: none; }
+  button.primary:hover { background: var(--accent-dark); }
+  input[type=range] { width: 100%; cursor: pointer; accent-color: var(--accent); }
+  .stats { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; border-top: 1px solid var(--border); padding-top: 12px; }
+  .stats div { display: flex; justify-content: space-between; }
+  .stats div span:first-child { color: var(--sub); }
+  .mute-row { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--sub); }
+  .mute-row input { width: auto; }
+
+  .game-wrap { position: relative; }
+  canvas { background: var(--lane-bg); border-radius: 8px; display: block; transition: box-shadow 0.3s ease; }
+  .game-wrap.oni-mode canvas {
+    background:
+      radial-gradient(ellipse at 30% 8%, rgba(150,160,180,0.5) 0%, transparent 55%),
+      radial-gradient(ellipse at 72% 22%, rgba(100,110,130,0.45) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 2%, rgba(180,190,210,0.3) 0%, transparent 60%),
+      linear-gradient(180deg, #14161d 0%, #262a37 40%, #363b4c 70%, #1e212b 100%);
+    box-shadow: 0 0 22px rgba(120, 130, 160, 0.5);
+  }
+  .lightning-flash {
+    position: absolute;
+    inset: 0;
+    background: #eaf2ff;
+    opacity: 0;
+    pointer-events: none;
+    border-radius: 8px;
+    z-index: 5;
+  }
+  .lightning-flash.strike { animation: lightningFlash 0.5s ease-out; }
+  @keyframes lightningFlash {
+    0% { opacity: 0; }
+    8% { opacity: 0.85; }
+    15% { opacity: 0.15; }
+    25% { opacity: 0.7; }
+    40% { opacity: 0.05; }
+    100% { opacity: 0; }
+  }
+  .game-wrap.mash-mode canvas {
+    background: linear-gradient(180deg, #3a1a05 0%, #8a3a08 60%, #ffb347 100%);
+    box-shadow: 0 0 22px rgba(255, 140, 0, 0.5);
+  }
+  .game-wrap.fire-mode canvas {
+    background:
+      radial-gradient(circle at 30% 75%, rgba(255,214,140,0.5) 0 2px, transparent 3px),
+      radial-gradient(circle at 65% 60%, rgba(255,180,80,0.45) 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 50% 85%, rgba(255,230,160,0.55) 0 2px, transparent 3px),
+      radial-gradient(circle at 20% 40%, rgba(255,160,60,0.35) 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 80% 30%, rgba(255,200,100,0.3) 0 1px, transparent 2px),
+      linear-gradient(180deg, #2b0f02 0%, #7a2a06 45%, #d1560a 80%, #ffb347 100%);
+    box-shadow: 0 0 22px rgba(255, 140, 0, 0.6);
+  }
+  .game-wrap.sea-mode canvas {
+    background:
+      radial-gradient(circle at 25% 20%, rgba(255,255,255,0.35) 0 3px, transparent 4px),
+      radial-gradient(circle at 55% 45%, rgba(255,255,255,0.25) 0 2px, transparent 3px),
+      radial-gradient(circle at 75% 70%, rgba(255,255,255,0.3) 0 3px, transparent 4px),
+      radial-gradient(circle at 40% 85%, rgba(255,255,255,0.2) 0 2px, transparent 3px),
+      radial-gradient(circle at 85% 30%, rgba(255,255,255,0.25) 0 2px, transparent 3px),
+      radial-gradient(circle at 15% 60%, rgba(255,255,255,0.2) 0 1.5px, transparent 2.5px),
+      linear-gradient(180deg, #04263e 0%, #0a5478 45%, #1489a8 100%);
+    box-shadow: 0 0 22px rgba(20, 137, 168, 0.6);
+  }
+  .game-wrap.ice-mode canvas {
+    background:
+      radial-gradient(circle at 20% 15%, rgba(255,255,255,0.75) 0 2px, transparent 3px),
+      radial-gradient(circle at 62% 32%, rgba(255,255,255,0.55) 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 82% 68%, rgba(255,255,255,0.65) 0 2px, transparent 3px),
+      radial-gradient(circle at 33% 78%, rgba(255,255,255,0.5) 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 90% 18%, rgba(255,255,255,0.45) 0 1px, transparent 2px),
+      radial-gradient(circle at 10% 55%, rgba(255,255,255,0.4) 0 1px, transparent 2px),
+      linear-gradient(180deg, #1c4a68 0%, #2f7fa8 55%, #bfe8fa 100%);
+    box-shadow: 0 0 22px rgba(129, 212, 250, 0.6);
+  }
+  .game-wrap.hell-mode canvas {
+    background: radial-gradient(ellipse at 50% 20%, #5a1a0a 0%, #240a06 75%);
+    box-shadow: 0 0 32px rgba(255, 87, 34, 0.75);
+    animation: hellShake 0.18s infinite, hellFlicker 1.4s ease-in-out infinite;
+  }
+  @keyframes hellShake {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(1px, -1px); }
+    50% { transform: translate(-1px, 1px); }
+    75% { transform: translate(1px, 1px); }
+  }
+  @keyframes hellFlicker {
+    0%, 100% { filter: brightness(1); }
+    30% { filter: brightness(1.18); }
+    55% { filter: brightness(0.9); }
+    80% { filter: brightness(1.1); }
+  }
+  .hell-embers {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    border-radius: 8px;
+    background-image:
+      radial-gradient(circle, rgba(255,210,120,0.9) 0 2px, transparent 3px),
+      radial-gradient(circle, rgba(255,140,50,0.85) 0 1.5px, transparent 2.5px),
+      radial-gradient(circle, rgba(255,230,160,0.9) 0 1.5px, transparent 2.5px),
+      radial-gradient(circle, rgba(255,100,30,0.75) 0 2px, transparent 3px);
+    background-size: 60px 220px, 90px 260px, 70px 200px, 110px 300px;
+    background-position: 10px 380px, 55px 300px, 25px 440px, 85px 200px;
+    background-repeat: repeat-y;
+  }
+  .game-wrap.hell-mode .hell-embers {
+    opacity: 1;
+    animation: emberRise 3.5s linear infinite;
+  }
+  @keyframes emberRise {
+    from { background-position: 10px 380px, 55px 300px, 25px 440px, 85px 200px; }
+    to   { background-position: 10px -220px, 55px -260px, 25px -200px, 85px -300px; }
+  }
+  .game-wrap.exploding canvas {
+    animation: explosionShake 0.08s infinite, explosionFlash 3s ease-out;
+  }
+  @keyframes explosionShake {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(3px, -3px); }
+    40% { transform: translate(-3px, 2px); }
+    60% { transform: translate(2px, 3px); }
+    80% { transform: translate(-3px, -2px); }
+  }
+  @keyframes explosionFlash {
+    0% { filter: brightness(2.4) saturate(1.6); }
+    12% { filter: brightness(1.5); }
+    28% { filter: brightness(2.1); }
+    45% { filter: brightness(1.3); }
+    70% { filter: brightness(1.5); }
+    100% { filter: brightness(1); }
+  }
+
+  .hud {
+    position: absolute;
+    top: 10px; left: 0; right: 0;
+    display: flex; justify-content: space-between;
+    padding: 0 14px;
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    pointer-events: none;
+  }
+  .life-bar-wrap {
+    position: absolute;
+    top: 38px; left: 14px; right: 14px;
+    height: 7px;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .life-bar {
+    height: 100%;
+    width: 100%;
+    background: var(--perfect);
+    transition: width 0.15s ease, background 0.3s ease;
+  }
+  .judge-text {
+    position: absolute;
+    left: 50%; top: 40%;
+    transform: translate(-50%, -50%);
+    font-size: 1.6rem;
+    font-weight: bold;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  .mash-hud {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    pointer-events: none;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  }
+  .mash-timer { font-size: 1.4rem; font-weight: bold; opacity: 0.85; }
+  .mash-count {
+    font-size: 4.2rem;
+    font-weight: bold;
+    line-height: 1;
+    transition: transform 0.08s ease;
+  }
+  .mash-count.pulse { animation: mashPulse 0.12s ease-out; }
+  @keyframes mashPulse {
+    0% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+  .mash-caption { font-size: 1rem; opacity: 0.8; letter-spacing: 0.1em; }
+
+  .keys-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .keys-row button {
+    width: 74px;
+    height: 56px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+  }
+  .keys-row button:nth-child(1) { background: var(--lane0); }
+  .keys-row button:nth-child(2) { background: var(--lane1); }
+  .keys-row button:nth-child(3) { background: var(--lane2); }
+  .keys-row button:nth-child(4) { background: var(--lane3); }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 18, 14, 0.9);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-radius: 8px;
+    text-align: center;
+    padding: 20px;
+  }
+  .overlay h2 { margin: 0 0 6px; font-size: 1.6rem; }
+  .overlay .rank { font-size: 3rem; font-weight: bold; color: var(--judge); margin: 4px 0; }
+  .overlay .row { display: flex; gap: 20px; font-size: 0.95rem; }
+  .overlay button { width: auto; padding: 10px 20px; margin-top: 10px; }
+
+  .explain {
+    max-width: 1000px;
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    line-height: 1.8;
+    font-size: 0.92rem;
+  }
+  .explain h2 { font-size: 1.1rem; margin-top: 0; }
+  .explain code { background: #eee7d5; padding: 1px 5px; border-radius: 4px; }
+
+  #editorPanel { margin-top: 20px; }
+  .editor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .editor-header h2 { margin: 0; font-size: 1.2rem; }
+  .editor-header button { width: auto; padding: 8px 14px; }
+  .editor-controls { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .editor-controls label { font-size: 0.85rem; color: var(--sub); display: block; margin-bottom: 4px; }
+  .editor-controls input, .editor-controls select {
+    font-family: inherit; font-size: 0.9rem; padding: 8px 10px; border-radius: 6px;
+    border: 1px solid var(--border); width: 140px;
+  }
+  .editor-grid-wrap {
+    display: flex; gap: 6px; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; background: #faf8f2;
+  }
+  .editor-lane-labels { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+  .editor-lane-labels div {
+    width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 0.75rem; color: #fff; border-radius: 3px;
+  }
+  .editor-lane-labels div:nth-child(1) { background: var(--lane0); }
+  .editor-lane-labels div:nth-child(2) { background: var(--lane1); }
+  .editor-lane-labels div:nth-child(3) { background: var(--lane2); }
+  .editor-lane-labels div:nth-child(4) { background: var(--lane3); }
+  .editor-lane-labels div.end-label { background: #4a463d; font-size: 0.7rem; }
+  .editor-grid-scroll { overflow-x: auto; }
+  .editor-grid { display: grid; gap: 3px; width: max-content; }
+  .editor-cell {
+    width: 22px; height: 22px; border-radius: 3px; background: #e5e0d0;
+    cursor: pointer; border: 1px solid var(--border);
+  }
+  .editor-cell.bar-start { border-left: 2px solid #a89a6e; }
+  .editor-cell.lane0.active { background: var(--lane0); }
+  .editor-cell.lane1.active { background: var(--lane1); }
+  .editor-cell.lane2.active { background: var(--lane2); }
+  .editor-cell.lane3.active { background: var(--lane3); }
+  .editor-cell.playing { outline: 2px solid #333; }
+  .editor-cell.end-cell { background: #efe9d8; }
+  .editor-cell.end-cell.active {
+    background: #2b2b2b;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+  }
+  .editor-cell.end-cell.active::after { content: "🏁"; }
+  .editor-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .editor-buttons button { width: auto; padding: 8px 14px; }
+  .editor-saved { margin-top: 20px; }
+  .editor-saved h3 { font-size: 1rem; margin: 0 0 8px; }
+  .saved-chart-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem;
+  }
+  .saved-chart-actions button { width: auto; padding: 4px 10px; font-size: 0.8rem; margin-left: 6px; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="index.html">めいろゲーム</a>
+  <a href="slide-puzzle.html">スライドパズル</a>
+  <a href="janken.html">じゃんけんゲーム</a>
+</div>
+<h1>リズムゲーム</h1>
+<div class="subtitle">D・F・J・K キー(または下のボタン)を、タイミングよく押そう</div>
+
+<div class="layout">
+  <div class="panel side">
+    <div>
+      <label>モード</label>
+      <div class="radio-row">
+        <label><input type="radio" name="playMode" value="single" checked> 1曲プレイ</label>
+        <label><input type="radio" name="playMode" value="training"> 🎓 とっくん(練習)</label>
+        <label><input type="radio" name="playMode" value="course-basic"> コース(かんたん〜むずかしい)</label>
+        <label><input type="radio" name="playMode" value="course-full"> コース(全難易度つづけて)</label>
+        <label><input type="radio" name="playMode" value="mash"> 🔥 連打チャレンジ</label>
+      </div>
+    </div>
+    <div id="songWrap">
+      <label for="songSelect">曲</label>
+      <select id="songSelect">
+        <option value="song1" selected>曲1: スタンダード</option>
+        <option value="song2">曲2: シンコペーション</option>
+        <option value="song3">曲3: れんだ連打</option>
+        <option value="song4">曲4: ロング(長い・コンボ数多め)</option>
+      </select>
+    </div>
+    <div id="mashWrap" style="display:none;">
+      <label for="mashDuration">秒数</label>
+      <select id="mashDuration">
+        <option value="5">5秒</option>
+        <option value="10" selected>10秒</option>
+        <option value="15">15秒</option>
+      </select>
+    </div>
+    <div id="difficultyWrap">
+      <label for="difficulty">むずかしさ</label>
+      <select id="difficulty">
+        <option value="easy">かんたん(BPM100)</option>
+        <option value="normal" selected>ふつう(BPM120)</option>
+        <option value="hard">むずかしい(BPM140)</option>
+        <option value="oni">👹 鬼(BPM160)</option>
+        <option value="hell">🔥 地獄(BPM190)</option>
+      </select>
+    </div>
+    <div id="speedWrap" style="display:none;">
+      <label for="bpmSlider">BPM: <span id="bpmValue">120</span>(体力は減りません)</label>
+      <input type="range" id="bpmSlider" min="40" max="240" step="5" value="120">
+    </div>
+    <button class="primary" id="startBtn">スタート</button>
+    <button id="stopBtn" style="display:none;">やめる</button>
+    <button type="button" id="editorBtn">🎼 譜面をつくる</button>
+
+    <div class="mute-row">
+      <input type="checkbox" id="muteBox">
+      <label for="muteBox">ミュート</label>
+    </div>
+
+    <div class="stats">
+      <div id="stageRow" style="display:none;"><span>ステージ</span><span id="stageStat">--</span></div>
+      <div><span>スコア</span><span id="scoreStat">0</span></div>
+      <div><span>コンボ</span><span id="comboStat">0</span></div>
+      <div><span>ベストスコア</span><span id="bestStat">--</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="game-wrap" id="gameWrap">
+      <canvas id="board" width="360" height="480"></canvas>
+      <div class="hell-embers" id="hellEmbers"></div>
+      <div class="lightning-flash" id="lightningFlash"></div>
+      <div class="hud" id="hudRow"><span id="hudScore">0</span><span id="hudCombo"></span></div>
+      <div class="life-bar-wrap" id="lifeBarWrap"><div class="life-bar" id="lifeBar"></div></div>
+      <div class="judge-text" id="judgeText"></div>
+      <div class="mash-hud" id="mashHud" style="display:none;">
+        <div class="mash-timer" id="mashTimer">10.0</div>
+        <div class="mash-count" id="mashCount">0</div>
+        <div class="mash-caption">れんだ!</div>
+      </div>
+      <div class="overlay" id="overlay" style="display:none;"></div>
+    </div>
+    <div class="keys-row">
+      <button data-lane="0">D</button>
+      <button data-lane="1">F</button>
+      <button data-lane="2">J</button>
+      <button data-lane="3">K</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="editorPanel" style="display:none; max-width:1000px; width:100%; margin:0 auto;">
+  <div class="editor-header">
+    <h2>譜面エディター</h2>
+    <button id="editorBackBtn">← もどる</button>
+  </div>
+  <div class="editor-controls">
+    <div>
+      <label for="editorName">名前</label>
+      <input type="text" id="editorName" value="マイ譜面1">
+    </div>
+    <div>
+      <label for="editorBpm">BPM</label>
+      <input type="number" id="editorBpm" min="60" max="220" step="5" value="120">
+    </div>
+    <div>
+      <label for="editorBars">小節数</label>
+      <select id="editorBars">
+        <option value="2">2小節</option>
+        <option value="4" selected>4小節</option>
+        <option value="8">8小節</option>
+        <option value="16">16小節</option>
+        <option value="32">32小節</option>
+      </select>
+    </div>
+  </div>
+  <div class="editor-grid-wrap">
+    <div class="editor-lane-labels"><div>D</div><div>F</div><div>J</div><div>K</div><div class="end-label">🏁</div></div>
+    <div class="editor-grid-scroll"><div class="editor-grid" id="editorGrid"></div></div>
+  </div>
+  <div class="editor-buttons">
+    <button id="editorPlayBtn">▶ テスト再生</button>
+    <button id="editorStopBtn">■ 停止</button>
+    <button id="editorClearBtn">🗑 ぜんぶ消す</button>
+    <button class="primary" id="editorSaveBtn">💾 ほぞん</button>
+    <button class="primary" id="editorPlayRealBtn">🎮 この譜面で遊ぶ</button>
+  </div>
+  <div class="editor-saved">
+    <h3>ほぞんした譜面</h3>
+    <div id="savedChartsList"></div>
+  </div>
+</div>
+
+<div class="explain">
+  <h2>この音ゲーの仕組み</h2>
+  <p>音や譜面は音楽ファイルを使わず、すべてプログラムの中で<code>Web Audio API</code>を使ってその場で合成している。太鼓の音(キック)・ハイハットの音・ノーツの音は、それぞれ波形(サイン波・ノイズなど)から作った電子音。</p>
+  <ol>
+    <li>むずかしさごとに決まった「たね」から乱数を作り、どのタイミングでどのレーンにノーツを置くかを自動で決めて「譜面」を作る(同じむずかしさなら毎回同じ譜面になるので、練習して上達できる)。</li>
+    <li>音がずれないように、時刻の基準は画面の時間ではなく<code>AudioContext</code>というオーディオ専用の時計を使う。少し先の未来の音をあらかじめ予約しておく「先読みスケジューリング」という方法で、音がもたつかないようにしている。</li>
+    <li>キーを押した瞬間の時刻と、ノーツ本来の時刻の差(ズレ)を計算して、0.05秒以内なら PERFECT、0.15秒以内なら GOOD、それより外れる(何もしない)と MISS と判定する。</li>
+    <li>「コースモード」では、かんたん→ふつう→むずかしい→鬼→地獄の5段階を体力ゲージを引き継がずに(毎ステージ全回復)連続でプレイする。スコアとコンボは全ステージ通して積み上がっていくので、最後まで走りきるとかなり大きい数字になる。</li>
+    <li>「とっくん(練習)モード」では、スライダーでBPM(テンポ)を40〜240の間で自由に設定できる。譜面のパターン(どのタイミングでどのレーンにノーツが来るか)は選んだ難易度のまま、テンポだけを変えられる。合成音なので、BPMを変えてもピッチ(音の高さ)は変わらない。体力が0になっても曲は止まらないので、苦手な難易度をゆっくりしたテンポから安心して練習できる。</li>
+    <li>「曲」を選ぶと、譜面を作る乱数のたねと配置のクセが変わる。曲2「シンコペーション」は裏拍(ジャストのタイミングより半歩ずれた拍)にノーツが来やすく、曲3「れんだ連打」は1つのノーツのあとに同じレーンへ連続でノーツが追加されることがある。曲4「ロング」は小節数を2倍にしてノーツの出現確率も少し上げているので、曲の長さもコンボ数もぐっと増える。同じ難易度でも曲を変えると、まったく違う手の動かし方が必要になる。</li>
+    <li>「連打チャレンジ」は譜面もタイミング判定もない別モードで、決めた秒数の間にD・F・J・Kを何回押せたかだけを数える。とにかく速く指を動かす反射神経・持久力の実験として、他のモードとは違う遊び方ができる。</li>
+    <li>「譜面をつくる」では、レーン×拍のマス目をクリックして自分だけの譜面を作れる。BPMと小節数(最大32小節まで)を決め、8分音符きざみでマスを塗ると、その場でノーツと太鼓の音に変換される。一番下の🏁の行に印をつけると、そのマスで曲を打ち切れるので、長い小節数を選んでおいて好きな長さで終わらせることができる。「テスト再生」は判定なしの試聴、「この譜面で遊ぶ」は実際にPERFECT/GOOD/MISSを判定しながらプレイできるモード。ブラウザの中に保存されるので、作った譜面はあとから呼び出して遊べる。</li>
+  </ol>
+</div>
+
+<script>
+(() => {
+  const DIFF = {
+    easy:   { bpm: 100, bars: 16, subdivisions: 1, density: 0.8,  chordChance: 0.0,  travelTime: 1.6,  missPenalty: 8 },
+    normal: { bpm: 120, bars: 20, subdivisions: 2, density: 0.55, chordChance: 0.08, travelTime: 1.5,  missPenalty: 10 },
+    hard:   { bpm: 140, bars: 24, subdivisions: 2, density: 0.75, chordChance: 0.2,  travelTime: 1.35, missPenalty: 13 },
+    oni:    { bpm: 160, bars: 28, subdivisions: 2, density: 0.9,  chordChance: 0.35, travelTime: 1.0,  missPenalty: 16 },
+    hell:   { bpm: 190, bars: 32, subdivisions: 3, density: 0.95, chordChance: 0.5,  travelTime: 0.8,  missPenalty: 20 },
+  };
+  const PERFECT_RECOVER = 1;
+  const LEAD_IN_BEATS = 8;
+  const TRAVEL_TIME = 1.5;
+  let currentTravelTime = TRAVEL_TIME;
+  const PERFECT_WINDOW = 0.05;
+  const GOOD_WINDOW = 0.15;
+  const LANE_KEYS = ['d', 'f', 'j', 'k'];
+  const LANE_COLORS = ['#e15b64', '#f2b134', '#4fb0c6', '#7a68c9'];
+  const COURSE_ORDERS = {
+    full: ['easy', 'normal', 'hard', 'oni', 'hell'],
+    basic: ['easy', 'normal', 'hard'],
+  };
+  const DIFF_LABEL = { easy: 'かんたん', normal: 'ふつう', hard: 'むずかしい', oni: '👹 鬼', hell: '🔥 地獄' };
+  const SONGS = {
+    song1: { style: 'standard' },
+    song2: { style: 'syncopation' },
+    song3: { style: 'renda' },
+    song4: { style: 'long' },
+  };
+
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const JUDGE_Y = H - 70;
+  const LANE_W = W / 4;
+
+  const diffSelect = document.getElementById('difficulty');
+  const songSelect = document.getElementById('songSelect');
+  const songWrap = document.getElementById('songWrap');
+  const difficultyWrap = document.getElementById('difficultyWrap');
+  const speedWrap = document.getElementById('speedWrap');
+  const bpmSlider = document.getElementById('bpmSlider');
+  const bpmValue = document.getElementById('bpmValue');
+  const mashWrap = document.getElementById('mashWrap');
+  const mashDurationSelect = document.getElementById('mashDuration');
+  const mashHud = document.getElementById('mashHud');
+  const mashTimerEl = document.getElementById('mashTimer');
+  const mashCountEl = document.getElementById('mashCount');
+  const playModeRadios = document.querySelectorAll('input[name=playMode]');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const muteBox = document.getElementById('muteBox');
+  const stageRow = document.getElementById('stageRow');
+  const stageStat = document.getElementById('stageStat');
+  const scoreStat = document.getElementById('scoreStat');
+  const comboStat = document.getElementById('comboStat');
+  const bestStat = document.getElementById('bestStat');
+  const hudRow = document.getElementById('hudRow');
+  const hudScore = document.getElementById('hudScore');
+  const hudCombo = document.getElementById('hudCombo');
+  const lifeBarWrap = document.getElementById('lifeBarWrap');
+  const lifeBar = document.getElementById('lifeBar');
+  const judgeText = document.getElementById('judgeText');
+  const lightningFlash = document.getElementById('lightningFlash');
+  const overlay = document.getElementById('overlay');
+  const gameWrap = document.getElementById('gameWrap');
+  const editorBtn = document.getElementById('editorBtn');
+  const editorPanel = document.getElementById('editorPanel');
+  const editorBackBtn = document.getElementById('editorBackBtn');
+  const editorName = document.getElementById('editorName');
+  const editorBpm = document.getElementById('editorBpm');
+  const editorBars = document.getElementById('editorBars');
+  const editorGrid = document.getElementById('editorGrid');
+  const editorPlayBtn = document.getElementById('editorPlayBtn');
+  const editorStopBtn = document.getElementById('editorStopBtn');
+  const editorClearBtn = document.getElementById('editorClearBtn');
+  const editorSaveBtn = document.getElementById('editorSaveBtn');
+  const editorPlayRealBtn = document.getElementById('editorPlayRealBtn');
+  const savedChartsList = document.getElementById('savedChartsList');
+  const layoutEl = document.querySelector('.layout');
+
+  let audioCtx = null;
+  let masterGain = null;
+  let events = [];
+  let notes = [];
+  let songStartTime = 0;
+  let totalDuration = 0;
+  let schedPtr = 0;
+  let schedTimer = null;
+  let rafId = null;
+  let running = false;
+  let score = 0, combo = 0, maxCombo = 0;
+  let perfectCount = 0, goodCount = 0, missCount = 0;
+  let flashes = []; // {lane, result, t}
+  let life = 100;
+  let currentMissPenalty = 10;
+  let courseActive = false;
+  let courseStageIndex = 0;
+  let courseTotalScore = 0;
+  let stageTransitionTimer = null;
+  let lightningTimer = null;
+  let hellRoarTimer = null;
+  let explosionTimer = null;
+  let explosionEndTimer = null;
+  let currentTrainingMode = false;
+  let mashActive = false;
+  let mashCount = 0;
+  let mashStartTime = 0;
+  let mashDurationSec = 10;
+  let mashTapTimes = [];
+  let mashRafId = null;
+  let playingCustomChart = false;
+  let lastPlayedCustomChart = null;
+  let editorCells = null;
+  let editorEndStep = null;
+  let editorPreviewActive = false;
+  let editorPreviewTimer = null;
+  let editorPreviewRafId = null;
+  let currentCourseOrder = COURSE_ORDERS.full;
+  let currentCourseKind = 'full';
+  let currentCourseKey = 'rhythm_best_course_full';
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hashSeed(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    return h;
+  }
+
+  function buildChart(diffKey, bpmOverride, songId) {
+    const cfg = DIFF[diffKey];
+    const song = SONGS[songId] || SONGS.song1;
+    const rng = mulberry32(hashSeed(diffKey + '_' + (songId || 'song1') + '_seed'));
+    const secPerBeat = 60 / (bpmOverride || cfg.bpm);
+    const barsMult = song.style === 'long' ? 2 : 1;
+    const totalBeats = LEAD_IN_BEATS + Math.round(cfg.bars * barsMult) * 4;
+    const chart = [];
+    const timeline = []; // kick / hihat
+
+    for (let b = 0; b < totalBeats; b++) {
+      const beatTime = b * secPerBeat;
+      timeline.push({ time: beatTime, type: 'kick' });
+      timeline.push({ time: beatTime + secPerBeat / 2, type: 'hihat' });
+
+      if (b < LEAD_IN_BEATS) continue;
+
+      for (let s = 0; s < cfg.subdivisions; s++) {
+        const t = beatTime + s * (secPerBeat / cfg.subdivisions);
+        let placeChance = cfg.density;
+        if (song.style === 'syncopation' && cfg.subdivisions > 1) {
+          placeChance = s === 0 ? cfg.density * 0.5 : Math.min(1, cfg.density * 1.3);
+        } else if (song.style === 'long') {
+          placeChance = Math.min(1, cfg.density * 1.15);
+        }
+        if (rng() < placeChance) {
+          const lane = Math.floor(rng() * 4);
+          chart.push({ time: t, lane, judged: false, result: null });
+          if (song.style === 'renda' && rng() < 0.3) {
+            const burstCount = 1 + Math.floor(rng() * 2);
+            const step = secPerBeat / cfg.subdivisions / 2;
+            for (let k = 1; k <= burstCount; k++) {
+              chart.push({ time: t + k * step, lane, judged: false, result: null });
+            }
+          }
+          if (rng() < cfg.chordChance) {
+            const lane2 = (lane + 1 + Math.floor(rng() * 3)) % 4;
+            chart.push({ time: t, lane: lane2, judged: false, result: null });
+          }
+        }
+      }
+    }
+    chart.sort((a, b) => a.time - b.time);
+
+    const merged = timeline.map(e => ({ time: e.time, type: e.type }))
+      .concat(chart.map(n => ({ time: n.time, type: 'note', lane: n.lane })))
+      .sort((a, b) => a.time - b.time);
+
+    const lastBeatTime = (totalBeats - 1) * secPerBeat;
+    const duration = lastBeatTime + cfg.travelTime + 1.0;
+    return { chart, events: merged, duration, travelTime: cfg.travelTime, missPenalty: cfg.missPenalty };
+  }
+
+  const CUSTOM_LEAD_IN_SEC = 2.0;
+  const CUSTOM_TRAVEL_TIME = 1.4;
+  const CUSTOM_MISS_PENALTY = 10;
+
+  function buildCustomEvents(customChart) {
+    const secPerBeat = 60 / customChart.bpm;
+    const stepDur = secPerBeat / 2;
+    const fullSteps = customChart.bars * 8;
+    const totalSteps = (customChart.endStep != null) ? Math.min(customChart.endStep + 1, fullSteps) : fullSteps;
+    const events = [];
+    const chart = [];
+
+    for (let step = 0; step < totalSteps; step++) {
+      const t = CUSTOM_LEAD_IN_SEC + step * stepDur;
+      events.push({ time: t, type: step % 2 === 0 ? 'kick' : 'hihat' });
+      for (let lane = 0; lane < 4; lane++) {
+        if (customChart.cells[lane][step]) {
+          events.push({ time: t, type: 'note', lane });
+          chart.push({ time: t, lane, judged: false, result: null });
+        }
+      }
+    }
+    events.sort((a, b) => a.time - b.time);
+    chart.sort((a, b) => a.time - b.time);
+    const duration = CUSTOM_LEAD_IN_SEC + totalSteps * stepDur + CUSTOM_TRAVEL_TIME + 1.0;
+    return { chart, events, duration, travelTime: CUSTOM_TRAVEL_TIME, missPenalty: CUSTOM_MISS_PENALTY };
+  }
+
+  function loadSavedCharts() {
+    try { return JSON.parse(localStorage.getItem('rhythm_custom_charts') || '[]'); }
+    catch (e) { return []; }
+  }
+  function saveSavedCharts(list) {
+    localStorage.setItem('rhythm_custom_charts', JSON.stringify(list));
+  }
+
+  function playKick(time) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(120, time);
+    osc.frequency.exponentialRampToValueAtTime(45, time + 0.12);
+    gain.gain.setValueAtTime(0.5, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+    osc.connect(gain).connect(masterGain);
+    osc.start(time);
+    osc.stop(time + 0.2);
+  }
+
+  function playHihat(time) {
+    const bufferSize = audioCtx.sampleRate * 0.05;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 6000;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.18, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+    noise.connect(filter).connect(gain).connect(masterGain);
+    noise.start(time);
+    noise.stop(time + 0.05);
+  }
+
+  const LANE_FREQ = [261.63, 329.63, 392.0, 523.25];
+  function playNoteTone(time, lane) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(LANE_FREQ[lane], time);
+    gain.gain.setValueAtTime(0.22, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
+    osc.connect(gain).connect(masterGain);
+    osc.start(time);
+    osc.stop(time + 0.25);
+  }
+
+  function playThunder() {
+    if (!audioCtx || !masterGain) return;
+    const time = audioCtx.currentTime;
+    const bufferSize = Math.floor(audioCtx.sampleRate * 1.2);
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(500, time);
+    filter.frequency.exponentialRampToValueAtTime(80, time + 1.0);
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(0.4, time + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 1.15);
+    noise.connect(filter).connect(gain).connect(masterGain);
+    noise.start(time);
+    noise.stop(time + 1.2);
+  }
+
+  function triggerLightning() {
+    lightningFlash.classList.remove('strike');
+    void lightningFlash.offsetWidth;
+    lightningFlash.classList.add('strike');
+    playThunder();
+  }
+
+  function scheduleLightning() {
+    const delay = 3000 + Math.random() * 4000;
+    lightningTimer = setTimeout(() => {
+      if (running && gameWrap.classList.contains('oni-mode')) {
+        triggerLightning();
+        scheduleLightning();
+      } else {
+        lightningTimer = null;
+      }
+    }, delay);
+  }
+
+  function playHellRoar() {
+    if (!audioCtx || !masterGain) return;
+    const time = audioCtx.currentTime;
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+    osc1.type = 'sawtooth';
+    osc2.type = 'sine';
+    osc1.frequency.setValueAtTime(70, time);
+    osc1.frequency.exponentialRampToValueAtTime(42, time + 1.5);
+    osc2.frequency.setValueAtTime(54, time);
+    osc2.frequency.exponentialRampToValueAtTime(32, time + 1.5);
+    filter.type = 'lowpass';
+    filter.frequency.value = 220;
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(0.28, time + 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 1.7);
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain).connect(masterGain);
+    osc1.start(time); osc2.start(time);
+    osc1.stop(time + 1.8); osc2.stop(time + 1.8);
+  }
+
+  function scheduleHellRoar() {
+    const delay = 4000 + Math.random() * 5000;
+    hellRoarTimer = setTimeout(() => {
+      if (running && gameWrap.classList.contains('hell-mode')) {
+        playHellRoar();
+        scheduleHellRoar();
+      } else {
+        hellRoarTimer = null;
+      }
+    }, delay);
+  }
+
+  function playExplosion() {
+    if (!audioCtx || !masterGain) return;
+    const time = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(35, time + 0.5);
+    oscGain.gain.setValueAtTime(0.6, time);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.9);
+    osc.connect(oscGain).connect(masterGain);
+    osc.start(time);
+    osc.stop(time + 0.9);
+
+    const bufferSize = Math.floor(audioCtx.sampleRate * 0.6);
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2500, time);
+    filter.frequency.exponentialRampToValueAtTime(150, time + 0.6);
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.5, time);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.6);
+    noise.connect(filter).connect(noiseGain).connect(masterGain);
+    noise.start(time);
+    noise.stop(time + 0.6);
+  }
+
+  function triggerExplosion() {
+    gameWrap.classList.add('exploding');
+    playExplosion();
+    explosionEndTimer = setTimeout(() => {
+      gameWrap.classList.remove('exploding');
+      explosionEndTimer = null;
+    }, 3000);
+  }
+
+  function scheduleExplosion() {
+    const delay = 8000 + Math.random() * 7000;
+    explosionTimer = setTimeout(() => {
+      if (running && gameWrap.classList.contains('hell-mode')) {
+        triggerExplosion();
+        scheduleExplosion();
+      } else {
+        explosionTimer = null;
+      }
+    }, delay);
+  }
+
+  function playClick() {
+    const time = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1200, time);
+    gain.gain.setValueAtTime(0.06, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+    osc.connect(gain).connect(masterGain);
+    osc.start(time);
+    osc.stop(time + 0.05);
+  }
+
+  const SCHEDULE_AHEAD = 0.15;
+  const LOOKAHEAD_MS = 25;
+
+  function scheduler() {
+    const horizon = (audioCtx.currentTime - songStartTime) + SCHEDULE_AHEAD;
+    while (schedPtr < events.length && events[schedPtr].time <= horizon) {
+      const ev = events[schedPtr];
+      const when = songStartTime + ev.time;
+      if (ev.type === 'kick') playKick(when);
+      else if (ev.type === 'hihat') playHihat(when);
+      else if (ev.type === 'note') playNoteTone(when, ev.lane);
+      schedPtr++;
+    }
+    if (running) schedTimer = setTimeout(scheduler, LOOKAHEAD_MS);
+  }
+
+  function bestKey(diff) { return 'rhythm_best_' + diff; }
+  function bestMashKey(duration) { return 'rhythm_best_mash_' + duration; }
+  function selectedPlayMode() {
+    return document.querySelector('input[name=playMode]:checked').value;
+  }
+  function isCourseMode() {
+    const m = selectedPlayMode();
+    return m === 'course-full' || m === 'course-basic';
+  }
+  function updateBestDisplay() {
+    const mode = selectedPlayMode();
+    const key = mode === 'course-full' ? 'rhythm_best_course_full'
+      : mode === 'course-basic' ? 'rhythm_best_course_basic'
+      : mode === 'mash' ? bestMashKey(Number(mashDurationSelect.value))
+      : bestKey(diffSelect.value);
+    const v = localStorage.getItem(key);
+    bestStat.textContent = v ? v : '--';
+  }
+
+  function showJudge(text, color) {
+    judgeText.textContent = text;
+    judgeText.style.color = color;
+    judgeText.style.opacity = '1';
+    judgeText.style.transform = 'translate(-50%, -50%) scale(1.15)';
+    clearTimeout(showJudge._t);
+    showJudge._t = setTimeout(() => { judgeText.style.opacity = '0'; }, 220);
+  }
+
+  function judge(lane) {
+    if (!running) return;
+    const songTime = audioCtx.currentTime - songStartTime;
+    let best = null, bestDelta = Infinity;
+    for (const note of notes) {
+      if (note.lane !== lane || note.judged) continue;
+      const delta = Math.abs(note.time - songTime);
+      if (delta < bestDelta) { bestDelta = delta; best = note; }
+    }
+    flashes.push({ lane, t: performance.now() });
+    if (best && bestDelta <= GOOD_WINDOW) {
+      best.judged = true;
+      if (bestDelta <= PERFECT_WINDOW) {
+        best.result = 'perfect'; score += 300; perfectCount++; life = Math.min(100, life + PERFECT_RECOVER); showJudge('PERFECT', getCss('--perfect'));
+      } else {
+        best.result = 'good'; score += 100; goodCount++; showJudge('GOOD', getCss('--good'));
+      }
+      combo++;
+      maxCombo = Math.max(maxCombo, combo);
+      playClick();
+      updateHud();
+      updateLife();
+    }
+  }
+
+  function updateHud() {
+    scoreStat.textContent = score;
+    comboStat.textContent = combo;
+    hudScore.textContent = score;
+    hudCombo.textContent = combo > 1 ? combo + ' COMBO' : '';
+  }
+
+  function updateLife() {
+    lifeBar.style.width = life + '%';
+    lifeBar.style.background = life > 50 ? getCss('--perfect') : life > 20 ? getCss('--good') : getCss('--miss');
+  }
+
+  function getCss(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  function draw(songTime) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = getCss('--lane-line');
+    ctx.lineWidth = 2;
+    for (let i = 1; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * LANE_W, 0);
+      ctx.lineTo(i * LANE_W, H);
+      ctx.stroke();
+    }
+    ctx.fillStyle = getCss('--judge');
+    ctx.fillRect(0, JUDGE_Y, W, 4);
+
+    for (const note of notes) {
+      if (note.judged) continue;
+      const rel = note.time - songTime;
+      if (rel > currentTravelTime + 0.2 || rel < -0.3) continue;
+      const y = JUDGE_Y - (rel / currentTravelTime) * JUDGE_Y;
+      ctx.fillStyle = LANE_COLORS[note.lane];
+      const x = note.lane * LANE_W + 8;
+      ctx.fillRect(x, y - 10, LANE_W - 16, 20);
+    }
+
+    const now = performance.now();
+    flashes = flashes.filter(f => now - f.t < 150);
+    for (const f of flashes) {
+      const alpha = 1 - (now - f.t) / 150;
+      ctx.fillStyle = LANE_COLORS[f.lane];
+      ctx.globalAlpha = alpha * 0.4;
+      ctx.fillRect(f.lane * LANE_W, JUDGE_Y - 40, LANE_W, 80);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function loop() {
+    if (!running) return;
+    const songTime = audioCtx.currentTime - songStartTime;
+
+    for (const note of notes) {
+      if (!note.judged && songTime - note.time > GOOD_WINDOW) {
+        note.judged = true;
+        note.result = 'miss';
+        missCount++;
+        combo = 0;
+        life = Math.max(0, life - currentMissPenalty);
+        showJudge('MISS', getCss('--miss'));
+        updateHud();
+        updateLife();
+        if (life <= 0 && !currentTrainingMode) {
+          endGame('fail');
+          return;
+        }
+      }
+    }
+
+    draw(songTime);
+
+    if (songTime > totalDuration) {
+      endGame('clear');
+      return;
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function ensureEditorCells() {
+    const totalSteps = Number(editorBars.value) * 8;
+    if (!editorCells || editorCells[0].length !== totalSteps) {
+      const fresh = [[], [], [], []];
+      for (let lane = 0; lane < 4; lane++) {
+        const oldRow = editorCells ? editorCells[lane] : [];
+        const row = new Array(totalSteps).fill(false);
+        for (let i = 0; i < Math.min(oldRow.length, totalSteps); i++) row[i] = oldRow[i];
+        fresh[lane] = row;
+      }
+      editorCells = fresh;
+    }
+    if (editorEndStep != null && editorEndStep >= totalSteps) editorEndStep = null;
+  }
+
+  function buildEditorGrid() {
+    ensureEditorCells();
+    const totalSteps = editorCells[0].length;
+    editorGrid.innerHTML = '';
+    editorGrid.style.gridTemplateColumns = `repeat(${totalSteps}, 22px)`;
+    for (let lane = 0; lane < 4; lane++) {
+      for (let step = 0; step < totalSteps; step++) {
+        const cell = document.createElement('div');
+        cell.className = 'editor-cell lane' + lane;
+        if (step % 8 === 0) cell.classList.add('bar-start');
+        if (editorCells[lane][step]) cell.classList.add('active');
+        cell.dataset.lane = lane;
+        cell.dataset.step = step;
+        cell.addEventListener('click', () => {
+          editorCells[lane][step] = !editorCells[lane][step];
+          cell.classList.toggle('active');
+        });
+        editorGrid.appendChild(cell);
+      }
+    }
+    for (let step = 0; step < totalSteps; step++) {
+      const cell = document.createElement('div');
+      cell.className = 'editor-cell end-cell';
+      if (step % 8 === 0) cell.classList.add('bar-start');
+      if (editorEndStep === step) cell.classList.add('active');
+      cell.dataset.step = step;
+      cell.addEventListener('click', () => {
+        editorEndStep = (editorEndStep === step) ? null : step;
+        buildEditorGrid();
+      });
+      editorGrid.appendChild(cell);
+    }
+  }
+
+  function readEditorChart() {
+    return {
+      name: editorName.value.trim() || 'マイ譜面',
+      endStep: editorEndStep,
+      bpm: Math.max(60, Math.min(220, Number(editorBpm.value) || 120)),
+      bars: Number(editorBars.value),
+      cells: editorCells.map(row => row.slice()),
+    };
+  }
+
+  function renderSavedChartsList() {
+    const list = loadSavedCharts();
+    savedChartsList.innerHTML = '';
+    if (list.length === 0) {
+      savedChartsList.innerHTML = '<div style="color:var(--sub); font-size:0.85rem;">まだ保存された譜面はありません</div>';
+      return;
+    }
+    list.forEach((chart, i) => {
+      const row = document.createElement('div');
+      row.className = 'saved-chart-row';
+      row.innerHTML = `
+        <span>${chart.name}(BPM${chart.bpm}・${chart.bars}小節)</span>
+        <span class="saved-chart-actions">
+          <button data-action="load" data-i="${i}">よみこみ</button>
+          <button data-action="play" data-i="${i}">あそぶ</button>
+          <button data-action="delete" data-i="${i}">けす</button>
+        </span>
+      `;
+      savedChartsList.appendChild(row);
+    });
+  }
+
+  function stopEditorPreview() {
+    editorPreviewActive = false;
+    if (editorPreviewTimer) { clearTimeout(editorPreviewTimer); editorPreviewTimer = null; }
+    if (editorPreviewRafId) { cancelAnimationFrame(editorPreviewRafId); editorPreviewRafId = null; }
+    document.querySelectorAll('.editor-cell.playing').forEach(el => el.classList.remove('playing'));
+  }
+
+  function playEditorPreview() {
+    stopEditorPreview();
+    if (audioCtx) audioCtx.close();
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = muteBox.checked ? 0 : 0.9;
+    masterGain.connect(audioCtx.destination);
+
+    const chart = readEditorChart();
+    const built = buildCustomEvents(chart);
+    const startAt = audioCtx.currentTime + 0.15;
+    const stepDur = (60 / chart.bpm) / 2;
+    let idx = 0;
+    editorPreviewActive = true;
+
+    function schedulePreview() {
+      if (!editorPreviewActive) return;
+      const horizon = (audioCtx.currentTime - startAt) + 0.15;
+      while (idx < built.events.length && built.events[idx].time <= horizon) {
+        const ev = built.events[idx];
+        const when = startAt + ev.time;
+        if (ev.type === 'kick') playKick(when);
+        else if (ev.type === 'hihat') playHihat(when);
+        else if (ev.type === 'note') playNoteTone(when, ev.lane);
+        idx++;
+      }
+      if (idx < built.events.length) {
+        editorPreviewTimer = setTimeout(schedulePreview, 25);
+      } else {
+        editorPreviewTimer = setTimeout(stopEditorPreview, 800);
+      }
+    }
+    schedulePreview();
+
+    function highlightLoop() {
+      if (!editorPreviewActive) return;
+      const t = audioCtx.currentTime - startAt;
+      const col = Math.floor(t / stepDur);
+      document.querySelectorAll('.editor-cell').forEach(el => {
+        el.classList.toggle('playing', Number(el.dataset.step) === col);
+      });
+      if (t < built.duration) editorPreviewRafId = requestAnimationFrame(highlightLoop);
+      else stopEditorPreview();
+    }
+    editorPreviewRafId = requestAnimationFrame(highlightLoop);
+  }
+
+  function openEditor() {
+    if (running || mashActive) return;
+    layoutEl.style.display = 'none';
+    editorPanel.style.display = 'block';
+    buildEditorGrid();
+    renderSavedChartsList();
+  }
+
+  function closeEditor() {
+    stopEditorPreview();
+    editorPanel.style.display = 'none';
+    layoutEl.style.display = 'flex';
+  }
+
+  function playCustomChart(customChart) {
+    if (running || mashActive) return;
+    stopEditorPreview();
+    if (audioCtx) audioCtx.close();
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = muteBox.checked ? 0 : 0.9;
+    masterGain.connect(audioCtx.destination);
+
+    clearThemeEffects();
+    gameWrap.classList.remove('mash-mode');
+    currentTrainingMode = false;
+    courseActive = false;
+    playingCustomChart = true;
+    lastPlayedCustomChart = customChart;
+
+    const built = buildCustomEvents(customChart);
+    notes = built.chart;
+    events = built.events;
+    totalDuration = built.duration;
+    currentTravelTime = built.travelTime;
+    currentMissPenalty = built.missPenalty;
+    schedPtr = 0;
+
+    score = 0; combo = 0; maxCombo = 0;
+    perfectCount = 0; goodCount = 0; missCount = 0;
+    life = 100;
+    flashes = [];
+    updateHud();
+    updateLife();
+    overlay.style.display = 'none';
+    stageRow.style.display = 'none';
+
+    closeEditor();
+    hudRow.style.display = 'flex';
+    lifeBarWrap.style.display = 'block';
+
+    songStartTime = audioCtx.currentTime + 0.3;
+    running = true;
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'block';
+    editorBtn.disabled = true;
+    diffSelect.disabled = true;
+    songSelect.disabled = true;
+    bpmSlider.disabled = true;
+    playModeRadios.forEach(r => r.disabled = true);
+
+    scheduler();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function clearThemeEffects() {
+    gameWrap.classList.remove('oni-mode', 'hell-mode', 'ice-mode', 'sea-mode', 'fire-mode', 'exploding');
+    lightningFlash.classList.remove('strike');
+    if (lightningTimer) { clearTimeout(lightningTimer); lightningTimer = null; }
+    if (hellRoarTimer) { clearTimeout(hellRoarTimer); hellRoarTimer = null; }
+    if (explosionTimer) { clearTimeout(explosionTimer); explosionTimer = null; }
+    if (explosionEndTimer) { clearTimeout(explosionEndTimer); explosionEndTimer = null; }
+  }
+
+  function startMash() {
+    if (audioCtx) audioCtx.close();
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = muteBox.checked ? 0 : 0.9;
+    masterGain.connect(audioCtx.destination);
+
+    clearThemeEffects();
+    ctx.clearRect(0, 0, W, H);
+    gameWrap.classList.add('mash-mode');
+    mashActive = true;
+    mashCount = 0;
+    mashTapTimes = [];
+    mashDurationSec = Number(mashDurationSelect.value);
+    mashCountEl.textContent = '0';
+    mashTimerEl.textContent = mashDurationSec.toFixed(1);
+    overlay.style.display = 'none';
+    hudRow.style.display = 'none';
+    lifeBarWrap.style.display = 'none';
+    stageRow.style.display = 'none';
+    mashHud.style.display = 'flex';
+
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'block';
+    editorBtn.disabled = true;
+    diffSelect.disabled = true;
+    songSelect.disabled = true;
+    bpmSlider.disabled = true;
+    mashDurationSelect.disabled = true;
+    playModeRadios.forEach(r => r.disabled = true);
+
+    mashStartTime = performance.now();
+    mashRafId = requestAnimationFrame(mashLoop);
+  }
+
+  function handleMashTap() {
+    if (!mashActive) return;
+    mashCount++;
+    mashTapTimes.push(performance.now());
+    mashCountEl.textContent = mashCount;
+    mashCountEl.classList.remove('pulse');
+    void mashCountEl.offsetWidth;
+    mashCountEl.classList.add('pulse');
+    playClick();
+  }
+
+  function mashLoop() {
+    if (!mashActive) return;
+    const elapsed = (performance.now() - mashStartTime) / 1000;
+    const remaining = Math.max(0, mashDurationSec - elapsed);
+    mashTimerEl.textContent = remaining.toFixed(1);
+    if (remaining <= 0) {
+      endMash('finished');
+      return;
+    }
+    mashRafId = requestAnimationFrame(mashLoop);
+  }
+
+  function endMash(mode) {
+    mashActive = false;
+    if (mashRafId) cancelAnimationFrame(mashRafId);
+    mashRafId = null;
+    gameWrap.classList.remove('mash-mode');
+
+    mashHud.style.display = 'none';
+    hudRow.style.display = 'flex';
+    lifeBarWrap.style.display = 'block';
+
+    startBtn.style.display = 'block';
+    stopBtn.style.display = 'none';
+    editorBtn.disabled = false;
+    diffSelect.disabled = false;
+    songSelect.disabled = false;
+    bpmSlider.disabled = false;
+    mashDurationSelect.disabled = false;
+    playModeRadios.forEach(r => r.disabled = false);
+
+    if (mode === 'abort') { overlay.style.display = 'none'; return; }
+
+    const rate = mashCount / mashDurationSec;
+    let rankLabel = 'れんしゅうしよう';
+    if (rate >= 8) rankLabel = '伝説の連打王';
+    else if (rate >= 6) rankLabel = '連打マスター';
+    else if (rate >= 4) rankLabel = 'なかなかやるね';
+    else if (rate >= 2) rankLabel = 'がんばった';
+
+    const key = bestMashKey(mashDurationSec);
+    const prevBest = Number(localStorage.getItem(key) || 0);
+    let newRecord = false;
+    if (mashCount > prevBest) { localStorage.setItem(key, mashCount); newRecord = true; }
+    updateBestDisplay();
+
+    overlay.innerHTML = `
+      <h2>🔥 連打しゅうりょう!</h2>
+      <div class="rank">${mashCount}</div>
+      <div>${mashDurationSec}秒間で ${mashCount}回(${rate.toFixed(1)}回/秒)</div>
+      <div>${rankLabel}${newRecord ? '(新記録!)' : ''}</div>
+      <button class="primary" id="retryBtn">もう一度</button>
+    `;
+    overlay.style.display = 'flex';
+    document.getElementById('retryBtn').addEventListener('click', () => startMash());
+  }
+
+  function startGame(overrideDiff, continueCourse) {
+    if (audioCtx) audioCtx.close();
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = muteBox.checked ? 0 : 0.9;
+    masterGain.connect(audioCtx.destination);
+
+    const diffKey = overrideDiff || diffSelect.value;
+    currentTrainingMode = selectedPlayMode() === 'training';
+    playingCustomChart = false;
+    const bpmOverride = currentTrainingMode ? Number(bpmSlider.value) : null;
+    const built = buildChart(diffKey, bpmOverride, songSelect.value);
+    notes = built.chart;
+    events = built.events;
+    totalDuration = built.duration;
+    currentTravelTime = built.travelTime;
+    currentMissPenalty = built.missPenalty;
+    schedPtr = 0;
+    gameWrap.classList.toggle('oni-mode', diffKey === 'oni');
+    gameWrap.classList.toggle('hell-mode', diffKey === 'hell');
+    gameWrap.classList.toggle('ice-mode', diffKey === 'easy');
+    gameWrap.classList.toggle('sea-mode', diffKey === 'normal');
+    gameWrap.classList.toggle('fire-mode', diffKey === 'hard');
+    gameWrap.classList.remove('mash-mode');
+    lightningFlash.classList.remove('strike');
+    if (lightningTimer) { clearTimeout(lightningTimer); lightningTimer = null; }
+    if (diffKey === 'oni') scheduleLightning();
+    if (hellRoarTimer) { clearTimeout(hellRoarTimer); hellRoarTimer = null; }
+    if (diffKey === 'hell') scheduleHellRoar();
+    if (explosionTimer) { clearTimeout(explosionTimer); explosionTimer = null; }
+    if (explosionEndTimer) { clearTimeout(explosionEndTimer); explosionEndTimer = null; }
+    gameWrap.classList.remove('exploding');
+    if (diffKey === 'hell') scheduleExplosion();
+
+    if (!continueCourse) {
+      score = 0; combo = 0; maxCombo = 0;
+      perfectCount = 0; goodCount = 0; missCount = 0;
+    }
+    life = 100;
+    flashes = [];
+    updateHud();
+    updateLife();
+    overlay.style.display = 'none';
+
+    if (courseActive) {
+      stageRow.style.display = 'flex';
+      stageStat.textContent = `${courseStageIndex + 1}/${currentCourseOrder.length} ${DIFF_LABEL[diffKey]}`;
+    } else {
+      stageRow.style.display = 'none';
+    }
+
+    songStartTime = audioCtx.currentTime + 0.3;
+    running = true;
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'block';
+    editorBtn.disabled = true;
+    diffSelect.disabled = true;
+    songSelect.disabled = true;
+    bpmSlider.disabled = true;
+    playModeRadios.forEach(r => r.disabled = true);
+
+    scheduler();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function startCourse(kind) {
+    courseActive = true;
+    courseStageIndex = 0;
+    currentCourseKind = kind;
+    currentCourseOrder = COURSE_ORDERS[kind];
+    currentCourseKey = 'rhythm_best_course_' + kind;
+    startGame(currentCourseOrder[0], false);
+  }
+
+  function endGame(mode) {
+    running = false;
+    if (schedTimer) clearTimeout(schedTimer);
+    if (rafId) cancelAnimationFrame(rafId);
+    if (stageTransitionTimer) { clearTimeout(stageTransitionTimer); stageTransitionTimer = null; }
+    if (lightningTimer) { clearTimeout(lightningTimer); lightningTimer = null; }
+    if (hellRoarTimer) { clearTimeout(hellRoarTimer); hellRoarTimer = null; }
+    if (explosionTimer) { clearTimeout(explosionTimer); explosionTimer = null; }
+    if (explosionEndTimer) { clearTimeout(explosionEndTimer); explosionEndTimer = null; }
+    gameWrap.classList.remove('exploding');
+
+    if (mode === 'abort') {
+      courseActive = false;
+      playingCustomChart = false;
+      startBtn.style.display = 'block';
+      stopBtn.style.display = 'none';
+      editorBtn.disabled = false;
+      diffSelect.disabled = false;
+      songSelect.disabled = false;
+      bpmSlider.disabled = false;
+      playModeRadios.forEach(r => r.disabled = false);
+      stageRow.style.display = 'none';
+      overlay.style.display = 'none';
+      return;
+    }
+
+    if (mode === 'fail') {
+      if (masterGain && audioCtx) masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+      const wasCourse = courseActive;
+      const stageInfo = wasCourse
+        ? `<div>ステージ ${courseStageIndex + 1}/${currentCourseOrder.length}(${DIFF_LABEL[currentCourseOrder[courseStageIndex]]})で力尽きた…</div>`
+        : '';
+      courseActive = false;
+      playingCustomChart = false;
+      startBtn.style.display = 'block';
+      stopBtn.style.display = 'none';
+      editorBtn.disabled = false;
+      diffSelect.disabled = false;
+      songSelect.disabled = false;
+      bpmSlider.disabled = false;
+      playModeRadios.forEach(r => r.disabled = false);
+      stageRow.style.display = 'none';
+
+      overlay.innerHTML = `
+        <h2>FAILED…</h2>
+        ${stageInfo}
+        <div class="row"><span>スコア: ${score}</span><span>最大コンボ: ${maxCombo}</span></div>
+        <div>体力が0になってしまった。もう一度チャレンジしよう。</div>
+        <button class="primary" id="retryBtn">もう一度</button>
+      `;
+      overlay.style.display = 'flex';
+      document.getElementById('retryBtn').addEventListener('click', () => {
+        if (wasCourse) startCourse(currentCourseKind); else startGame();
+      });
+      return;
+    }
+
+    // mode === 'clear'
+    if (courseActive && courseStageIndex < currentCourseOrder.length - 1) {
+      const clearedLabel = DIFF_LABEL[currentCourseOrder[courseStageIndex]];
+      courseStageIndex++;
+      const nextDiff = currentCourseOrder[courseStageIndex];
+      overlay.innerHTML = `
+        <h2>STAGE CLEAR!</h2>
+        <div>${clearedLabel} クリア!</div>
+        <div class="row"><span>スコア: ${score}</span><span>最大コンボ: ${maxCombo}</span></div>
+        <div>つぎ: ${DIFF_LABEL[nextDiff]}</div>
+      `;
+      overlay.style.display = 'flex';
+      stageTransitionTimer = setTimeout(() => startGame(nextDiff, true), 1600);
+      return;
+    }
+
+    const wasCourse = courseActive;
+    const wasCustom = playingCustomChart;
+    courseActive = false;
+    playingCustomChart = false;
+    startBtn.style.display = 'block';
+    stopBtn.style.display = 'none';
+    editorBtn.disabled = false;
+    diffSelect.disabled = false;
+    songSelect.disabled = false;
+    bpmSlider.disabled = false;
+    playModeRadios.forEach(r => r.disabled = false);
+    stageRow.style.display = 'none';
+
+    const total = perfectCount + goodCount + missCount;
+    const accuracy = total > 0 ? ((perfectCount + goodCount) / total) * 100 : 0;
+    let rank = 'C';
+    if (accuracy >= 98) rank = 'S';
+    else if (accuracy >= 90) rank = 'A';
+    else if (accuracy >= 75) rank = 'B';
+
+    let newRecord = false;
+    if (!currentTrainingMode && !wasCustom) {
+      const key = wasCourse ? currentCourseKey : bestKey(diffSelect.value);
+      const prevBest = Number(localStorage.getItem(key) || 0);
+      if (score > prevBest) { localStorage.setItem(key, score); newRecord = true; }
+      updateBestDisplay();
+    }
+
+    const titleText = currentTrainingMode ? '🎓 練習おわり!' : wasCustom ? '🎨 じぶんの譜面 CLEAR!' : (wasCourse ? '🎉 コースクリア!!' : '🎉 CLEAR!');
+    overlay.innerHTML = `
+      <h2>${titleText}</h2>
+      <div class="rank">${rank}</div>
+      <div class="row"><span>スコア: ${score}</span><span>最大コンボ: ${maxCombo}</span></div>
+      <div class="row"><span>PERFECT: ${perfectCount}</span><span>GOOD: ${goodCount}</span><span>MISS: ${missCount}</span></div>
+      <div>正確率: ${accuracy.toFixed(1)}%${newRecord ? '(新記録!)' : ''}</div>
+      <button class="primary" id="retryBtn">もう一度</button>
+    `;
+    overlay.style.display = 'flex';
+    document.getElementById('retryBtn').addEventListener('click', () => {
+      if (wasCustom) { playCustomChart(lastPlayedCustomChart); return; }
+      if (wasCourse) startCourse(currentCourseKind); else startGame();
+    });
+  }
+
+  document.querySelectorAll('.keys-row button').forEach(btn => {
+    const lane = Number(btn.dataset.lane);
+    btn.addEventListener('pointerdown', () => {
+      if (mashActive) handleMashTap(); else judge(lane);
+    });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    const idx = LANE_KEYS.indexOf(e.key.toLowerCase());
+    if (idx === -1) return;
+    if (mashActive) handleMashTap();
+    else if (running) judge(idx);
+  });
+
+  muteBox.addEventListener('change', () => {
+    if (masterGain) masterGain.gain.value = muteBox.checked ? 0 : 0.9;
+  });
+
+  function syncBpmDefault() {
+    bpmSlider.value = DIFF[diffSelect.value].bpm;
+    bpmValue.textContent = bpmSlider.value;
+  }
+  bpmSlider.addEventListener('input', () => { bpmValue.textContent = bpmSlider.value; });
+
+  diffSelect.addEventListener('change', updateBestDisplay);
+  function updateModeUI() {
+    const mode = selectedPlayMode();
+    const course = mode === 'course-full' || mode === 'course-basic';
+    const training = mode === 'training';
+    const mash = mode === 'mash';
+    songWrap.style.display = mash ? 'none' : 'block';
+    difficultyWrap.style.display = (course || mash) ? 'none' : 'block';
+    speedWrap.style.display = training ? 'block' : 'none';
+    mashWrap.style.display = mash ? 'block' : 'none';
+    if (training) syncBpmDefault();
+    updateBestDisplay();
+  }
+  playModeRadios.forEach(r => r.addEventListener('change', updateModeUI));
+  mashDurationSelect.addEventListener('change', updateBestDisplay);
+  startBtn.addEventListener('click', () => {
+    const mode = selectedPlayMode();
+    if (mode === 'course-full') startCourse('full');
+    else if (mode === 'course-basic') startCourse('basic');
+    else if (mode === 'mash') startMash();
+    else startGame();
+  });
+  stopBtn.addEventListener('click', () => {
+    if (mashActive) endMash('abort'); else endGame('abort');
+  });
+
+  editorBtn.addEventListener('click', openEditor);
+  editorBackBtn.addEventListener('click', closeEditor);
+  editorBars.addEventListener('change', buildEditorGrid);
+  editorPlayBtn.addEventListener('click', playEditorPreview);
+  editorStopBtn.addEventListener('click', stopEditorPreview);
+  editorClearBtn.addEventListener('click', () => {
+    ensureEditorCells();
+    for (let lane = 0; lane < 4; lane++) editorCells[lane].fill(false);
+    editorEndStep = null;
+    buildEditorGrid();
+  });
+  editorSaveBtn.addEventListener('click', () => {
+    const chart = readEditorChart();
+    const list = loadSavedCharts();
+    const existingIdx = list.findIndex(c => c.name === chart.name);
+    if (existingIdx !== -1) list[existingIdx] = chart; else list.push(chart);
+    saveSavedCharts(list);
+    renderSavedChartsList();
+  });
+  editorPlayRealBtn.addEventListener('click', () => {
+    playCustomChart(readEditorChart());
+  });
+  savedChartsList.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const i = Number(btn.dataset.i);
+    const list = loadSavedCharts();
+    const chart = list[i];
+    if (!chart) return;
+    if (btn.dataset.action === 'load') {
+      editorName.value = chart.name;
+      editorBpm.value = chart.bpm;
+      editorBars.value = chart.bars;
+      editorCells = chart.cells.map(row => row.slice());
+      editorEndStep = (chart.endStep != null) ? chart.endStep : null;
+      buildEditorGrid();
+    } else if (btn.dataset.action === 'play') {
+      playCustomChart(chart);
+    } else if (btn.dataset.action === 'delete') {
+      list.splice(i, 1);
+      saveSavedCharts(list);
+      renderSavedChartsList();
+    }
+  });
+
+  updateBestDisplay();
+})();
+</script>
+</body>
+</html>
