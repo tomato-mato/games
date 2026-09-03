@@ -221,6 +221,57 @@
     .game-card:nth-child(6n + 5) { --accent: var(--purple);  --accent-glow: var(--purple-glow); }
     .game-card:nth-child(6n + 6) { --accent: var(--orange);  --accent-glow: var(--orange-glow); }
 
+    /* ===== リズムゲーム専用：虹色に光るカラフル演出 ===== */
+    .game-card.rhythm-card {
+      --accent: var(--magenta);
+      --accent-glow: var(--magenta-glow);
+    }
+
+    .card-screen.rainbow-screen {
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.025) 0px,
+          rgba(255, 255, 255, 0.025) 1px,
+          transparent 1px,
+          transparent 3px
+        ),
+        linear-gradient(90deg,
+          var(--cyan), var(--magenta), var(--yellow),
+          var(--green), var(--purple), var(--orange), var(--cyan));
+      background-size: auto, 300% 100%;
+      animation: rainbow-shift 5s linear infinite;
+      border-bottom: 2px solid transparent;
+    }
+
+    @keyframes rainbow-shift {
+      0% { background-position: 0 0, 0% 50%; }
+      100% { background-position: 0 0, 300% 50%; }
+    }
+
+    .game-title.rainbow-glow {
+      background-image: linear-gradient(90deg,
+        var(--cyan), var(--magenta), var(--yellow),
+        var(--green), var(--purple), var(--orange), var(--cyan));
+      background-size: 300% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: rainbow-shift-text 5s linear infinite;
+    }
+
+    @keyframes rainbow-shift-text {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .card-screen.rainbow-screen,
+      .game-title.rainbow-glow {
+        animation: none;
+      }
+    }
+
     /* ===== スマホ対応 ===== */
     @media (max-width: 480px) {
       body {
@@ -251,9 +302,21 @@
 
   <div class="game-grid">
 
+    <a href="games/rhythm-game/index.html" class="game-card rhythm-card">
+      <div class="card-screen rainbow-screen">
+        <span class="card-number">01</span>
+        <span>🎧</span>
+      </div>
+      <div class="game-info">
+        <h2 class="game-title rainbow-glow">リズムゲーム</h2>
+        <p class="game-desc">流れてくるノーツにタイミングを合わせてキーを押す、爽快リズムアクション！</p>
+        <span class="play-btn">PLAY <span class="arrow">▶</span></span>
+      </div>
+    </a>
+
     <a href="games/coinCollector/smartphone.html" class="game-card">
       <div class="card-screen">
-        <span class="card-number">01</span>
+        <span class="card-number">02</span>
         <span>🪙</span>
       </div>
       <div class="game-info">
@@ -265,7 +328,7 @@
 
     <a href="games/coinCollector/pc.html" class="game-card">
       <div class="card-screen">
-        <span class="card-number">02</span>
+        <span class="card-number">03</span>
         <span>🪙</span>
       </div>
       <div class="game-info">
@@ -275,9 +338,21 @@
       </div>
     </a>
 
+    <a href="games/escapeTheRoach/index.html" class="game-card">
+      <div class="card-screen">
+        <span class="card-number">04</span>
+        <span>🪳</span>
+      </div>
+      <div class="game-info">
+        <h2 class="game-title">ゴキブリから逃げろ</h2>
+        <p class="game-desc">暗い屋敷で鍵を3つ集めて脱出！迫りくる巨大ゴキブリから隠れて逃げ切れ。</p>
+        <span class="play-btn">PLAY <span class="arrow">▶</span></span>
+      </div>
+    </a>
+
     <a href="games/breakOut/index.html" class="game-card">
       <div class="card-screen">
-        <span class="card-number">03</span>
+        <span class="card-number">05</span>
         <span>🧱</span>
       </div>
       <div class="game-info">
@@ -289,7 +364,7 @@
 
     <a href="games/fishAttack/index.html" class="game-card">
       <div class="card-screen">
-        <span class="card-number">04</span>
+        <span class="card-number">06</span>
         <span>🐟</span>
       </div>
       <div class="game-info">
@@ -301,7 +376,7 @@
 
     <a href="games/jankenBattle/index.html" class="game-card">
       <div class="card-screen">
-        <span class="card-number">05</span>
+        <span class="card-number">07</span>
         <span>✊</span>
       </div>
       <div class="game-info">
@@ -313,7 +388,7 @@
 
     <a href="games/avatarCreator/index.html" class="game-card">
       <div class="card-screen">
-        <span class="card-number">06</span>
+        <span class="card-number">08</span>
         <span>🎨</span>
       </div>
       <div class="game-info">
@@ -325,24 +400,12 @@
 
     <a href="games/kyoto-yatsuhashi-clicker/index.html" class="game-card">
       <div class="card-screen">
-        <span class="card-number">07</span>
+        <span class="card-number">09</span>
         <span>🍡</span>
       </div>
       <div class="game-info">
         <h2 class="game-title">京都みやげコレクター</h2>
         <p class="game-desc">京都の名所をめぐりながらおみやげを集める放置ゲーム！</p>
-        <span class="play-btn">PLAY <span class="arrow">▶</span></span>
-      </div>
-    </a>
-
-    <a href="games/escapeTheRoach/index.html" class="game-card">
-      <div class="card-screen">
-        <span class="card-number">08</span>
-        <span>🪳</span>
-      </div>
-      <div class="game-info">
-        <h2 class="game-title">ゴキブリから逃げろ</h2>
-        <p class="game-desc">暗い屋敷で鍵を3つ集めて脱出！迫りくる巨大ゴキブリから隠れて逃げ切れ。</p>
         <span class="play-btn">PLAY <span class="arrow">▶</span></span>
       </div>
     </a>
