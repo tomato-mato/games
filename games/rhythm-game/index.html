@@ -326,6 +326,7 @@
     font-family: inherit; font-size: 0.9rem; padding: 8px 10px; border-radius: 6px;
     border: 1px solid var(--border); width: 140px;
   }
+  .editor-hint { font-size: 0.82rem; color: var(--sub); margin: 0 0 10px; line-height: 1.6; }
   .editor-grid-wrap {
     display: flex; gap: 6px; border: 1px solid var(--border); border-radius: 8px;
     padding: 10px; background: #faf8f2;
@@ -340,13 +341,48 @@
   .editor-lane-labels div:nth-child(3) { background: var(--lane2); }
   .editor-lane-labels div:nth-child(4) { background: var(--lane3); }
   .editor-lane-labels div.end-label { background: #4a463d; font-size: 0.7rem; }
+  .editor-lane-labels div.bpm-label { background: #4fb0c6; font-size: 0.65rem; }
+  .editor-lane-labels div.speed-label { background: #e15b64; font-size: 0.6rem; }
   .editor-grid-scroll { overflow-x: auto; }
   .editor-grid { display: grid; gap: 3px; width: max-content; }
   .editor-cell {
+    position: relative;
     width: 22px; height: 22px; border-radius: 3px; background: #e5e0d0;
     cursor: pointer; border: 1px solid var(--border);
   }
+  .editor-cell.nudge-early::after,
+  .editor-cell.nudge-late::after {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.9); font-weight: bold; font-size: 13px;
+    pointer-events: none;
+  }
+  .editor-cell.nudge-early::after { content: "‹"; }
+  .editor-cell.nudge-late::after { content: "›"; }
+  .editor-cell.hold-cell {
+    background: #7a68c9;
+    border-top-color: #7a68c9; border-bottom-color: #7a68c9;
+    margin-left: -1px;
+  }
+  .editor-cell.hold-cell.hold-head { border-radius: 8px 3px 3px 8px; margin-left: 0; }
+  .editor-cell.hold-cell.hold-tail { border-radius: 3px 8px 8px 3px; }
+  .editor-cell.hold-cell.hold-head::after { content: "●"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; pointer-events: none; }
+  .editor-cell.bpm-cell { background: #efe9d8; }
+  .editor-cell.bpm-cell.active {
+    background: #4fb0c6;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; font-weight: bold; color: #fff;
+    overflow: hidden;
+  }
+  .editor-cell.speed-cell { background: #efe9d8; }
+  .editor-cell.speed-cell.active {
+    background: #e15b64;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; font-weight: bold; color: #fff;
+    overflow: hidden;
+  }
   .editor-cell.bar-start { border-left: 2px solid #a89a6e; }
+  .editor-cell.beat-start:not(.bar-start) { border-left: 1px solid #c9bd96; }
   .editor-cell.lane0.active { background: var(--lane0); }
   .editor-cell.lane1.active { background: var(--lane1); }
   .editor-cell.lane2.active { background: var(--lane2); }
@@ -363,11 +399,34 @@
   .editor-buttons button { width: auto; padding: 8px 14px; }
   .editor-saved { margin-top: 20px; }
   .editor-saved h3 { font-size: 1rem; margin: 0 0 8px; }
+  .editor-share {
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+  .editor-share h3 { font-size: 1rem; margin: 0 0 6px; }
+  .editor-share-note { font-size: 0.82rem; color: var(--sub); margin: 0 0 10px; line-height: 1.6; }
+  .editor-share label { font-size: 0.82rem; color: var(--sub); display: block; margin: 10px 0 4px; }
+  .editor-share textarea {
+    width: 100%;
+    font-family: monospace;
+    font-size: 0.75rem;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    resize: vertical;
+    box-sizing: border-box;
+  }
+  .editor-msg { font-size: 0.85rem; color: var(--accent-dark); margin-top: 8px; min-height: 20px; }
   .saved-chart-row {
     display: flex; justify-content: space-between; align-items: center;
     padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem;
   }
   .saved-chart-actions button { width: auto; padding: 4px 10px; font-size: 0.8rem; margin-left: 6px; }
+  .saved-chart-stars { margin-left: 8px; color: #d8a53f; letter-spacing: 1px; }
+  .star-picker { display: flex; gap: 2px; font-size: 1.4rem; line-height: 1; cursor: pointer; user-select: none; }
+  .star-picker span { color: #d8d2c2; transition: color 0.1s ease; }
+  .star-picker span.filled { color: #d8a53f; }
 </style>
 </head>
 <body>
@@ -399,6 +458,17 @@
         <option value="song2">曲2: シンコペーション</option>
         <option value="song3">曲3: れんだ連打</option>
         <option value="song4">曲4: ロング(長い・コンボ数多め)</option>
+        <option value="song5">曲5: サニーデイ</option>
+        <option value="song6">曲6: ムーンライト</option>
+        <option value="song7">曲7: 全力ダッシュ</option>
+        <option value="song8">曲8: エンドレスロード</option>
+        <option value="song9">曲9: きまぐれビート</option>
+        <option value="song10">曲10: タンゴ風</option>
+        <option value="song11">曲11: 連続コンボ</option>
+        <option value="song12">曲12: マラソン</option>
+        <option value="song13">曲13: スターライト</option>
+        <option value="song14">曲14: ウェイブダンス</option>
+        <option value="song15">曲15: フィナーレ</option>
       </select>
     </div>
     <div id="mashWrap" style="display:none;">
@@ -479,18 +549,31 @@
       <input type="number" id="editorBpm" min="60" max="220" step="5" value="120">
     </div>
     <div>
-      <label for="editorBars">小節数</label>
-      <select id="editorBars">
-        <option value="2">2小節</option>
-        <option value="4" selected>4小節</option>
-        <option value="8">8小節</option>
-        <option value="16">16小節</option>
-        <option value="32">32小節</option>
+      <label for="editorBars">小節数(1〜128)</label>
+      <input type="number" id="editorBars" min="1" max="128" step="1" value="4">
+    </div>
+    <div>
+      <label for="editorSubdivision">音符の細かさ</label>
+      <select id="editorSubdivision">
+        <option value="1">4分音符きざみ(1拍に1マス)</option>
+        <option value="2" selected>8分音符きざみ(1拍に2マス)</option>
+        <option value="3">3連符きざみ(1拍に3マス)</option>
+        <option value="4">16分音符きざみ(1拍に4マス)</option>
       </select>
     </div>
+    <div>
+      <label>むずかしさ(★)</label>
+      <div class="star-picker" id="starPicker">
+        <span data-star="1">★</span><span data-star="2">★</span><span data-star="3">★</span><span data-star="4">★</span><span data-star="5">★</span>
+      </div>
+    </div>
   </div>
+  <div class="editor-buttons">
+    <button id="holdModeBtn">🟦 ホールド配置: OFF</button>
+  </div>
+  <p class="editor-hint" id="editorHintText">クリックでノーツON/OFF。すでにあるノーツを<b>Shiftキー+クリック</b>すると「ぴったり → 少し早め(‹) → 少し遅め(›) → ぴったり」の順でタイミングを微妙にずらせる。一番下の「BPM」の行をクリックすると、そのマスから先のテンポを変えられる(途中でだんだん速くなる曲も作れる)。</p>
   <div class="editor-grid-wrap">
-    <div class="editor-lane-labels"><div>D</div><div>F</div><div>J</div><div>K</div><div class="end-label">🏁</div></div>
+    <div class="editor-lane-labels"><div>D</div><div>F</div><div>J</div><div>K</div><div class="end-label">🏁</div><div class="bpm-label">BPM</div><div class="speed-label">👁速度</div></div>
     <div class="editor-grid-scroll"><div class="editor-grid" id="editorGrid"></div></div>
   </div>
   <div class="editor-buttons">
@@ -504,6 +587,24 @@
     <h3>ほぞんした譜面</h3>
     <div id="savedChartsList"></div>
   </div>
+  <div class="editor-share">
+    <h3>譜面をシェアする</h3>
+    <p class="editor-share-note">このゲームはネットのサーバーを使っていないので、みんなが見られる場所に自動で公開することはできない。かわりに、譜面ファイルか共有コードを友だちに送って、この同じゲームで読み込んでもらう形でシェアできる。</p>
+    <div class="editor-buttons">
+      <button id="exportBtn">📤 ファイルに書き出す</button>
+      <button id="importBtn">📥 ファイルから読み込む</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+      <button id="shareCodeBtn">🔗 共有コードを作る</button>
+    </div>
+    <label for="shareCodeOut">共有コード(コピーして送る)</label>
+    <textarea id="shareCodeOut" readonly rows="3" placeholder="「共有コードを作る」を押すとここに出る"></textarea>
+    <label for="shareCodeIn">もらった共有コードを貼り付け</label>
+    <textarea id="shareCodeIn" rows="3" placeholder="ここに貼り付けて下のボタンを押す"></textarea>
+    <div class="editor-buttons">
+      <button id="loadShareCodeBtn">📥 コードから読み込む</button>
+    </div>
+    <div class="editor-msg" id="editorShareMsg"></div>
+  </div>
 </div>
 
 <div class="explain">
@@ -515,9 +616,9 @@
     <li>キーを押した瞬間の時刻と、ノーツ本来の時刻の差(ズレ)を計算して、0.05秒以内なら PERFECT、0.15秒以内なら GOOD、それより外れる(何もしない)と MISS と判定する。</li>
     <li>「コースモード」では、かんたん→ふつう→むずかしい→鬼→地獄の5段階を体力ゲージを引き継がずに(毎ステージ全回復)連続でプレイする。スコアとコンボは全ステージ通して積み上がっていくので、最後まで走りきるとかなり大きい数字になる。</li>
     <li>「とっくん(練習)モード」では、スライダーでBPM(テンポ)を40〜240の間で自由に設定できる。譜面のパターン(どのタイミングでどのレーンにノーツが来るか)は選んだ難易度のまま、テンポだけを変えられる。合成音なので、BPMを変えてもピッチ(音の高さ)は変わらない。体力が0になっても曲は止まらないので、苦手な難易度をゆっくりしたテンポから安心して練習できる。</li>
-    <li>「曲」を選ぶと、譜面を作る乱数のたねと配置のクセが変わる。曲2「シンコペーション」は裏拍(ジャストのタイミングより半歩ずれた拍)にノーツが来やすく、曲3「れんだ連打」は1つのノーツのあとに同じレーンへ連続でノーツが追加されることがある。曲4「ロング」は小節数を2倍にしてノーツの出現確率も少し上げているので、曲の長さもコンボ数もぐっと増える。同じ難易度でも曲を変えると、まったく違う手の動かし方が必要になる。</li>
+    <li>「曲」を選ぶと、譜面を作る乱数のたねと配置のクセが変わる。曲2「シンコペーション」は裏拍(ジャストのタイミングより半歩ずれた拍)にノーツが来やすく、曲3「れんだ連打」は1つのノーツのあとに同じレーンへ連続でノーツが追加されることがあり、さらに時々「ホールドノーツ」(長い棒状のノーツ)も出現する。ホールドノーツは押した瞬間だけでなく、棒が終わるまでキーを押しつづけている間ずっとコンボが増え続け、途中で離すとそこでMISSになる。曲4「ロング」は小節数を2倍にしてノーツの出現確率も少し上げているので、曲の長さもコンボ数もぐっと増える。同じ難易度でも曲を変えると、まったく違う手の動かし方が必要になる。曲5以降も、この4つのタイプ(スタンダード/シンコペーション/れんだ連打/ロング)を使い回しながら、曲ごとに違う乱数のたねで配置をガラッと変えている。全部で15曲あるので、同じ難易度でも何度も新鮮な気持ちで遊べる。</li>
     <li>「連打チャレンジ」は譜面もタイミング判定もない別モードで、決めた秒数の間にD・F・J・Kを何回押せたかだけを数える。とにかく速く指を動かす反射神経・持久力の実験として、他のモードとは違う遊び方ができる。</li>
-    <li>「譜面をつくる」では、レーン×拍のマス目をクリックして自分だけの譜面を作れる。BPMと小節数(最大32小節まで)を決め、8分音符きざみでマスを塗ると、その場でノーツと太鼓の音に変換される。一番下の🏁の行に印をつけると、そのマスで曲を打ち切れるので、長い小節数を選んでおいて好きな長さで終わらせることができる。「テスト再生」は判定なしの試聴、「この譜面で遊ぶ」は実際にPERFECT/GOOD/MISSを判定しながらプレイできるモード。ブラウザの中に保存されるので、作った譜面はあとから呼び出して遊べる。</li>
+    <li>「譜面をつくる」では、レーン×拍のマス目をクリックして自分だけの譜面を作れる。BPMと小節数(最大128小節まで自由入力)を決め、マスを塗ると、その場でノーツと太鼓の音に変換される。「音符の細かさ」では1拍を1〜4マスに分ける刻み方(4分・8分・3連符・16分音符)を選べる。細かくするほど同じ1拍の中にたくさんノーツを置けるが、刻みを変えるとマス目の意味が変わるので今の譜面はリセットされる。一番下の🏁の行に印をつけると、そのマスで曲を打ち切れるので、長い小節数を選んでおいて好きな長さで終わらせることができる。Shiftキーを押しながらノーツをクリックすると、グリッドのマス目そのものは変えずに、音の鳴る時刻だけをそのマスの時間の3割分だけ早め・遅めにずらせる。グリッドぴったりの機械的なリズムから、少し人間っぽい「ヨレ」や「ハネ」のあるリズムに近づけることができる。「🟦 ホールド配置」ボタンを押すと、マスをドラッグして長押し用の「ホールドノーツ」(紫色の太いバー)を作れるようになる。作ったホールドノーツは実際のプレイでも、頭を叩いてから終わりまでキーを押しつづけるとコンボが増え続ける仕組みになっている。一番下の「BPM」の行にマスを置くと、そのマスから先だけテンポが変わる「BPMチェンジ」を作れる。曲の途中でだんだん速くなったり、急に遅くなったりする譜面も作れる。さらにその下の「👁速度」の行は、音の速さ(BPM)は変えずに、ノーツが画面上を落ちてくる見た目の速さだけを変える。実際のテンポはそのままで、画面だけ速く(または遅く)流れるので、たとえば曲はゆっくりなのに目が追いつかない「ハイスピード」な見た目の譜面も作れる。「むずかしさ(★)」は見た目のための星の数(0〜5)で、保存した譜面の一覧に★★★☆☆のように表示される。実際の難易度を自動で計算しているわけではなく、作った人が自分で決める目印。「テスト再生」は判定なしの試聴、「この譜面で遊ぶ」は実際にPERFECT/GOOD/MISSを判定しながらプレイできるモード。ブラウザの中に保存されるので、作った譜面はあとから呼び出して遊べる。</li>
   </ol>
 </div>
 
@@ -536,6 +637,8 @@
   let currentTravelTime = TRAVEL_TIME;
   const PERFECT_WINDOW = 0.05;
   const GOOD_WINDOW = 0.15;
+  const HOLD_END_TOLERANCE = 0.12;
+  const HOLD_TICK_INTERVAL = 0.15;
   const LANE_KEYS = ['d', 'f', 'j', 'k'];
   const LANE_COLORS = ['#e15b64', '#f2b134', '#4fb0c6', '#7a68c9'];
   const COURSE_ORDERS = {
@@ -548,6 +651,17 @@
     song2: { style: 'syncopation' },
     song3: { style: 'renda' },
     song4: { style: 'long' },
+    song5: { style: 'standard' },
+    song6: { style: 'syncopation' },
+    song7: { style: 'renda' },
+    song8: { style: 'long' },
+    song9: { style: 'standard' },
+    song10: { style: 'syncopation' },
+    song11: { style: 'renda' },
+    song12: { style: 'long' },
+    song13: { style: 'standard' },
+    song14: { style: 'syncopation' },
+    song15: { style: 'renda' },
   };
 
   const canvas = document.getElementById('board');
@@ -592,6 +706,11 @@
   const editorName = document.getElementById('editorName');
   const editorBpm = document.getElementById('editorBpm');
   const editorBars = document.getElementById('editorBars');
+  const editorSubdivision = document.getElementById('editorSubdivision');
+  const starPicker = document.getElementById('starPicker');
+  const starPickerStars = starPicker.querySelectorAll('span');
+  const holdModeBtn = document.getElementById('holdModeBtn');
+  const editorHintText = document.getElementById('editorHintText');
   const editorGrid = document.getElementById('editorGrid');
   const editorPlayBtn = document.getElementById('editorPlayBtn');
   const editorStopBtn = document.getElementById('editorStopBtn');
@@ -599,6 +718,14 @@
   const editorSaveBtn = document.getElementById('editorSaveBtn');
   const editorPlayRealBtn = document.getElementById('editorPlayRealBtn');
   const savedChartsList = document.getElementById('savedChartsList');
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importFile = document.getElementById('importFile');
+  const shareCodeBtn = document.getElementById('shareCodeBtn');
+  const shareCodeOut = document.getElementById('shareCodeOut');
+  const shareCodeIn = document.getElementById('shareCodeIn');
+  const loadShareCodeBtn = document.getElementById('loadShareCodeBtn');
+  const editorShareMsg = document.getElementById('editorShareMsg');
   const layoutEl = document.querySelector('.layout');
 
   let audioCtx = null;
@@ -635,12 +762,20 @@
   let lastPlayedCustomChart = null;
   let editorCells = null;
   let editorEndStep = null;
+  let editorHolds = [[], [], [], []];
+  let editorBpmChanges = [];
+  let editorSpeedChanges = [];
+  let editorStars = 3;
+  let holdModeActive = false;
+  let holdDrag = null;
   let editorPreviewActive = false;
   let editorPreviewTimer = null;
   let editorPreviewRafId = null;
   let currentCourseOrder = COURSE_ORDERS.full;
   let currentCourseKind = 'full';
   let currentCourseKey = 'rhythm_best_course_full';
+  let laneHeld = [false, false, false, false];
+  let activeHolds = [null, null, null, null];
 
   function mulberry32(a) {
     return function () {
@@ -665,6 +800,7 @@
     const totalBeats = LEAD_IN_BEATS + Math.round(cfg.bars * barsMult) * 4;
     const chart = [];
     const timeline = []; // kick / hihat
+    const laneBusyUntil = [0, 0, 0, 0];
 
     for (let b = 0; b < totalBeats; b++) {
       const beatTime = b * secPerBeat;
@@ -682,18 +818,33 @@
           placeChance = Math.min(1, cfg.density * 1.15);
         }
         if (rng() < placeChance) {
-          const lane = Math.floor(rng() * 4);
-          chart.push({ time: t, lane, judged: false, result: null });
-          if (song.style === 'renda' && rng() < 0.3) {
-            const burstCount = 1 + Math.floor(rng() * 2);
-            const step = secPerBeat / cfg.subdivisions / 2;
-            for (let k = 1; k <= burstCount; k++) {
-              chart.push({ time: t + k * step, lane, judged: false, result: null });
+          let lane = Math.floor(rng() * 4);
+          if (t < laneBusyUntil[lane]) lane = (lane + 1 + Math.floor(rng() * 3)) % 4;
+          if (t < laneBusyUntil[lane]) continue;
+
+          if (song.style === 'renda' && rng() < 0.35) {
+            const holdBeats = 0.5 + rng() * 1.5;
+            const holdEnd = t + holdBeats * secPerBeat;
+            chart.push({ time: t, lane, judged: false, result: null, holdEnd });
+            laneBusyUntil[lane] = holdEnd + 0.05;
+          } else {
+            chart.push({ time: t, lane, judged: false, result: null });
+            laneBusyUntil[lane] = t + 0.05;
+            if (song.style === 'renda' && rng() < 0.3) {
+              const burstCount = 1 + Math.floor(rng() * 2);
+              const step = secPerBeat / cfg.subdivisions / 2;
+              for (let k = 1; k <= burstCount; k++) {
+                chart.push({ time: t + k * step, lane, judged: false, result: null });
+              }
+              laneBusyUntil[lane] = t + burstCount * step + 0.05;
             }
           }
           if (rng() < cfg.chordChance) {
             const lane2 = (lane + 1 + Math.floor(rng() * 3)) % 4;
-            chart.push({ time: t, lane: lane2, judged: false, result: null });
+            if (t >= laneBusyUntil[lane2]) {
+              chart.push({ time: t, lane: lane2, judged: false, result: null });
+              laneBusyUntil[lane2] = t + 0.05;
+            }
           }
         }
       }
@@ -712,28 +863,85 @@
   const CUSTOM_LEAD_IN_SEC = 2.0;
   const CUSTOM_TRAVEL_TIME = 1.4;
   const CUSTOM_MISS_PENALTY = 10;
+  const NUDGE_FRACTION = 0.3;
+
+  function computeStepTimes(customChart, totalSteps) {
+    const stepsPerBeat = customChart.subdivision || 2;
+    const changes = {};
+    (Array.isArray(customChart.bpmChanges) ? customChart.bpmChanges : []).forEach(c => {
+      if (c && Number.isFinite(c.step) && Number.isFinite(c.bpm)) changes[c.step] = c.bpm;
+    });
+    let currentBpm = customChart.bpm;
+    let t = CUSTOM_LEAD_IN_SEC;
+    const times = new Array(totalSteps + 1);
+    for (let step = 0; step <= totalSteps; step++) {
+      if (changes[step] != null) currentBpm = changes[step];
+      times[step] = t;
+      if (step < totalSteps) t += (60 / currentBpm) / stepsPerBeat;
+    }
+    return times;
+  }
+
+  function computeSpeedMults(customChart, totalSteps) {
+    const changes = (Array.isArray(customChart.speedChanges) ? customChart.speedChanges : [])
+      .filter(c => c && Number.isFinite(c.step) && Number.isFinite(c.speedMult))
+      .slice().sort((a, b) => a.step - b.step);
+    const mults = new Array(totalSteps);
+    let mult = 1, idx = 0;
+    for (let step = 0; step < totalSteps; step++) {
+      while (idx < changes.length && changes[idx].step <= step) { mult = changes[idx].speedMult; idx++; }
+      mults[step] = mult;
+    }
+    return mults;
+  }
 
   function buildCustomEvents(customChart) {
-    const secPerBeat = 60 / customChart.bpm;
-    const stepDur = secPerBeat / 2;
-    const fullSteps = customChart.bars * 8;
+    const stepsPerBeat = customChart.subdivision || 2;
+    const fullSteps = customChart.bars * 4 * stepsPerBeat;
     const totalSteps = (customChart.endStep != null) ? Math.min(customChart.endStep + 1, fullSteps) : fullSteps;
+    const stepTimes = computeStepTimes(customChart, totalSteps);
+    const speedMults = computeSpeedMults(customChart, totalSteps);
     const events = [];
     const chart = [];
+    const holds = Array.isArray(customChart.holds) && customChart.holds.length === 4
+      ? customChart.holds : [[], [], [], []];
+
+    const holdStepSet = [new Set(), new Set(), new Set(), new Set()];
+    const holdStarts = [{}, {}, {}, {}];
+    for (let lane = 0; lane < 4; lane++) {
+      for (const h of holds[lane]) {
+        if (h.start >= totalSteps) continue;
+        const end = Math.min(h.end, totalSteps - 1);
+        for (let i = h.start; i <= end; i++) holdStepSet[lane].add(i);
+        holdStarts[lane][h.start] = end;
+      }
+    }
 
     for (let step = 0; step < totalSteps; step++) {
-      const t = CUSTOM_LEAD_IN_SEC + step * stepDur;
-      events.push({ time: t, type: step % 2 === 0 ? 'kick' : 'hihat' });
+      const t = stepTimes[step];
+      const localStepDur = stepTimes[step + 1] - t;
+      events.push({ time: t, type: step % stepsPerBeat === 0 ? 'kick' : 'hihat' });
       for (let lane = 0; lane < 4; lane++) {
-        if (customChart.cells[lane][step]) {
+        if (holdStarts[lane][step] != null) {
+          const holdEnd = stepTimes[holdStarts[lane][step] + 1];
           events.push({ time: t, type: 'note', lane });
-          chart.push({ time: t, lane, judged: false, result: null });
+          chart.push({ time: t, lane, judged: false, result: null, holdEnd, speedMult: speedMults[step] });
+          continue;
+        }
+        if (holdStepSet[lane].has(step)) continue;
+        const state = customChart.cells[lane][step];
+        if (state) {
+          const offset = state === 'early' ? -NUDGE_FRACTION * localStepDur
+            : state === 'late' ? NUDGE_FRACTION * localStepDur : 0;
+          const noteTime = t + offset;
+          events.push({ time: noteTime, type: 'note', lane });
+          chart.push({ time: noteTime, lane, judged: false, result: null, speedMult: speedMults[step] });
         }
       }
     }
     events.sort((a, b) => a.time - b.time);
     chart.sort((a, b) => a.time - b.time);
-    const duration = CUSTOM_LEAD_IN_SEC + totalSteps * stepDur + CUSTOM_TRAVEL_TIME + 1.0;
+    const duration = stepTimes[totalSteps] + CUSTOM_TRAVEL_TIME + 1.0;
     return { chart, events, duration, travelTime: CUSTOM_TRAVEL_TIME, missPenalty: CUSTOM_MISS_PENALTY };
   }
 
@@ -980,16 +1188,17 @@
 
   function judge(lane) {
     if (!running) return;
+    laneHeld[lane] = true;
     const songTime = audioCtx.currentTime - songStartTime;
     let best = null, bestDelta = Infinity;
     for (const note of notes) {
-      if (note.lane !== lane || note.judged) continue;
+      if (note.lane !== lane || note.headJudged) continue;
       const delta = Math.abs(note.time - songTime);
       if (delta < bestDelta) { bestDelta = delta; best = note; }
     }
     flashes.push({ lane, t: performance.now() });
     if (best && bestDelta <= GOOD_WINDOW) {
-      best.judged = true;
+      best.headJudged = true;
       if (bestDelta <= PERFECT_WINDOW) {
         best.result = 'perfect'; score += 300; perfectCount++; life = Math.min(100, life + PERFECT_RECOVER); showJudge('PERFECT', getCss('--perfect'));
       } else {
@@ -1000,6 +1209,36 @@
       playClick();
       updateHud();
       updateLife();
+
+      if (best.holdEnd != null) {
+        best.holding = true;
+        best.lastTickTime = songTime;
+        activeHolds[lane] = best;
+      } else {
+        best.judged = true;
+      }
+    }
+  }
+
+  function releaseLane(lane) {
+    laneHeld[lane] = false;
+    const note = activeHolds[lane];
+    if (!note) return;
+    activeHolds[lane] = null;
+    note.holding = false;
+    const songTime = audioCtx.currentTime - songStartTime;
+    if (songTime >= note.holdEnd - HOLD_END_TOLERANCE) {
+      note.judged = true;
+    } else {
+      note.judged = true;
+      note.result = 'miss';
+      missCount++;
+      combo = 0;
+      life = Math.max(0, life - currentMissPenalty);
+      showJudge('MISS', getCss('--miss'));
+      updateHud();
+      updateLife();
+      if (life <= 0 && !currentTrainingMode) endGame('fail');
     }
   }
 
@@ -1032,12 +1271,35 @@
 
     for (const note of notes) {
       if (note.judged) continue;
-      const rel = note.time - songTime;
-      if (rel > currentTravelTime + 0.2 || rel < -0.3) continue;
-      const y = JUDGE_Y - (rel / currentTravelTime) * JUDGE_Y;
-      ctx.fillStyle = LANE_COLORS[note.lane];
+      const relHead = note.time - songTime;
       const x = note.lane * LANE_W + 8;
-      ctx.fillRect(x, y - 10, LANE_W - 16, 20);
+      const w = LANE_W - 16;
+      const effTravel = currentTravelTime / (note.speedMult || 1);
+
+      if (note.holdEnd != null) {
+        const relTail = note.holdEnd - songTime;
+        if (relTail < -0.3 && relHead < -0.3) continue;
+        if (relHead > effTravel + 0.2) continue;
+        const yHead = note.headJudged ? JUDGE_Y : (JUDGE_Y - (relHead / effTravel) * JUDGE_Y);
+        const yTail = JUDGE_Y - (relTail / effTravel) * JUDGE_Y;
+        const top = Math.min(yHead, yTail);
+        const bottom = Math.max(yHead, yTail);
+        ctx.fillStyle = LANE_COLORS[note.lane];
+        ctx.globalAlpha = note.holding ? 1 : 0.8;
+        ctx.fillRect(x, top, w, Math.max(bottom - top, 6));
+        ctx.globalAlpha = 1;
+        if (note.holding) {
+          ctx.fillStyle = '#fff';
+          ctx.globalAlpha = 0.55;
+          ctx.fillRect(x, JUDGE_Y - 4, w, 8);
+          ctx.globalAlpha = 1;
+        }
+      } else {
+        if (relHead > effTravel + 0.2 || relHead < -0.3) continue;
+        const y = JUDGE_Y - (relHead / effTravel) * JUDGE_Y;
+        ctx.fillStyle = LANE_COLORS[note.lane];
+        ctx.fillRect(x, y - 10, w, 20);
+      }
     }
 
     const now = performance.now();
@@ -1056,8 +1318,9 @@
     const songTime = audioCtx.currentTime - songStartTime;
 
     for (const note of notes) {
-      if (!note.judged && songTime - note.time > GOOD_WINDOW) {
+      if (!note.headJudged && songTime - note.time > GOOD_WINDOW) {
         note.judged = true;
+        note.headJudged = true;
         note.result = 'miss';
         missCount++;
         combo = 0;
@@ -1072,6 +1335,34 @@
       }
     }
 
+    for (let lane = 0; lane < 4; lane++) {
+      const note = activeHolds[lane];
+      if (!note || !note.holding) continue;
+      if (!laneHeld[lane]) {
+        releaseLane(lane);
+        continue;
+      }
+      if (songTime >= note.holdEnd) {
+        note.holding = false;
+        note.judged = true;
+        activeHolds[lane] = null;
+        score += 50;
+        combo++;
+        maxCombo = Math.max(maxCombo, combo);
+        updateHud();
+        continue;
+      }
+      if (songTime - note.lastTickTime >= HOLD_TICK_INTERVAL) {
+        note.lastTickTime = songTime;
+        score += 20;
+        combo++;
+        maxCombo = Math.max(maxCombo, combo);
+        flashes.push({ lane, t: performance.now() });
+        playClick();
+        updateHud();
+      }
+    }
+
     draw(songTime);
 
     if (songTime > totalDuration) {
@@ -1082,36 +1373,120 @@
   }
 
   function ensureEditorCells() {
-    const totalSteps = Number(editorBars.value) * 8;
+    let bars = Math.floor(Number(editorBars.value));
+    if (!bars || bars < 1) bars = 1;
+    if (bars > 128) bars = 128;
+    editorBars.value = bars;
+    const stepsPerBeat = Number(editorSubdivision.value) || 2;
+    const totalSteps = bars * 4 * stepsPerBeat;
     if (!editorCells || editorCells[0].length !== totalSteps) {
       const fresh = [[], [], [], []];
       for (let lane = 0; lane < 4; lane++) {
         const oldRow = editorCells ? editorCells[lane] : [];
-        const row = new Array(totalSteps).fill(false);
+        const row = new Array(totalSteps).fill(null);
         for (let i = 0; i < Math.min(oldRow.length, totalSteps); i++) row[i] = oldRow[i];
         fresh[lane] = row;
       }
       editorCells = fresh;
     }
     if (editorEndStep != null && editorEndStep >= totalSteps) editorEndStep = null;
+    if (!editorHolds) editorHolds = [[], [], [], []];
+    for (let lane = 0; lane < 4; lane++) {
+      editorHolds[lane] = editorHolds[lane]
+        .map(h => ({ start: h.start, end: Math.min(h.end, totalSteps - 1) }))
+        .filter(h => h.start < totalSteps && h.start <= h.end);
+    }
+    if (!editorBpmChanges) editorBpmChanges = [];
+    editorBpmChanges = editorBpmChanges.filter(c => c.step < totalSteps);
+    if (!editorSpeedChanges) editorSpeedChanges = [];
+    editorSpeedChanges = editorSpeedChanges.filter(c => c.step < totalSteps);
+  }
+
+  function applyCellStateClasses(cell, state) {
+    cell.classList.toggle('active', !!state);
+    cell.classList.toggle('nudge-early', state === 'early');
+    cell.classList.toggle('nudge-late', state === 'late');
+  }
+
+  function normalizeCellValue(v) {
+    if (v === 'on' || v === 'early' || v === 'late') return v;
+    if (v === true) return 'on';
+    return null;
+  }
+
+  function getHoldAt(lane, step) {
+    return editorHolds[lane].find(h => step >= h.start && step <= h.end) || null;
+  }
+
+  function removeHoldAt(lane, step) {
+    editorHolds[lane] = editorHolds[lane].filter(h => !(step >= h.start && step <= h.end));
+  }
+
+  function addHoldSpan(lane, start, end) {
+    editorHolds[lane] = editorHolds[lane].filter(h => end < h.start || start > h.end);
+    editorHolds[lane].push({ start, end });
+    for (let i = start; i <= end; i++) editorCells[lane][i] = null;
+  }
+
+  function finalizeHoldDrag() {
+    if (!holdDrag) return;
+    const { lane, startStep } = holdDrag;
+    const endStep = holdDrag.endStep != null ? holdDrag.endStep : startStep;
+    holdDrag = null;
+    if (startStep === endStep) {
+      removeHoldAt(lane, startStep);
+    } else {
+      addHoldSpan(lane, Math.min(startStep, endStep), Math.max(startStep, endStep));
+    }
+    buildEditorGrid();
   }
 
   function buildEditorGrid() {
     ensureEditorCells();
     const totalSteps = editorCells[0].length;
+    const stepsPerBeat = Number(editorSubdivision.value) || 2;
+    const stepsPerBar = stepsPerBeat * 4;
     editorGrid.innerHTML = '';
     editorGrid.style.gridTemplateColumns = `repeat(${totalSteps}, 22px)`;
     for (let lane = 0; lane < 4; lane++) {
       for (let step = 0; step < totalSteps; step++) {
         const cell = document.createElement('div');
         cell.className = 'editor-cell lane' + lane;
-        if (step % 8 === 0) cell.classList.add('bar-start');
-        if (editorCells[lane][step]) cell.classList.add('active');
+        if (step % stepsPerBar === 0) cell.classList.add('bar-start');
+        else if (step % stepsPerBeat === 0) cell.classList.add('beat-start');
+
+        const hold = getHoldAt(lane, step);
+        if (hold) {
+          cell.classList.add('hold-cell');
+          if (step === hold.start) cell.classList.add('hold-head');
+          if (step === hold.end) cell.classList.add('hold-tail');
+        } else {
+          applyCellStateClasses(cell, editorCells[lane][step]);
+        }
         cell.dataset.lane = lane;
         cell.dataset.step = step;
-        cell.addEventListener('click', () => {
-          editorCells[lane][step] = !editorCells[lane][step];
-          cell.classList.toggle('active');
+
+        cell.addEventListener('pointerdown', (e) => {
+          if (!holdModeActive) return;
+          e.preventDefault();
+          holdDrag = { lane, startStep: step, endStep: step };
+        });
+        cell.addEventListener('pointerenter', () => {
+          if (holdModeActive && holdDrag && holdDrag.lane === lane) holdDrag.endStep = step;
+        });
+        cell.addEventListener('click', (e) => {
+          if (holdModeActive) return;
+          if (getHoldAt(lane, step)) return;
+          const cur = editorCells[lane][step];
+          let next;
+          if (e.shiftKey) {
+            if (!cur) return;
+            next = cur === 'on' ? 'early' : cur === 'early' ? 'late' : 'on';
+          } else {
+            next = cur ? null : 'on';
+          }
+          editorCells[lane][step] = next;
+          applyCellStateClasses(cell, next);
         });
         editorGrid.appendChild(cell);
       }
@@ -1119,11 +1494,70 @@
     for (let step = 0; step < totalSteps; step++) {
       const cell = document.createElement('div');
       cell.className = 'editor-cell end-cell';
-      if (step % 8 === 0) cell.classList.add('bar-start');
+      if (step % stepsPerBar === 0) cell.classList.add('bar-start');
+      else if (step % stepsPerBeat === 0) cell.classList.add('beat-start');
       if (editorEndStep === step) cell.classList.add('active');
       cell.dataset.step = step;
       cell.addEventListener('click', () => {
         editorEndStep = (editorEndStep === step) ? null : step;
+        buildEditorGrid();
+      });
+      editorGrid.appendChild(cell);
+    }
+    for (let step = 0; step < totalSteps; step++) {
+      const cell = document.createElement('div');
+      cell.className = 'editor-cell bpm-cell';
+      if (step % stepsPerBar === 0) cell.classList.add('bar-start');
+      else if (step % stepsPerBeat === 0) cell.classList.add('beat-start');
+      const existing = editorBpmChanges.find(c => c.step === step);
+      if (existing) {
+        cell.classList.add('active');
+        cell.textContent = existing.bpm;
+      }
+      cell.dataset.step = step;
+      cell.addEventListener('click', () => {
+        const current = editorBpmChanges.find(c => c.step === step);
+        const input = prompt(
+          'このマスからのBPMを入力してね(空にすると削除)',
+          current ? current.bpm : editorBpm.value
+        );
+        if (input === null) return;
+        const trimmed = input.trim();
+        editorBpmChanges = editorBpmChanges.filter(c => c.step !== step);
+        if (trimmed !== '') {
+          const bpmVal = Math.max(40, Math.min(300, Math.round(Number(trimmed)) || Number(editorBpm.value)));
+          editorBpmChanges.push({ step, bpm: bpmVal });
+          editorBpmChanges.sort((a, b) => a.step - b.step);
+        }
+        buildEditorGrid();
+      });
+      editorGrid.appendChild(cell);
+    }
+    for (let step = 0; step < totalSteps; step++) {
+      const cell = document.createElement('div');
+      cell.className = 'editor-cell speed-cell';
+      if (step % stepsPerBar === 0) cell.classList.add('bar-start');
+      else if (step % stepsPerBeat === 0) cell.classList.add('beat-start');
+      const existingSpeed = editorSpeedChanges.find(c => c.step === step);
+      if (existingSpeed) {
+        cell.classList.add('active');
+        cell.textContent = existingSpeed.speedMult + 'x';
+      }
+      cell.dataset.step = step;
+      cell.addEventListener('click', () => {
+        const current = editorSpeedChanges.find(c => c.step === step);
+        const input = prompt(
+          'このマスからの見た目の速さ(倍率)を入力してね。音の速さ(BPM)は変わらない(空にすると削除)',
+          current ? current.speedMult : 1
+        );
+        if (input === null) return;
+        const trimmed = input.trim();
+        editorSpeedChanges = editorSpeedChanges.filter(c => c.step !== step);
+        if (trimmed !== '') {
+          const speedVal = Math.round(Math.max(0.01, Math.min(100, Number(trimmed) || 1)) * 100) / 100;
+          editorSpeedChanges.push({ step, speedMult: speedVal });
+          editorSpeedChanges.sort((a, b) => a.step - b.step);
+        }
         buildEditorGrid();
       });
       editorGrid.appendChild(cell);
@@ -1136,8 +1570,66 @@
       endStep: editorEndStep,
       bpm: Math.max(60, Math.min(220, Number(editorBpm.value) || 120)),
       bars: Number(editorBars.value),
+      subdivision: Number(editorSubdivision.value) || 2,
       cells: editorCells.map(row => row.slice()),
+      holds: editorHolds.map(row => row.map(h => ({ start: h.start, end: h.end }))),
+      bpmChanges: editorBpmChanges.map(c => ({ step: c.step, bpm: c.bpm })),
+      speedChanges: editorSpeedChanges.map(c => ({ step: c.step, speedMult: c.speedMult })),
+      stars: editorStars,
     };
+  }
+
+  function renderStarPicker() {
+    starPickerStars.forEach(el => {
+      el.classList.toggle('filled', Number(el.dataset.star) <= editorStars);
+    });
+  }
+
+  function loadChartIntoEditor(chart) {
+    if (!chart || !Array.isArray(chart.cells) || chart.cells.length !== 4) {
+      throw new Error('invalid chart');
+    }
+    editorName.value = chart.name || 'マイ譜面';
+    editorBpm.value = Math.max(60, Math.min(220, Number(chart.bpm) || 120));
+    editorBars.value = Math.max(1, Math.min(128, Number(chart.bars) || 4));
+    editorSubdivision.value = [1, 2, 3, 4].includes(Number(chart.subdivision)) ? Number(chart.subdivision) : 2;
+    editorCells = chart.cells.map(row => row.map(normalizeCellValue));
+    editorEndStep = (chart.endStep != null && !isNaN(Number(chart.endStep))) ? Number(chart.endStep) : null;
+    editorHolds = Array.isArray(chart.holds) && chart.holds.length === 4
+      ? chart.holds.map(row => row.filter(h => h && Number.isFinite(h.start) && Number.isFinite(h.end) && h.end >= h.start)
+          .map(h => ({ start: Number(h.start), end: Number(h.end) })))
+      : [[], [], [], []];
+    editorBpmChanges = Array.isArray(chart.bpmChanges)
+      ? chart.bpmChanges.filter(c => c && Number.isFinite(c.step) && Number.isFinite(c.bpm))
+          .map(c => ({ step: Number(c.step), bpm: Number(c.bpm) }))
+      : [];
+    editorSpeedChanges = Array.isArray(chart.speedChanges)
+      ? chart.speedChanges.filter(c => c && Number.isFinite(c.step) && Number.isFinite(c.speedMult))
+          .map(c => ({ step: Number(c.step), speedMult: Number(c.speedMult) }))
+      : [];
+    editorStars = Number.isFinite(Number(chart.stars)) ? Math.max(0, Math.min(5, Number(chart.stars))) : 3;
+    renderStarPicker();
+    buildEditorGrid();
+  }
+
+  function downloadChartFile(chart) {
+    const blob = new Blob([JSON.stringify(chart, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (chart.name || 'chart').replace(/[\\/:*?"<>|]/g, '_') + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function encodeShareCode(chart) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(chart))));
+  }
+
+  function decodeShareCode(code) {
+    return JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
   }
 
   function renderSavedChartsList() {
@@ -1150,8 +1642,10 @@
     list.forEach((chart, i) => {
       const row = document.createElement('div');
       row.className = 'saved-chart-row';
+      const starCount = Math.max(0, Math.min(5, Number(chart.stars) || 0));
+      const starStr = '★'.repeat(starCount) + '☆'.repeat(5 - starCount);
       row.innerHTML = `
-        <span>${chart.name}(BPM${chart.bpm}・${chart.bars}小節)</span>
+        <span>${chart.name}(BPM${chart.bpm}・${chart.bars}小節)<span class="saved-chart-stars">${starStr}</span></span>
         <span class="saved-chart-actions">
           <button data-action="load" data-i="${i}">よみこみ</button>
           <button data-action="play" data-i="${i}">あそぶ</button>
@@ -1180,7 +1674,20 @@
     const chart = readEditorChart();
     const built = buildCustomEvents(chart);
     const startAt = audioCtx.currentTime + 0.15;
-    const stepDur = (60 / chart.bpm) / 2;
+    const stepsPerBeat = chart.subdivision || 2;
+    const fullSteps = chart.bars * 4 * stepsPerBeat;
+    const totalSteps = (chart.endStep != null) ? Math.min(chart.endStep + 1, fullSteps) : fullSteps;
+    const stepTimes = computeStepTimes(chart, totalSteps);
+    function findCol(t) {
+      if (t <= stepTimes[0]) return 0;
+      if (t >= stepTimes[totalSteps - 1]) return totalSteps - 1;
+      let lo = 0, hi = totalSteps - 1;
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        if (stepTimes[mid] <= t) lo = mid; else hi = mid - 1;
+      }
+      return lo;
+    }
     let idx = 0;
     editorPreviewActive = true;
 
@@ -1206,7 +1713,7 @@
     function highlightLoop() {
       if (!editorPreviewActive) return;
       const t = audioCtx.currentTime - startAt;
-      const col = Math.floor(t / stepDur);
+      const col = findCol(t);
       document.querySelectorAll('.editor-cell').forEach(el => {
         el.classList.toggle('playing', Number(el.dataset.step) === col);
       });
@@ -1253,6 +1760,8 @@
     currentTravelTime = built.travelTime;
     currentMissPenalty = built.missPenalty;
     schedPtr = 0;
+    laneHeld = [false, false, false, false];
+    activeHolds = [null, null, null, null];
 
     score = 0; combo = 0; maxCombo = 0;
     perfectCount = 0; goodCount = 0; missCount = 0;
@@ -1411,6 +1920,8 @@
     currentTravelTime = built.travelTime;
     currentMissPenalty = built.missPenalty;
     schedPtr = 0;
+    laneHeld = [false, false, false, false];
+    activeHolds = [null, null, null, null];
     gameWrap.classList.toggle('oni-mode', diffKey === 'oni');
     gameWrap.classList.toggle('hell-mode', diffKey === 'hell');
     gameWrap.classList.toggle('ice-mode', diffKey === 'easy');
@@ -1589,13 +2100,21 @@
     btn.addEventListener('pointerdown', () => {
       if (mashActive) handleMashTap(); else judge(lane);
     });
+    btn.addEventListener('pointerup', () => { if (!mashActive && running) releaseLane(lane); });
+    btn.addEventListener('pointerleave', () => { if (!mashActive && running) releaseLane(lane); });
   });
 
   window.addEventListener('keydown', (e) => {
     const idx = LANE_KEYS.indexOf(e.key.toLowerCase());
-    if (idx === -1) return;
+    if (idx === -1 || e.repeat) return;
     if (mashActive) handleMashTap();
     else if (running) judge(idx);
+  });
+
+  window.addEventListener('keyup', (e) => {
+    const idx = LANE_KEYS.indexOf(e.key.toLowerCase());
+    if (idx === -1) return;
+    if (running) releaseLane(idx);
   });
 
   muteBox.addEventListener('change', () => {
@@ -1637,14 +2156,52 @@
   editorBtn.addEventListener('click', openEditor);
   editorBackBtn.addEventListener('click', closeEditor);
   editorBars.addEventListener('change', buildEditorGrid);
+  starPickerStars.forEach(el => {
+    el.addEventListener('click', () => {
+      const val = Number(el.dataset.star);
+      editorStars = (editorStars === val) ? val - 1 : val;
+      renderStarPicker();
+    });
+  });
+  renderStarPicker();
+  let editorSubdivisionPrev = editorSubdivision.value;
+  editorSubdivision.addEventListener('change', () => {
+    const hasNotes = (editorCells && editorCells.some(row => row.some(Boolean)))
+      || editorHolds.some(row => row.length > 0)
+      || editorBpmChanges.length > 0
+      || editorSpeedChanges.length > 0;
+    if (hasNotes && !confirm('音符の細かさを変えると、今作っている譜面はリセットされるよ。続ける?')) {
+      editorSubdivision.value = editorSubdivisionPrev;
+      return;
+    }
+    editorSubdivisionPrev = editorSubdivision.value;
+    editorCells = null;
+    editorEndStep = null;
+    editorHolds = [[], [], [], []];
+    editorBpmChanges = [];
+    editorSpeedChanges = [];
+    buildEditorGrid();
+  });
   editorPlayBtn.addEventListener('click', playEditorPreview);
   editorStopBtn.addEventListener('click', stopEditorPreview);
   editorClearBtn.addEventListener('click', () => {
     ensureEditorCells();
-    for (let lane = 0; lane < 4; lane++) editorCells[lane].fill(false);
+    for (let lane = 0; lane < 4; lane++) editorCells[lane].fill(null);
     editorEndStep = null;
+    editorHolds = [[], [], [], []];
+    editorBpmChanges = [];
+    editorSpeedChanges = [];
     buildEditorGrid();
   });
+  holdModeBtn.addEventListener('click', () => {
+    holdModeActive = !holdModeActive;
+    holdModeBtn.textContent = holdModeActive ? '🟦 ホールド配置: ON' : '🟦 ホールド配置: OFF';
+    editorHintText.innerHTML = holdModeActive
+      ? 'ホールド配置モード: マスを<b>ドラッグ</b>してホールドノーツ(長押しノーツ)を作る。既にあるホールドをクリックすると削除できる。'
+      : 'クリックでノーツON/OFF。すでにあるノーツを<b>Shiftキー+クリック</b>すると「ぴったり → 少し早め(‹) → 少し遅め(›) → ぴったり」の順でタイミングを微妙にずらせる。一番下の「BPM」の行をクリックすると、そのマスから先のテンポを変えられる。';
+    buildEditorGrid();
+  });
+  document.addEventListener('pointerup', finalizeHoldDrag);
   editorSaveBtn.addEventListener('click', () => {
     const chart = readEditorChart();
     const list = loadSavedCharts();
@@ -1664,18 +2221,51 @@
     const chart = list[i];
     if (!chart) return;
     if (btn.dataset.action === 'load') {
-      editorName.value = chart.name;
-      editorBpm.value = chart.bpm;
-      editorBars.value = chart.bars;
-      editorCells = chart.cells.map(row => row.slice());
-      editorEndStep = (chart.endStep != null) ? chart.endStep : null;
-      buildEditorGrid();
+      loadChartIntoEditor(chart);
     } else if (btn.dataset.action === 'play') {
       playCustomChart(chart);
     } else if (btn.dataset.action === 'delete') {
       list.splice(i, 1);
       saveSavedCharts(list);
       renderSavedChartsList();
+    }
+  });
+
+  exportBtn.addEventListener('click', () => {
+    downloadChartFile(readEditorChart());
+    editorShareMsg.textContent = 'ファイルに書き出したよ(ダウンロードフォルダを確認してね)';
+  });
+  importBtn.addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const chart = JSON.parse(ev.target.result);
+        loadChartIntoEditor(chart);
+        editorShareMsg.textContent = `「${chart.name || 'マイ譜面'}」を読み込んだよ`;
+      } catch (err) {
+        editorShareMsg.textContent = '読み込みに失敗した。正しい譜面ファイルか確認してね';
+      }
+    };
+    reader.readAsText(file);
+    importFile.value = '';
+  });
+  shareCodeBtn.addEventListener('click', () => {
+    shareCodeOut.value = encodeShareCode(readEditorChart());
+    shareCodeOut.select();
+    editorShareMsg.textContent = '共有コードを作ったよ。コピーして送ってね';
+  });
+  loadShareCodeBtn.addEventListener('click', () => {
+    const code = shareCodeIn.value.trim();
+    if (!code) { editorShareMsg.textContent = '共有コードを貼り付けてね'; return; }
+    try {
+      const chart = decodeShareCode(code);
+      loadChartIntoEditor(chart);
+      editorShareMsg.textContent = `「${chart.name || 'マイ譜面'}」を読み込んだよ`;
+    } catch (err) {
+      editorShareMsg.textContent = '共有コードの読み込みに失敗した。コピーミスがないか確認してね';
     }
   });
 
